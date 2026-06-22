@@ -5,22 +5,9 @@
  * Brewery identity/colours/copy/AI scripts live on the brand preset (brand.ts); this is the surrounding world.
  */
 import { DEMO_BRAND } from "./brand";
+import type { KpiSeed } from "./kpiModel";
 
 export type Market = "SE" | "DE" | "UK";
-
-export interface KpiMock {
-  venues: number;
-  eventsRun: number;
-  playersReached: number;
-  teamsCreated: number;
-  avgPlayersPerVenue: number;
-  sponsoredParticipationPct: number;
-  completionPct: number;
-  estimatedCampaignReach: number;
-  engagementByVenue: { venue: string; players: number; engagementPct: number }[];
-  engagementByRound: { round: string; answerRatePct: number }[];
-  topVenues: string[];
-}
 
 export interface RolloutTier {
   id: "pilot" | "regional" | "campaign";
@@ -41,7 +28,7 @@ export interface MarketData {
   city: string;
   teamNames: string[];
   playerNames: string[];
-  kpi: KpiMock;
+  kpiSeed: KpiSeed;
   rollout: RolloutTier[];
   pilotVenues: string[];
   nextVenues: string[];
@@ -58,19 +45,17 @@ export const MARKETS: Record<Market, MarketData> = {
     city: "Stockholm",
     teamNames: ["Kvartersmästarna", "Trekronor Trivia", "Surdegsgänget", "Norrsken Nördar"],
     playerNames: ["Erik Andersson", "Anna Lindberg", "Johan Nilsson", "Sara Berg", "Fatima Hassan", "Amir Khan", "Linnea Karlsson", "Elias Pettersson"],
-    kpi: {
-      venues: 18, eventsRun: 74, playersReached: 5120, teamsCreated: 980, avgPlayersPerVenue: 38,
-      sponsoredParticipationPct: 86, completionPct: 91, estimatedCampaignReach: 42000,
-      engagementByVenue: [
-        { venue: "Kvarteret Krog", players: 56, engagementPct: 94 },
-        { venue: "Söder Pub & Kök", players: 48, engagementPct: 90 },
-        { venue: "Hamnkrogen Göteborg", players: 41, engagementPct: 88 },
+    kpiSeed: {
+      venuesActivated: 18, avgEventsPerVenue: 4.2, avgPlayersPerEvent: 70, avgPlayersPerTeam: 4.4,
+      completionRate: 0.91, sponsoredAnswerRate: 0.86, questionsPerEvent: 10, avgMinutesPerQuestion: 4.5,
+      bufferMinutes: 12, repeatBookingRate: 0.62, campaignReachMultiplier: 1.5, currency: "kr", valuePerVisit: 70,
+      venues: [
+        { name: "Kvarteret Krog", events: 5 }, { name: "Söder Pub & Kök", events: 4 }, { name: "Hamnkrogen Göteborg", events: 4 },
       ],
-      engagementByRound: [
-        { round: "General", answerRatePct: 96 }, { round: "Local (Stockholm)", answerRatePct: 93 },
-        { round: "Music", answerRatePct: 90 }, { round: "Sponsored (Nordström)", answerRatePct: 86 },
+      rounds: [
+        { name: "Allmänbildning", answerRate: 0.95 }, { name: "Lokal (Stockholm)", answerRate: 0.93 },
+        { name: "Musik", answerRate: 0.90 }, { name: "Sponsrad (Nordström)", sponsor: true, answerRate: 0.86 },
       ],
-      topVenues: ["Kvarteret Krog", "Söder Pub & Kök", "Hamnkrogen Göteborg"],
     },
     rollout: [
       { id: "pilot", label: "5-pub pilot", venues: 5, eventsRunPerMonth: 20, playersReached: 1400, note: "Stockholm inner-city pilot" },
@@ -90,19 +75,17 @@ export const MARKETS: Record<Market, MarketData> = {
     city: "München",
     teamNames: ["Die Stammtischhelden", "Bundesliga Brains", "Bierdeckel-Banditen", "Die Schlaubergerei"],
     playerNames: ["Lukas Müller", "Anna Schneider", "Felix Weber", "Laura Fischer", "Mehmet Yılmaz", "Aylin Demir", "Jonas Becker", "Sofia Wagner"],
-    kpi: {
-      venues: 22, eventsRun: 96, playersReached: 7300, teamsCreated: 1410, avgPlayersPerVenue: 44,
-      sponsoredParticipationPct: 88, completionPct: 93, estimatedCampaignReach: 61000,
-      engagementByVenue: [
-        { venue: "Zum Goldenen Hirsch", players: 64, engagementPct: 95 },
-        { venue: "Augustiner Eck", players: 58, engagementPct: 92 },
-        { venue: "Rheinterrasse Köln", players: 49, engagementPct: 89 },
+    kpiSeed: {
+      venuesActivated: 22, avgEventsPerVenue: 4.5, avgPlayersPerEvent: 78, avgPlayersPerTeam: 4.6,
+      completionRate: 0.93, sponsoredAnswerRate: 0.88, questionsPerEvent: 10, avgMinutesPerQuestion: 4.5,
+      bufferMinutes: 12, repeatBookingRate: 0.68, campaignReachMultiplier: 1.6, currency: "€", valuePerVisit: 7,
+      venues: [
+        { name: "Zum Goldenen Hirsch", events: 5 }, { name: "Augustiner Eck", events: 5 }, { name: "Rheinterrasse Köln", events: 4 },
       ],
-      engagementByRound: [
-        { round: "Allgemeinwissen", answerRatePct: 97 }, { round: "Lokal (München)", answerRatePct: 94 },
-        { round: "Musik", answerRatePct: 91 }, { round: "Sponsored (Adlerbräu)", answerRatePct: 88 },
+      rounds: [
+        { name: "Allgemeinwissen", answerRate: 0.97 }, { name: "Lokal (München)", answerRate: 0.94 },
+        { name: "Musik", answerRate: 0.91 }, { name: "Sponsored (Adlerbräu)", sponsor: true, answerRate: 0.88 },
       ],
-      topVenues: ["Zum Goldenen Hirsch", "Augustiner Eck", "Rheinterrasse Köln"],
     },
     rollout: [
       { id: "pilot", label: "5-Kneipen-Pilot", venues: 5, eventsRunPerMonth: 22, playersReached: 1800, note: "München-Pilot" },
@@ -122,19 +105,17 @@ export const MARKETS: Record<Market, MarketData> = {
     city: "Manchester",
     teamNames: ["The Anchor Regulars", "Quiz Lightning", "Bar Stool Boffins", "Trivia Newton-John"],
     playerNames: ["James Smith", "Emily Taylor", "Oliver Brown", "Sophie Wilson", "Aisha Khan", "Daniel Patel", "Grace Johnson", "Mohammed Ali"],
-    kpi: {
-      venues: 20, eventsRun: 88, playersReached: 6400, teamsCreated: 1220, avgPlayersPerVenue: 41,
-      sponsoredParticipationPct: 87, completionPct: 92, estimatedCampaignReach: 52000,
-      engagementByVenue: [
-        { venue: "The Anchor", players: 60, engagementPct: 94 },
-        { venue: "The Crown & Anchor", players: 52, engagementPct: 91 },
-        { venue: "The Railway Tap", players: 45, engagementPct: 88 },
+    kpiSeed: {
+      venuesActivated: 20, avgEventsPerVenue: 4.4, avgPlayersPerEvent: 72, avgPlayersPerTeam: 4.5,
+      completionRate: 0.92, sponsoredAnswerRate: 0.87, questionsPerEvent: 10, avgMinutesPerQuestion: 4.5,
+      bufferMinutes: 12, repeatBookingRate: 0.65, campaignReachMultiplier: 1.5, currency: "£", valuePerVisit: 6,
+      venues: [
+        { name: "The Anchor", events: 5 }, { name: "The Crown & Anchor", events: 5 }, { name: "The Railway Tap", events: 4 },
       ],
-      engagementByRound: [
-        { round: "General", answerRatePct: 96 }, { round: "Local (Manchester)", answerRatePct: 93 },
-        { round: "Music", answerRatePct: 90 }, { round: "Sponsored (Northgate)", answerRatePct: 87 },
+      rounds: [
+        { name: "General", answerRate: 0.96 }, { name: "Local (Manchester)", answerRate: 0.93 },
+        { name: "Music", answerRate: 0.90 }, { name: "Sponsored (Northgate)", sponsor: true, answerRate: 0.87 },
       ],
-      topVenues: ["The Anchor", "The Crown & Anchor", "The Railway Tap"],
     },
     rollout: [
       { id: "pilot", label: "5-pub pilot", venues: 5, eventsRunPerMonth: 21, playersReached: 1600, note: "Greater Manchester pilot" },
