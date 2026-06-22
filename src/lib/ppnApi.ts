@@ -246,6 +246,47 @@ export async function submitTeamAnswer(questionId: string, teamId: string, value
     .upsert({ question_id: questionId, team_id: teamId, submitted_value: value, submitted_by_player_id: playerId ?? null }, { onConflict: "question_id,team_id" });
   if (error) throw error;
 }
+// ─── Operator / presenter prep (demo only — never touches the loop's logic) ───────────────────
+/** Reset the demo session to a clean lobby: clears answers, zeroes scores, returns to lobby + AI intro on. */
+export async function resetDemo(sessionId: string) {
+  const teams = await listTeams(sessionId);
+  const ids = teams.map((t) => t.id);
+  if (ids.length) {
+    await supabase.from("ppn_answers").delete().in("team_id", ids);
+    await supabase.from("ppn_teams").update({ score: 0 }).eq("session_id", sessionId);
+  }
+  const { error } = await supabase
+    .from("ppn_game_sessions")
+    .update({ phase: "lobby", status: "lobby", current_question_id: null, ai_intro_enabled: true })
+    .eq("id", sessionId);
+  if (error) throw error;
+}
+
+/** Remove all teams + players from the session (answers cascade on team delete). */
+export async function clearTeams(sessionId: string) {
+  await supabase.from("ppn_players").delete().eq("session_id", sessionId);
+  await supabase.from("ppn_teams").delete().eq("session_id", sessionId);
+}
+
+/** Seed demo teams (with players + captain) for the active market — for a clean repopulated demo. */
+export async function seedDemoTeams(sessionId: string, specs: { name: string; players: string[] }[]) {
+  for (const s of specs) {
+    const { data: team, error } = await supabase
+      .from("ppn_teams")
+      .insert({ session_id: sessionId, name: s.name, join_code: genJoinCode() })
+      .select("id")
+      .single();
+    if (error) throw error;
+    const teamId = (team as { id: string }).id;
+    let captain: string | null = null;
+    for (const p of s.players) {
+      const pid = await addPlayer(sessionId, teamId, p);
+      if (!captain) captain = pid;
+    }
+    if (captain) await supabase.from("ppn_teams").update({ captain_player_id: captain }).eq("id", teamId);
+  }
+}
+
 export async function getTeamAnswer(questionId: string, teamId: string): Promise<{ submitted_value: string | null; is_correct: boolean | null; awarded_points: number } | null> {
   const { data, error } = await supabase
     .from("ppn_answers")

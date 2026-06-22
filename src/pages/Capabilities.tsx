@@ -68,10 +68,13 @@ export default function Capabilities() {
           ))}
         </div>
 
-        <h2 className="mt-10 text-2xl font-bold">Broader than quiz</h2>
-        <p className="mt-1 text-[var(--ppn-muted)]">Quiz is the first format — the same network later supports:</p>
+        <div className="mt-10 flex items-center gap-2">
+          <h2 className="text-2xl font-bold">Broader than quiz</h2>
+          <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase" style={{ background: "color-mix(in srgb, var(--ppn-warning) 20%, transparent)", color: "var(--ppn-warning)" }}>Future capability — not built</span>
+        </div>
+        <p className="mt-1 text-[var(--ppn-muted)]">Quiz is the first format — the same network is designed to later support:</p>
         <div className="mt-4 flex flex-wrap gap-2">
-          {BEYOND_QUIZ.map((c) => <span key={c} className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-2 text-sm">{c}</span>)}
+          {BEYOND_QUIZ.map((c) => <span key={c} className="rounded-xl border border-dashed border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-2 text-sm text-[var(--ppn-muted)]">{c}</span>)}
         </div>
         <p className="mt-8 text-xs text-[var(--ppn-muted)]">Seeded demo content. Switch market/brewery at /config.</p>
       </div>

@@ -11,7 +11,7 @@ export default function Rollout() {
   return (
     <DemoShell>
       <div className="mx-auto max-w-4xl px-5 py-10">
-        <p className="text-sm uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>{m.flag} {m.label} · rollout (mock)</p>
+        <p className="text-sm uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>{m.flag} {m.label} · Seeded projection</p>
         <h1 className="mt-2 text-3xl font-extrabold">From pilot to {DEMO_BRAND.sponsorName} network</h1>
         <p className="mt-1 text-[var(--ppn-muted)]">{m.context}</p>
 
