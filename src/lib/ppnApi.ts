@@ -287,6 +287,18 @@ export async function seedDemoTeams(sessionId: string, specs: { name: string; pl
   }
 }
 
+/** Team ids that have submitted an answer to a question — host "answered N/total" + per-team status (no values). */
+export async function getAnsweredTeamIds(questionId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("ppn_answers")
+    .select("team_id, submitted_value")
+    .eq("question_id", questionId);
+  if (error) throw error;
+  return ((data ?? []) as { team_id: string; submitted_value: string | null }[])
+    .filter((a) => a.submitted_value != null && a.submitted_value !== "")
+    .map((a) => a.team_id);
+}
+
 export async function getTeamAnswer(questionId: string, teamId: string): Promise<{ submitted_value: string | null; is_correct: boolean | null; awarded_points: number } | null> {
   const { data, error } = await supabase
     .from("ppn_answers")

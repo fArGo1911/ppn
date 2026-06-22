@@ -1,25 +1,60 @@
 /**
- * /host — the staff host control panel (the ONLY operational surface). One session-control model drives every
- * venue setup: pick the OUTPUT setup (TV+audio / audio-only / local-host) and HOSTING mode (staff / AI-assisted),
- * then run the loop: Start → (read question) → Reveal & score → Scoreboard → Next → … → End & final standings.
- *
- * The panel always shows a staff-readable script + the current question/answer, so a non-dev can run the whole
- * event with no TV and no AI (local-host mode). Defaults to the seeded DEMO session (?token to override).
+ * /host — the staff control CONSOLE (the only operational surface). Three zones:
+ *   A. sticky status bar — what's happening, what players/TV see, answered count.
+ *   B. now/next — current question + read-aloud script + audio cues + ONE clear primary action.
+ *   C. teams/answers — standings + per-team answered state for the active question.
+ * Pre-game setup collapses once live. Human labels only (no internal phase words). Defaults to DEMO (?token).
  */
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  resolveJoinToken, listTeams, getSessionState, getSessionQuestions,
+  resolveJoinToken, listTeams, getSessionState, getSessionQuestions, getAnsweredTeamIds,
   setSessionSetup, startGame, gotoQuestion, setPhase, revealAndScore, endGame,
   setAiIntroEnabled, startIntro,
-  type SetupMode, type HostingMode,
+  type SetupMode, type HostingMode, type Phase,
 } from "../lib/ppnApi";
 import { HostShell } from "../components/shells";
 import { SETUP_MODES, HOSTING_MODES, questionCompatibility } from "../demo/setup";
 import { DEMO_BRAND, questionAudio } from "../demo/brand";
 import { AudioCue } from "../components/AudioCue";
 import { playCue, pickVariant } from "../lib/audio";
+
+// ── Human labels (never expose internal phase words like qintro / tv_off / live_question) ──
+function phaseHeading(phase: Phase, qNum: number, total: number): string {
+  switch (phase) {
+    case "lobby": return "Not started";
+    case "intro": return "AI evening intro";
+    case "qintro": return "Question coming up";
+    case "question": return `Question ${qNum} of ${total}`;
+    case "reveal": return "Answer reveal";
+    case "scoreboard": return "Scoreboard";
+    case "ended": return "Final standings";
+  }
+}
+function playersSee(phase: Phase): string {
+  switch (phase) {
+    case "lobby": return "Lobby / waiting";
+    case "intro": return "AI intro";
+    case "qintro": return "Question coming up";
+    case "question": return "Answering now";
+    case "reveal": return "Answer reveal";
+    case "scoreboard": return "Scoreboard";
+    case "ended": return "Winner / final";
+  }
+}
+function tvShows(phase: Phase, setupMode: SetupMode): string {
+  if (setupMode !== "tv_audio") return "Phones only (no TV)";
+  switch (phase) {
+    case "lobby": return "Welcome / QR";
+    case "intro": return "AI intro";
+    case "qintro": return "Question coming up";
+    case "question": return "Question + options";
+    case "reveal": return "Answer reveal";
+    case "scoreboard": return "Scoreboard";
+    case "ended": return "Winner";
+  }
+}
 
 export default function Host() {
   const [params] = useSearchParams();
@@ -43,51 +78,48 @@ export default function Host() {
   const idx = useMemo(() => questions.findIndex((q) => q.id === st?.currentQuestionId), [questions, st?.currentQuestionId]);
   const q = idx >= 0 ? questions[idx] : null;
   const isLast = idx >= 0 && idx === questions.length - 1;
-  const phase = st?.phase ?? "lobby";
+  const phase: Phase = st?.phase ?? "lobby";
   const setupMode: SetupMode = st?.setupMode ?? "tv_audio";
   const hostingMode: HostingMode = st?.hostingMode ?? "staff";
   const aiIntroEnabled = st?.aiIntroEnabled ?? true;
   const preGame = phase === "lobby" || phase === "intro";
   const compat = q ? questionCompatibility(q.kind, setupMode) : null;
+  const setupHuman = SETUP_MODES.find((m) => m.id === setupMode)?.label ?? setupMode;
+  const hostingHuman = HOSTING_MODES.find((m) => m.id === hostingMode)?.label ?? hostingMode;
 
-  // ── Audio layer (playback-only, pre-generated MP3s). Chime + question-intro are presenter settings. ──
+  // Answered count + per-team status for the active question.
+  const answerable = phase === "question" || phase === "reveal";
+  const answeredQ = useQuery({
+    queryKey: ["host-answered", st?.currentQuestionId],
+    queryFn: () => getAnsweredTeamIds(st!.currentQuestionId!),
+    enabled: !!st?.currentQuestionId && answerable,
+    refetchInterval: 2000,
+  });
+  const answeredSet = useMemo(() => new Set(answeredQ.data ?? []), [answeredQ.data]);
+  const answeredCount = teams.filter((t) => answeredSet.has(t.id)).length;
+
+  // ── Audio (playback-only) + presenter chime/intro toggles ──
   const audio = DEMO_BRAND.audio;
   const [chimeOn, setChimeOn] = useState(audio.chimeEnabled);
   const [qIntroOn, setQIntroOn] = useState(audio.questionIntroEnabled);
-  const useQIntro = chimeOn || qIntroOn; // route Next/Start through a "question coming up" pre-roll
-  const qa = idx >= 0 ? questionAudio(DEMO_BRAND, idx + 1) : { readout: undefined, reveal: undefined };
-  const qIntroLine = `${pickVariant(audio.questionIntroVariants, idx < 0 ? 0 : idx)} ${pickVariant(audio.questionNumberAnnouncementVariants, idx < 0 ? 0 : idx).replace("{n}", String((idx < 0 ? 0 : idx) + 1))}`;
+  const useQIntro = chimeOn || qIntroOn;
+  const qa = idx >= 0 ? questionAudio(DEMO_BRAND, idx + 1) : { readout: undefined as string | undefined, reveal: undefined as string | undefined };
+  const safeIdx = idx < 0 ? 0 : idx;
+  const qIntroLine = `${pickVariant(audio.questionIntroVariants, safeIdx)} ${pickVariant(audio.questionNumberAnnouncementVariants, safeIdx).replace("{n}", String(safeIdx + 1))}`;
 
   const act = useMutation({
     mutationFn: (fn: () => Promise<unknown>) => fn(),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["host-state", sid] });
-      qc.invalidateQueries({ queryKey: ["host-teams", sid] });
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["host-state", sid] }); qc.invalidateQueries({ queryKey: ["host-teams", sid] }); },
   });
   const run = (fn: () => Promise<unknown>) => act.mutate(fn);
   const busy = act.isPending;
 
-  // Control handlers that also fire audio cues (within the click gesture → playback allowed).
-  const startFirst = () => {
-    if (chimeOn) playCue(audio.questionChimeAudioUrl);
-    run(() => startGame(sid!, questions[0].id, useQIntro ? "qintro" : "question"));
-  };
-  const goNext = () => {
-    if (chimeOn) playCue(audio.questionChimeAudioUrl);
-    run(() => gotoQuestion(sid!, questions[idx + 1].id, useQIntro ? "qintro" : "question"));
-  };
-  const showQuestion = () => {
-    playCue(qa.readout); // reads the question if a clip exists; silent fallback otherwise
-    run(() => setPhase(sid!, "question"));
-  };
+  const startFirst = () => { if (chimeOn) playCue(audio.questionChimeAudioUrl); run(() => startGame(sid!, questions[0].id, useQIntro ? "qintro" : "question")); };
+  const goNext = () => { if (chimeOn) playCue(audio.questionChimeAudioUrl); run(() => gotoQuestion(sid!, questions[idx + 1].id, useQIntro ? "qintro" : "question")); };
+  const showQuestion = () => { playCue(qa.readout); run(() => setPhase(sid!, "question")); };
 
-  // Staff-readable script — the same line the AI would voice; in local-host mode staff reads it via the pub mic.
-  const scriptLead = setupMode === "local_host"
-    ? "📢 Read aloud via the pub mic/speaker"
-    : hostingMode === "ai_assisted"
-      ? "🤖 AI voice announces"
-      : "🎤 Host reads aloud";
+  // Read-aloud script for the current state.
+  const scriptLead = setupMode === "local_host" ? "📢 Read aloud via the pub mic/speaker" : hostingMode === "ai_assisted" ? "🤖 AI voice announces" : "🎤 Host reads aloud";
   const scriptBody =
     phase === "intro" ? DEMO_BRAND.ai.eventIntro
     : phase === "qintro" ? qIntroLine
@@ -97,109 +129,152 @@ export default function Host() {
     : phase === "ended" ? `That's a wrap! ${standings[0]?.name ?? "Our winners"} take it — thanks to ${DEMO_BRAND.sponsorName}, and goodnight!`
     : q ? `Question ${q.roundSeq}.${q.sequence}: ${q.prompt}` : "…";
 
-  const Btn = ({ label, onClick, disabled, primary }: { label: string; onClick: () => void; disabled?: boolean; primary?: boolean }) => (
-    <button
-      onClick={onClick}
-      disabled={disabled || busy}
-      className="rounded-xl px-4 py-3 text-sm font-semibold disabled:opacity-40"
-      style={primary
-        ? { background: "var(--ppn-brand)", color: "var(--ppn-on-brand)" }
-        : { background: "var(--ppn-surface)", color: "var(--ppn-text)", border: "1px solid var(--ppn-border)" }}
-    >
-      {label}
-    </button>
+  // ── Primary + secondary actions per phase (one obvious primary) ──
+  type Action = { label: string; onClick: () => void; disabled?: boolean };
+  let primary: Action | null = null;
+  const secondary: Action[] = [];
+  const noQ = questions.length === 0;
+  if (phase === "lobby") {
+    if (aiIntroEnabled) { primary = { label: "▶ Play AI intro", onClick: () => run(() => startIntro(sid!)), disabled: noQ }; secondary.push({ label: "Skip intro · Start game", onClick: startFirst, disabled: noQ }); }
+    else primary = { label: "▶ Start game", onClick: startFirst, disabled: noQ };
+  } else if (phase === "intro") {
+    primary = { label: "Start first question ▶", onClick: startFirst, disabled: noQ };
+    secondary.push({ label: "◀ Back to lobby", onClick: () => run(() => setPhase(sid!, "lobby")) });
+  } else if (phase === "qintro") {
+    primary = { label: "Show question ▶", onClick: showQuestion };
+    if (idx > 0) secondary.push({ label: "◀ Previous", onClick: () => run(() => gotoQuestion(sid!, questions[idx - 1].id, useQIntro ? "qintro" : "question")) });
+  } else if (phase === "question") {
+    primary = { label: "Reveal & score", onClick: () => run(() => revealAndScore(sid!, q!.id)) };
+    if (!isLast) secondary.push({ label: "Skip ▶", onClick: goNext });
+    if (idx > 0) secondary.push({ label: "◀ Previous", onClick: () => run(() => gotoQuestion(sid!, questions[idx - 1].id)) });
+  } else if (phase === "reveal") {
+    if (!isLast) { primary = { label: "Next question ▶", onClick: goNext }; secondary.push({ label: "Show scoreboard", onClick: () => run(() => setPhase(sid!, "scoreboard")) }); }
+    else primary = { label: "Show scoreboard", onClick: () => run(() => setPhase(sid!, "scoreboard")) };
+  } else if (phase === "scoreboard") {
+    if (!isLast) { primary = { label: "Next question ▶", onClick: goNext }; }
+    else primary = { label: "⏹ End game", onClick: () => run(() => endGame(sid!)) };
+  }
+  if (phase !== "lobby" && phase !== "ended" && !(phase === "scoreboard" && isLast)) secondary.push({ label: "End game", onClick: () => run(() => endGame(sid!)) });
+
+  // ── Phase-aware audio cues (quiet secondary row) ──
+  const audioCues = (() => {
+    switch (phase) {
+      case "intro": return <AudioCue url={audio.aiEventIntroAudioUrl} label="Replay intro" />;
+      case "qintro": return <><AudioCue url={audio.questionChimeAudioUrl} label="Chime" /><AudioCue url={qa.readout} label="Read question" /></>;
+      case "question": return <><AudioCue url={qa.readout} label="Replay question" /><AudioCue url={audio.questionChimeAudioUrl} label="Chime" />{q?.kind === "sponsored" && <AudioCue url={audio.sponsorAudioMessageUrl} label="Sponsor message" />}</>;
+      case "reveal": return <AudioCue url={qa.reveal} label="Play reveal" />;
+      case "ended": return <AudioCue url={audio.aiWinnerAnnouncementAudioUrl} label="Play winner" />;
+      default: return null;
+    }
+  })();
+
+  // ── Setup selector (used expanded pre-game, collapsed when live) ──
+  const setupSelector = (
+    <>
+      <div className="grid gap-2 md:grid-cols-3">
+        {SETUP_MODES.map((m) => {
+          const on = setupMode === m.id;
+          return (
+            <button key={m.id} disabled={phase !== "lobby" || busy} onClick={() => run(() => setSessionSetup(sid!, m.id, hostingMode))}
+              className="rounded-xl border p-3 text-left disabled:opacity-60"
+              style={{ borderColor: on ? "var(--ppn-brand)" : "var(--ppn-border)", background: on ? "color-mix(in srgb, var(--ppn-brand) 12%, transparent)" : "transparent" }}>
+              <p className="text-sm font-semibold">{m.label}</p>
+              <p className="mt-1 text-xs text-[var(--ppn-muted)]">{m.supports}</p>
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="text-xs text-[var(--ppn-muted)]">Hosting:</span>
+        {HOSTING_MODES.map((h) => {
+          const on = hostingMode === h.id;
+          return (
+            <button key={h.id} disabled={phase !== "lobby" || busy} onClick={() => run(() => setSessionSetup(sid!, setupMode, h.id))}
+              className="rounded-full border px-3 py-1.5 text-xs font-medium disabled:opacity-60"
+              style={{ borderColor: on ? "var(--ppn-brand)" : "var(--ppn-border)", color: on ? "var(--ppn-brand)" : "var(--ppn-muted)" }}>
+              {h.label}
+            </button>
+          );
+        })}
+        {setupMode === "tv_audio"
+          ? <span className="text-xs text-[var(--ppn-muted)]">· TV: <span className="font-mono">/tv/{token}</span></span>
+          : <span className="text-xs text-[var(--ppn-muted)]">· TV not used — phones carry the game</span>}
+      </div>
+    </>
   );
 
-  const statusLine = st
-    ? `${SETUP_MODES.find((m) => m.id === setupMode)?.label} · ${phase} · ${teams.length} team${teams.length === 1 ? "" : "s"} · ${totalPlayers} player${totalPlayers === 1 ? "" : "s"}`
-    : undefined;
+  const Pill = ({ label, value, accent }: { label: string; value: string; accent?: boolean }) => (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1 text-xs">
+      <span className="text-[var(--ppn-muted)]">{label}</span>
+      <span className="font-semibold" style={accent ? { color: "var(--ppn-brand)" } : undefined}>{value}</span>
+    </span>
+  );
 
   return (
-    <HostShell venue={session?.venueName} event={session?.eventTitle} status={statusLine}>
+    <HostShell venue={session?.venueName} event={session?.eventTitle}>
       {resolveQ.isLoading && <p className="text-[var(--ppn-muted)]">Loading…</p>}
       {resolveQ.data?.kind === "invalid" && <p className="text-amber-400">No session for token “{token}”. Try /host?token=DEMO.</p>}
 
       {session && st && (
         <div className="space-y-4">
-          {/* ── Setup: output mode + hosting mode (locked once the game starts) ── */}
-          <div className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold">Venue setup</p>
-              {phase !== "lobby" && <span className="text-xs text-[var(--ppn-muted)]">locked while live</span>}
-            </div>
-            <div className="mt-2 grid gap-2 md:grid-cols-3">
-              {SETUP_MODES.map((m) => {
-                const on = setupMode === m.id;
-                return (
-                  <button key={m.id} disabled={phase !== "lobby" || busy} onClick={() => run(() => setSessionSetup(sid!, m.id, hostingMode))}
-                    className="rounded-xl border p-3 text-left disabled:opacity-60"
-                    style={{ borderColor: on ? "var(--ppn-brand)" : "var(--ppn-border)", background: on ? "color-mix(in srgb, var(--ppn-brand) 12%, transparent)" : "transparent" }}>
-                    <p className="text-sm font-semibold">{m.label}</p>
-                    <p className="mt-1 text-xs text-[var(--ppn-muted)]">{m.supports}</p>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="text-xs text-[var(--ppn-muted)]">Hosting:</span>
-              {HOSTING_MODES.map((h) => {
-                const on = hostingMode === h.id;
-                return (
-                  <button key={h.id} disabled={phase !== "lobby" || busy} onClick={() => run(() => setSessionSetup(sid!, setupMode, h.id))}
-                    className="rounded-full border px-3 py-1.5 text-xs font-medium disabled:opacity-60"
-                    style={{ borderColor: on ? "var(--ppn-brand)" : "var(--ppn-border)", color: on ? "var(--ppn-brand)" : "var(--ppn-muted)" }}>
-                    {h.label}
-                  </button>
-                );
-              })}
-              {setupMode === "tv_audio"
-                ? <span className="text-xs text-[var(--ppn-muted)]">· TV: <span className="font-mono">/tv/{sid}</span></span>
-                : <span className="text-xs text-[var(--ppn-muted)]">· TV not used for this setup (phones carry the game)</span>}
+          {/* ── Zone A: sticky status bar ── */}
+          <div className="sticky top-0 z-10 -mx-5 border-b border-[var(--ppn-border)] bg-[var(--ppn-bg)]/95 px-5 py-2.5 backdrop-blur">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>
+                ● {phaseHeading(phase, idx + 1, questions.length)}
+              </span>
+              <Pill label="Players see:" value={playersSee(phase)} accent />
+              <Pill label="TV:" value={tvShows(phase, setupMode)} accent />
+              {answerable && <Pill label="Answered:" value={`${answeredCount}/${teams.length} teams`} accent />}
+              <Pill label="" value={`${setupHuman}`} />
+              <Pill label="" value={hostingHuman} />
+              <Pill label="AI intro" value={aiIntroEnabled ? "on" : "off"} />
+              <Pill label="" value={`${teams.length} teams · ${totalPlayers} players`} />
             </div>
           </div>
 
-          {/* ── Optional AI evening intro (first-class, include/skip) ── */}
-          {preGame && (
-            <div className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold">AI evening intro <span className="font-normal text-[var(--ppn-muted)]">· optional</span></p>
-                <span className="flex items-center gap-2">
-                  <span className="rounded-full px-2 py-0.5 text-xs font-medium"
-                    style={aiIntroEnabled
-                      ? { background: "color-mix(in srgb, var(--ppn-success) 18%, transparent)", color: "var(--ppn-success)" }
-                      : { background: "var(--ppn-bg)", color: "var(--ppn-muted)" }}>
-                    {aiIntroEnabled ? "Available · enabled" : "Disabled"}
+          {/* ── Pre-game setup (expanded) → collapses once live ── */}
+          {preGame ? (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
+                <p className="mb-2 text-sm font-semibold">Venue setup</p>
+                {setupSelector}
+              </div>
+              <div className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold">AI evening intro <span className="font-normal text-[var(--ppn-muted)]">· optional</span></p>
+                  <span className="flex items-center gap-2">
+                    <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={aiIntroEnabled ? { background: "color-mix(in srgb, var(--ppn-success) 18%, transparent)", color: "var(--ppn-success)" } : { background: "var(--ppn-bg)", color: "var(--ppn-muted)" }}>{aiIntroEnabled ? "Enabled" : "Disabled"}</span>
+                    <button onClick={() => run(() => setAiIntroEnabled(sid!, !aiIntroEnabled))} disabled={busy} className="rounded-full border border-[var(--ppn-border)] px-3 py-1 text-xs font-medium disabled:opacity-50">{aiIntroEnabled ? "Disable" : "Enable"}</button>
                   </span>
-                  <button onClick={() => run(() => setAiIntroEnabled(sid!, !aiIntroEnabled))} disabled={busy}
-                    className="rounded-full border border-[var(--ppn-border)] px-3 py-1 text-xs font-medium disabled:opacity-50">
-                    {aiIntroEnabled ? "Disable" : "Enable"}
-                  </button>
-                </span>
+                </div>
+                <div className="mt-3 rounded-lg border border-dashed border-[var(--ppn-border)] p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-muted)]">Intro script + voice (plays if present, else read the script)</p>
+                  <p className="mt-1 text-sm text-[var(--ppn-text)]">{DEMO_BRAND.ai.eventIntro}</p>
+                  <div className="mt-2"><AudioCue url={audio.aiEventIntroAudioUrl} label="Preview intro audio" /></div>
+                </div>
               </div>
-              <p className="mt-1 text-xs text-[var(--ppn-muted)]">
-                A polished opening before questions start. {setupMode === "local_host" ? "Local-host mode: staff reads it via the mic, or skip it." : hostingMode === "ai_assisted" ? "AI voice will welcome the room (planned voice — text preview below)." : "Read by staff, or skip and introduce the evening yourself."}
-              </p>
-              <div className="mt-3 rounded-lg border border-dashed border-[var(--ppn-border)] p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-muted)]">Intro script + voice (pre-generated MP3 · plays if present, else read the script)</p>
-                <p className="mt-1 text-sm text-[var(--ppn-text)]">{DEMO_BRAND.ai.eventIntro}</p>
-                <div className="mt-2"><AudioCue url={audio.aiEventIntroAudioUrl} label={phase === "intro" ? "Replay intro" : "Preview intro audio"} primary={phase === "intro"} /></div>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--ppn-muted)]">
+                <span>Audio:</span>
+                <button onClick={() => setChimeOn((v) => !v)} className="rounded-full border px-3 py-1 font-medium" style={{ borderColor: chimeOn ? "var(--ppn-brand)" : "var(--ppn-border)", color: chimeOn ? "var(--ppn-brand)" : "var(--ppn-muted)" }}>Chime {chimeOn ? "on" : "off"}</button>
+                <button onClick={() => setQIntroOn((v) => !v)} className="rounded-full border px-3 py-1 font-medium" style={{ borderColor: qIntroOn ? "var(--ppn-brand)" : "var(--ppn-border)", color: qIntroOn ? "var(--ppn-brand)" : "var(--ppn-muted)" }}>“Question coming up” {qIntroOn ? "on" : "off"}</button>
               </div>
-              {phase === "lobby" && aiIntroEnabled && <p className="mt-2 text-xs text-[var(--ppn-brand)]">▶ Play intro puts the room into the intro screen before the first question.</p>}
-              {phase === "intro" && <p className="mt-2 text-xs text-[var(--ppn-brand)]">Intro is live on the player/TV surfaces — hand over to the first question when ready.</p>}
             </div>
+          ) : (
+            <details className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-4 py-3">
+              <summary className="cursor-pointer text-sm text-[var(--ppn-muted)]">
+                Setup: <span className="font-semibold text-[var(--ppn-text)]">{setupHuman}</span> · {hostingHuman} · AI intro {aiIntroEnabled ? "on" : "off"} <span className="text-[var(--ppn-muted)]">(locked while live)</span>
+              </summary>
+              <div className="mt-3 opacity-70">{setupSelector}</div>
+            </details>
           )}
 
-          {/* ── Current question + read-aloud script (host-only answer) ── */}
-          <div className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
+          {/* ── Zone B: now / next ── */}
+          <div className="rounded-xl border-2 bg-[var(--ppn-surface)] p-4" style={{ borderColor: "color-mix(in srgb, var(--ppn-brand) 30%, var(--ppn-border))" }}>
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold">{phase === "lobby" ? "Not started" : phase === "intro" ? "AI evening intro" : phase === "qintro" ? "Question coming up" : q ? `Question ${q.roundSeq}.${q.sequence} of ${questions.length}` : phase}</p>
+              <p className="text-lg font-bold">{phaseHeading(phase, idx + 1, questions.length)}</p>
               {q && (
-                <span className="rounded-full px-2 py-0.5 text-xs font-medium"
-                  style={compat?.ok
-                    ? { background: "color-mix(in srgb, var(--ppn-success) 18%, transparent)", color: "var(--ppn-success)" }
-                    : { background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>
-                  {q.kind}{compat?.ok ? "" : ` · ${compat?.note}`}
-                </span>
+                <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={compat?.ok ? { background: "color-mix(in srgb, var(--ppn-success) 18%, transparent)", color: "var(--ppn-success)" } : { background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>{q.kind}{compat?.ok ? "" : ` · ${compat?.note}`}</span>
               )}
             </div>
             {q && phase !== "lobby" && phase !== "ended" && (
@@ -212,82 +287,59 @@ export default function Host() {
             <div className="mt-3 rounded-lg border border-dashed border-[var(--ppn-border)] p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-muted)]">{scriptLead}</p>
               <p className="mt-1 text-[var(--ppn-text)]">{scriptBody}</p>
-
-              {/* Phase-aware audio cues — playback only, fall back to the script when a file is missing. */}
-              {phase !== "lobby" && phase !== "intro" && (
-                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[var(--ppn-border)] pt-3">
-                  {phase === "qintro" && <AudioCue url={audio.questionChimeAudioUrl} label="Chime" />}
-                  {phase === "qintro" && <AudioCue url={qa.readout} label="Read question" />}
-                  {phase === "question" && <AudioCue url={qa.readout} label="Replay question" primary />}
-                  {phase === "question" && <AudioCue url={audio.questionChimeAudioUrl} label="Chime" />}
-                  {phase === "question" && q?.kind === "sponsored" && <AudioCue url={audio.sponsorAudioMessageUrl} label="Sponsor message" />}
-                  {phase === "reveal" && <AudioCue url={qa.reveal} label="Play reveal" primary />}
-                  {phase === "scoreboard" && <AudioCue url={audio.aiRoundIntroAudioUrl} label="Round/standings VO" />}
-                  {phase === "ended" && <AudioCue url={audio.aiWinnerAnnouncementAudioUrl} label="Play winner" primary />}
-                  {(setupMode === "local_host") && <span className="text-[10px] text-[var(--ppn-muted)]">local-host: audio optional — read the script via the mic</span>}
-                </div>
-              )}
+              {audioCues && <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[var(--ppn-border)] pt-3">{audioCues}{setupMode === "local_host" && <span className="text-[10px] text-[var(--ppn-muted)]">local-host: audio optional — read via the mic</span>}</div>}
             </div>
 
-            {/* Audio settings (presenter): chime + question-intro pre-roll */}
-            {preGame && (
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--ppn-muted)]">
-                <span>Audio:</span>
-                <button onClick={() => setChimeOn((v) => !v)} className="rounded-full border px-3 py-1 font-medium"
-                  style={{ borderColor: chimeOn ? "var(--ppn-brand)" : "var(--ppn-border)", color: chimeOn ? "var(--ppn-brand)" : "var(--ppn-muted)" }}>
-                  Chime {chimeOn ? "on" : "off"}
+            {/* Primary + secondary actions */}
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              {primary && (
+                <button onClick={primary.onClick} disabled={primary.disabled || busy} className="rounded-xl px-6 py-3.5 text-base font-bold text-[var(--ppn-on-brand)] shadow disabled:opacity-40" style={{ background: "var(--ppn-brand)" }}>
+                  {primary.label}
                 </button>
-                <button onClick={() => setQIntroOn((v) => !v)} className="rounded-full border px-3 py-1 font-medium"
-                  style={{ borderColor: qIntroOn ? "var(--ppn-brand)" : "var(--ppn-border)", color: qIntroOn ? "var(--ppn-brand)" : "var(--ppn-muted)" }}>
-                  “Question coming up” {qIntroOn ? "on" : "off"}
-                </button>
-                <span>· cues play through the host device / pub PA</span>
-              </div>
-            )}
+              )}
+              {phase === "ended" && <span className="text-sm font-semibold text-[var(--ppn-brand)]">Game ended — final standings below.</span>}
+              {secondary.map((s) => (
+                <button key={s.label} onClick={s.onClick} disabled={s.disabled || busy} className="rounded-lg border border-[var(--ppn-border)] px-3 py-2 text-sm text-[var(--ppn-muted)] hover:text-[var(--ppn-text)] disabled:opacity-40">{s.label}</button>
+              ))}
+            </div>
+            {noQ && phase === "lobby" && <p className="mt-2 text-xs text-amber-400">No questions seeded for this session.</p>}
           </div>
 
-          {/* ── Controls ── */}
-          <div className="flex flex-wrap gap-2">
-            {phase === "lobby" && aiIntroEnabled && <Btn primary label="▶ Play AI intro" disabled={questions.length === 0} onClick={() => run(() => startIntro(sid!))} />}
-            {phase === "lobby" && <Btn primary={!aiIntroEnabled} label={aiIntroEnabled ? "Skip intro · Start game" : "▶ Start game"} disabled={questions.length === 0} onClick={startFirst} />}
-            {phase === "intro" && <Btn primary label="Start first question ▶" disabled={questions.length === 0} onClick={startFirst} />}
-            {phase === "intro" && <Btn label="◀ Back to lobby" onClick={() => run(() => setPhase(sid!, "lobby"))} />}
-            {phase === "qintro" && <Btn primary label="Show question ▶" onClick={showQuestion} />}
-            {idx > 0 && phase !== "ended" && phase !== "qintro" && <Btn label="◀ Previous" onClick={() => run(() => gotoQuestion(sid!, questions[idx - 1].id))} />}
-            {phase === "question" && <Btn primary label="Reveal & score" onClick={() => run(() => revealAndScore(sid!, q!.id))} />}
-            {(phase === "reveal" || phase === "scoreboard") && <Btn label="Scoreboard" onClick={() => run(() => setPhase(sid!, "scoreboard"))} />}
-            {(phase === "reveal" || phase === "scoreboard") && !isLast && <Btn primary label="Next question ▶" onClick={goNext} />}
-            {phase === "question" && <Btn label="Skip ▶" disabled={isLast} onClick={goNext} />}
-            {phase !== "lobby" && phase !== "ended" && <Btn label="⏹ End game" onClick={() => run(() => endGame(sid!))} />}
-            {phase === "ended" && <span className="text-sm text-[var(--ppn-brand)]">Game ended — final standings below.</span>}
-          </div>
-
-          {/* ── Live teams + scores ── */}
+          {/* ── Zone C: teams / answers ── */}
           <div>
-            <p className="mb-2 text-sm font-semibold">{phase === "ended" ? "Final standings" : "Teams & scores"}</p>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-semibold">{phase === "ended" ? "Final standings" : "Teams & scores"}</p>
+              {answerable && <p className="text-sm text-[var(--ppn-muted)]">Answered <span className="font-bold text-[var(--ppn-text)]">{answeredCount}/{teams.length}</span></p>}
+            </div>
             {teams.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-[var(--ppn-border)] p-6 text-center text-[var(--ppn-muted)]">
-                No teams yet. Players join at <span className="font-mono text-[var(--ppn-text)]">/play/{token}</span> (or via the TV QR).
-              </p>
+              <p className="rounded-xl border border-dashed border-[var(--ppn-border)] p-6 text-center text-[var(--ppn-muted)]">No teams yet. Players join at <span className="font-mono text-[var(--ppn-text)]">/play/{token}</span> (or via the TV QR).</p>
             ) : (
               <div className="grid gap-2 sm:grid-cols-2">
-                {standings.map((t, i) => (
-                  <div key={t.id} className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold"><span className="mr-2 font-black text-[var(--ppn-brand)]">{i + 1}</span>{t.name}</span>
-                      <span className="text-sm font-bold">{t.score} pts</span>
-                    </div>
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      {t.players.map((p) => (
-                        <span key={p.id} className="inline-flex items-center gap-1 rounded-lg bg-[var(--ppn-bg)] px-2 py-0.5 text-xs">
-                          {p.display_name}
-                          {p.id === t.captain_player_id && <span className="rounded bg-amber-500/20 px-1 text-[9px] font-semibold uppercase text-amber-300">Cap</span>}
+                {standings.map((t, i) => {
+                  const answered = answeredSet.has(t.id);
+                  return (
+                    <div key={t.id} className="rounded-xl border bg-[var(--ppn-surface)] p-3" style={{ borderColor: answerable ? (answered ? "color-mix(in srgb, var(--ppn-success) 40%, var(--ppn-border))" : "var(--ppn-border)") : "var(--ppn-border)" }}>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold"><span className="mr-2 font-black text-[var(--ppn-brand)]">{i + 1}</span>{t.name}</span>
+                        <span className="flex items-center gap-2">
+                          {answerable && (answered
+                            ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-success) 20%, transparent)", color: "var(--ppn-success)" }}>✓ answered</span>
+                            : <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold text-[var(--ppn-muted)]" style={{ background: "var(--ppn-bg)" }}>waiting</span>)}
+                          <span className="text-sm font-bold">{t.score} pts</span>
                         </span>
-                      ))}
-                      {t.players.length === 0 && <span className="text-xs text-[var(--ppn-muted)]">no players yet</span>}
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {t.players.map((p) => (
+                          <span key={p.id} className="inline-flex items-center gap-1 rounded-lg bg-[var(--ppn-bg)] px-2 py-0.5 text-xs">
+                            {p.display_name}
+                            {p.id === t.captain_player_id && <span className="rounded bg-amber-500/20 px-1 text-[9px] font-semibold uppercase text-amber-300">Cap</span>}
+                          </span>
+                        ))}
+                        {t.players.length === 0 && <span className="text-xs text-[var(--ppn-muted)]">no players yet</span>}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
