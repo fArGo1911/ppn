@@ -37,3 +37,26 @@ insert into public.ppn_questions (id, round_id, sequence, kind, prompt, options,
    'Our sponsor was founded in which city?',
    '["Manchester","London","Leeds","Bristol"]'::jsonb, 'Manchester', 5)
 on conflict (id) do nothing;
+
+-- Realistic demo teams + players (UK market for The Anchor) so host/TV look populated in a presentation.
+insert into public.ppn_teams (id, session_id, name, join_code) values
+  ('00000000-0000-4000-8000-000000000030', '00000000-0000-4000-8000-000000000003', 'The Anchor Regulars', 'ANCH'),
+  ('00000000-0000-4000-8000-000000000031', '00000000-0000-4000-8000-000000000003', 'Quiz Lightning', 'BOLT'),
+  ('00000000-0000-4000-8000-000000000032', '00000000-0000-4000-8000-000000000003', 'Bar Stool Boffins', 'BOFF')
+on conflict (id) do nothing;
+
+insert into public.ppn_players (id, session_id, team_id, display_name) values
+  ('00000000-0000-4000-8000-000000000040', '00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000030', 'James Smith'),
+  ('00000000-0000-4000-8000-000000000041', '00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000030', 'Emily Taylor'),
+  ('00000000-0000-4000-8000-000000000042', '00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000030', 'Aisha Khan'),
+  ('00000000-0000-4000-8000-000000000043', '00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000031', 'Oliver Brown'),
+  ('00000000-0000-4000-8000-000000000044', '00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000031', 'Sophie Wilson'),
+  ('00000000-0000-4000-8000-000000000045', '00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000031', 'Daniel Patel'),
+  ('00000000-0000-4000-8000-000000000046', '00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000032', 'Grace Johnson'),
+  ('00000000-0000-4000-8000-000000000047', '00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000032', 'Mohammed Ali')
+on conflict (id) do nothing;
+
+-- Captains (first player of each team) — visual/contextual only.
+update public.ppn_teams set captain_player_id = '00000000-0000-4000-8000-000000000040' where id = '00000000-0000-4000-8000-000000000030' and captain_player_id is null;
+update public.ppn_teams set captain_player_id = '00000000-0000-4000-8000-000000000043' where id = '00000000-0000-4000-8000-000000000031' and captain_player_id is null;
+update public.ppn_teams set captain_player_id = '00000000-0000-4000-8000-000000000046' where id = '00000000-0000-4000-8000-000000000032' and captain_player_id is null;

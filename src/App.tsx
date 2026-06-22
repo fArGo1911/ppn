@@ -1,60 +1,32 @@
 /**
- * PPN (PubPlay Network) — POC app shell.
- *
- * Routing is written relative to a configurable base path (VITE_PPN_BASE_PATH) so the same app works at the
- * subdomain root (ppn.todeloo.com) or under a /ppn subpath, with no code changes. Local-first, deploy-ready.
+ * PPN (PubPlay Network) — POC app shell. Routes are relative to a configurable base path (VITE_PPN_BASE_PATH)
+ * so the same app works at the subdomain root (ppn.todeloo.com) or under a /ppn subpath. Local-first, deploy-ready.
  */
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Landing from "./pages/Landing";
 import PlayJoin from "./pages/PlayJoin";
 import Host from "./pages/Host";
+import Tv from "./pages/Tv";
+import Preview from "./pages/Preview";
 
 const BASENAME = import.meta.env.VITE_PPN_BASE_PATH ?? "/";
-
-function Home() {
-  return (
-    <main className="mx-auto max-w-2xl px-6 py-16">
-      <h1 className="text-3xl font-bold tracking-tight text-emerald-400">PubPlay Network</h1>
-      <p className="mt-2 text-slate-400">POC scaffold — live‑event core (local) + brewery demo surfaces (seeded).</p>
-      <p className="mt-6 text-sm text-slate-500">Routes (placeholders during bootstrap):</p>
-      <ul className="mt-2 grid grid-cols-2 gap-1 text-sm">
-        {["/config", "/setup", "/host", "/play/demo", "/tv/demo", "/kpi", "/rollout", "/capabilities"].map((r) => (
-          <li key={r}>
-            <Link className="text-emerald-300 hover:underline" to={r}>
-              {r}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </main>
-  );
-}
-
-function Placeholder({ name }: { name: string }) {
-  return (
-    <main className="mx-auto max-w-2xl px-6 py-16">
-      <Link className="text-sm text-emerald-300 hover:underline" to="/">
-        ← PPN
-      </Link>
-      <h2 className="mt-4 text-xl font-semibold">{name}</h2>
-      <p className="mt-2 text-slate-400">Placeholder — built in the POC build order.</p>
-    </main>
-  );
-}
 
 export default function App() {
   return (
     <BrowserRouter basename={BASENAME}>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/config" element={<Placeholder name="Brewery preset / config (hidden)" />} />
-        <Route path="/setup" element={<Placeholder name="Demo setup — market / venue / brand studio" />} />
-        <Route path="/host" element={<Host />} />
+        <Route path="/" element={<Landing />} />
+        {/* Functional surfaces */}
         <Route path="/play/:joinToken" element={<PlayJoin />} />
-        <Route path="/tv/:sessionId" element={<Placeholder name="TV / display view" />} />
-        <Route path="/kpi" element={<Placeholder name="Brewery KPI mock-up" />} />
-        <Route path="/rollout" element={<Placeholder name="Rollout / network view" />} />
-        <Route path="/capabilities" element={<Placeholder name="Broader-than-quiz capability cards" />} />
-        <Route path="*" element={<Placeholder name="Not found" />} />
+        <Route path="/host" element={<Host />} />
+        <Route path="/tv/:sessionId" element={<Tv />} />
+        {/* Commercial surfaces — branded previews this slice (built later in the POC order) */}
+        <Route path="/config" element={<Preview title="Brewery preset / config" blurb="Switch the demo to a specific brewery — identity, colours, market, offer — without code changes. (Hidden presenter control; built later.)" />} />
+        <Route path="/setup" element={<Preview title="Demo setup & brand studio" blurb="Pick the market, venue audience and content mix, and preview the brand across TV + phone. Built later in the guided demo." />} />
+        <Route path="/kpi" element={<Preview title="Brewery KPI report" blurb="The campaign proof a sponsor receives — reach, sponsored-round participation, dwell, venue network. Built later." />} />
+        <Route path="/rollout" element={<Preview title="Rollout / network" blurb="From a pilot to a brewery-funded pub network: 5 → 25 → 100 venues. Built later." />} />
+        <Route path="/capabilities" element={<Preview title="Beyond quiz" blurb="Music nights, match-day games, sponsored mini-games, seasonal & inter-pub events — the same network. Built later." />} />
+        <Route path="*" element={<Preview title="Not found" blurb="That screen isn't part of the demo. Head back to the overview." />} />
       </Routes>
     </BrowserRouter>
   );
