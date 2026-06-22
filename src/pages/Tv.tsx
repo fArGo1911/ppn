@@ -9,7 +9,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { resolveJoinToken, listTeams } from "../lib/ppnApi";
 import { DEMO_BRAND } from "../demo/brand";
 import { TvShell } from "../components/shells";
-import { BrandAssetPreview, OfferBadge, AiAnnouncementSlot } from "../components/brandZones";
+import { OfferBadge, AiAnnouncementSlot } from "../components/brandZones";
 import { Carousel } from "../components/Carousel";
 import { VideoSlot } from "../components/VideoSlot";
 import { sponsorSlides, pauseSlides, victorySlides } from "../demo/media";
@@ -44,7 +44,15 @@ export default function Tv() {
   );
 
   if (state === "slideshow")
-    return <TvShell><div className="w-full max-w-6xl"><Carousel slides={sponsorSlides(DEMO_BRAND)} auto size="tv" /></div></TvShell>;
+    return (
+      <TvShell>
+        <div className="grid w-full max-w-6xl gap-6">
+          {/* Sponsor bumper video (local in this demo → shows fallback) + the sponsor slide carousel. */}
+          <VideoSlot url={DEMO_BRAND.video.sponsorBumperVideoUrl} sourceType={DEMO_BRAND.video.sponsorBumperVideoSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Sponsor bumper" />
+          <Carousel slides={sponsorSlides(DEMO_BRAND)} auto size="tv" />
+        </div>
+      </TvShell>
+    );
 
   if (state === "pause")
     return (
@@ -110,7 +118,7 @@ export default function Tv() {
         <h1 className="mt-2 text-5xl font-black">What's happening in this clip?</h1>
         <div className="mt-6 grid w-full max-w-6xl grid-cols-[1.5fr_1fr] items-center gap-8 text-left">
           {/* Large media area — real brewery video asset (external URL or local MP4) with image fallback */}
-          <VideoSlot url={DEMO_BRAND.video.videoQuestionUrl} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Video question media" />
+          <VideoSlot url={DEMO_BRAND.video.videoQuestionUrl} sourceType={DEMO_BRAND.video.videoQuestionSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Video question media" />
           <div className="grid gap-3 text-2xl">
             {["Brewing day", "Match day", "Quiz night", "Delivery run"].map((o, i) => (
               <div key={o} className="rounded-2xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-5 py-4">
@@ -144,7 +152,7 @@ export default function Tv() {
         <p className="mt-3 text-3xl" style={{ color: DEMO_BRAND.primary }}>{DEMO_BRAND.cta}</p>
         <p className="mt-2 text-2xl text-[var(--ppn-muted)]">Brought to you by {DEMO_BRAND.sponsorName}</p>
         <div className="mt-6 w-full max-w-3xl">
-          <VideoSlot url={DEMO_BRAND.video.closingVideoUrl} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Closing sponsor video (optional)" />
+          <VideoSlot url={DEMO_BRAND.video.closingVideoUrl} sourceType={DEMO_BRAND.video.closingVideoSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Closing sponsor video (optional)" />
         </div>
         <div className="mt-6"><OfferBadge size="tv" /></div>
       </TvShell>
@@ -154,14 +162,10 @@ export default function Tv() {
   return (
     <TvShell>
       <Title />
-      <div className="mt-8 grid w-full max-w-6xl grid-cols-[1.4fr_1fr] gap-8">
-        <BrandAssetPreview aspect="16/9" alt={DEMO_BRAND.heroImageAltText} className="w-full">
-          <div className="max-w-lg text-left">
-            <p className="text-3xl font-extrabold text-white drop-shadow">{DEMO_BRAND.sponsorName}</p>
-            <p className="mt-2 text-xl text-white/90">{DEMO_BRAND.tagline}</p>
-            <div className="mt-4"><OfferBadge size="tv" /></div>
-          </div>
-        </BrandAssetPreview>
+      <div className="mt-4"><OfferBadge size="tv" /></div>
+      <div className="mt-6 grid w-full max-w-6xl grid-cols-[1.4fr_1fr] items-center gap-8 text-left">
+        {/* Intro video (embed/local/external) — kept SEPARATE from the QR so a video failure never blocks join. */}
+        <VideoSlot url={DEMO_BRAND.video.tvIntroVideoUrl} sourceType={DEMO_BRAND.video.tvIntroVideoSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Intro video" />
         <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-6">
           <div className="rounded-2xl bg-white p-4 shadow-2xl"><QRCodeSVG value={joinUrl} size={220} bgColor="#ffffff" fgColor="#0f172a" level="M" /></div>
           <p className="text-3xl font-bold">Scan to join</p>

@@ -164,14 +164,22 @@ export default function BrandAssets() {
 
         <Section title="Video assets (real URL or local MP4 — slot/player/fallback, no downloader)">
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
-            <div>
-              <VideoSlot url={DEMO_BRAND.video.videoQuestionUrl} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="videoQuestionUrl" />
+            <div className="space-y-3">
+              <VideoSlot url={DEMO_BRAND.video.videoQuestionUrl} sourceType={DEMO_BRAND.video.videoQuestionSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="external MP4 (plays)" />
+              <VideoSlot url={DEMO_BRAND.video.sponsorBumperVideoUrl} sourceType={DEMO_BRAND.video.sponsorBumperVideoSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="local (missing → fallback)" />
             </div>
             <div className="text-sm">
-              <p className="font-medium text-[var(--ppn-text)]">Preset fields</p>
+              <p className="font-medium text-[var(--ppn-text)]">Per-slot source type</p>
               <ul className="mt-1 space-y-0.5 text-xs text-[var(--ppn-muted)]">
-                {["tvIntroVideoUrl", "sponsorBumperVideoUrl", "videoQuestionUrl", "closingVideoUrl", "fallbackImage", "sourceNote"].map((f) => (
-                  <li key={f}><span className="font-mono" style={{ color: DEMO_BRAND.primary }}>{f}</span>{(DEMO_BRAND.video as Record<string, string | undefined>)[f] ? " ✓ set" : " — empty (fallback shown)"}</li>
+                {([
+                  ["TV intro", DEMO_BRAND.video.tvIntroVideoSourceType, DEMO_BRAND.video.tvIntroVideoUrl],
+                  ["Sponsor bumper", DEMO_BRAND.video.sponsorBumperVideoSourceType, DEMO_BRAND.video.sponsorBumperVideoUrl],
+                  ["Video question", DEMO_BRAND.video.videoQuestionSourceType, DEMO_BRAND.video.videoQuestionUrl],
+                  ["Closing", DEMO_BRAND.video.closingVideoSourceType, DEMO_BRAND.video.closingVideoUrl],
+                ] as [string, string | undefined, string | undefined][]).map(([name, st, url]) => (
+                  <li key={name}>
+                    <span className="text-[var(--ppn-text)]">{name}</span> · <span className="font-mono" style={{ color: DEMO_BRAND.primary }}>{st ?? "—"}</span> · {url ? "set" : "empty → fallback"}
+                  </li>
                 ))}
               </ul>
               <p className="mt-3 font-medium text-[var(--ppn-text)]">Guidance</p>

@@ -21,6 +21,8 @@ export interface ThemeColours {
   warning: string;
 }
 
+export type VideoSourceType = "embed" | "local" | "external";
+
 export interface DemoBrand {
   id: string;
   // ── Identity (PRIMARY) ──
@@ -44,12 +46,19 @@ export interface DemoBrand {
   heroOverlayMode: "dark" | "light" | "none";
   heroImageAltText: string;
   images: { logoUrl?: string; heroUrl?: string; venueUrl?: string; sponsorSlideUrl?: string; phoneCardUrl?: string; lowerThirdUrl?: string };
-  /** Real brewery VIDEO assets — external URL (YouTube/Vimeo embed) or local/hosted MP4. Always provide a
-   * fallbackImage. POC: a swappable slot/player/fallback structure — NOT a downloader/scraper. */
+  /** Real brewery VIDEO assets, by source type:
+   *   "embed"    → YouTube/Vimeo embed URL (rendered in an iframe)
+   *   "external" → external hosted MP4/WebM URL (rendered in an HTML <video>)
+   *   "local"    → local MP4/WebM placed manually in public/demo/ (rendered in an HTML <video>)
+   * Always provide a fallbackImage. POC = a swappable slot/player/fallback — NEVER a downloader/scraper. */
   video: {
+    tvIntroVideoSourceType?: VideoSourceType;
     tvIntroVideoUrl?: string;
+    sponsorBumperVideoSourceType?: VideoSourceType;
     sponsorBumperVideoUrl?: string;
+    videoQuestionSourceType?: VideoSourceType;
     videoQuestionUrl?: string;
+    closingVideoSourceType?: VideoSourceType;
     closingVideoUrl?: string;
     fallbackImage?: string;
     sourceNote?: string;
@@ -88,10 +97,16 @@ const NORTHGATE: DemoBrand = {
   heroImageAltText: "Northgate Brewing Co. quiz night campaign image at The Anchor",
   images: {},
   video: {
-    // Demo placeholder (Big Buck Bunny, Creative Commons) — swap per brewery. External URL or local MP4.
-    tvIntroVideoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+    // Demo references (CC / public samples) — swap per brewery. Local files go in public/demo/.
+    tvIntroVideoSourceType: "embed",
+    tvIntroVideoUrl: "https://www.youtube.com/watch?v=aqz-KE-bpKQ", // Big Buck Bunny (CC, embeddable)
+    sponsorBumperVideoSourceType: "local",
+    sponsorBumperVideoUrl: "/demo/sponsor-bumper.mp4", // not bundled → shows fallback (drop a file in public/demo/)
+    videoQuestionSourceType: "external",
     videoQuestionUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-    sourceNote: "Demo sample clip (CC) — replace with the brewery's own bumper/intro.",
+    closingVideoSourceType: "external",
+    closingVideoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    sourceNote: "Demo references (CC / public samples) — replace with the brewery's own clips.",
   },
   ai: aiScripts("Northgate Brewing Co."),
   primary: "#f59e0b",
@@ -122,10 +137,16 @@ const CRIMSON: DemoBrand = {
   heroImageAltText: "Crimson & Co. Brewery quiz night campaign image at The Anchor",
   images: {},
   video: {
-    // Demo placeholder (Big Buck Bunny, Creative Commons) — swap per brewery. External URL or local MP4.
-    tvIntroVideoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+    // Demo references (CC / public samples) — swap per brewery. Local files go in public/demo/.
+    tvIntroVideoSourceType: "embed",
+    tvIntroVideoUrl: "https://www.youtube.com/watch?v=aqz-KE-bpKQ", // Big Buck Bunny (CC, embeddable)
+    sponsorBumperVideoSourceType: "local",
+    sponsorBumperVideoUrl: "/demo/sponsor-bumper.mp4", // not bundled → shows fallback (drop a file in public/demo/)
+    videoQuestionSourceType: "external",
     videoQuestionUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-    sourceNote: "Demo sample clip (CC) — replace with the brewery's own bumper/intro.",
+    closingVideoSourceType: "external",
+    closingVideoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    sourceNote: "Demo references (CC / public samples) — replace with the brewery's own clips.",
   },
   ai: aiScripts("Crimson & Co."),
   primary: "#dc2626",
