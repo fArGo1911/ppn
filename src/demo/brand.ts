@@ -44,6 +44,16 @@ export interface DemoBrand {
   heroOverlayMode: "dark" | "light" | "none";
   heroImageAltText: string;
   images: { logoUrl?: string; heroUrl?: string; venueUrl?: string; sponsorSlideUrl?: string; phoneCardUrl?: string; lowerThirdUrl?: string };
+  /** Real brewery VIDEO assets — external URL (YouTube/Vimeo embed) or local/hosted MP4. Always provide a
+   * fallbackImage. POC: a swappable slot/player/fallback structure — NOT a downloader/scraper. */
+  video: {
+    tvIntroVideoUrl?: string;
+    sponsorBumperVideoUrl?: string;
+    videoQuestionUrl?: string;
+    closingVideoUrl?: string;
+    fallbackImage?: string;
+    sourceNote?: string;
+  };
   ai: Record<"eventIntro" | "roundIntro" | "sponsoredIntro" | "questionReadout" | "answerReveal" | "intermission" | "winner", string>;
 }
 
@@ -77,6 +87,12 @@ const NORTHGATE: DemoBrand = {
   heroOverlayMode: "dark",
   heroImageAltText: "Northgate Brewing Co. quiz night campaign image at The Anchor",
   images: {},
+  video: {
+    // Demo placeholder (Big Buck Bunny, Creative Commons) — swap per brewery. External URL or local MP4.
+    tvIntroVideoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+    videoQuestionUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+    sourceNote: "Demo sample clip (CC) — replace with the brewery's own bumper/intro.",
+  },
   ai: aiScripts("Northgate Brewing Co."),
   primary: "#f59e0b",
   primaryDark: "#b45309",
@@ -105,6 +121,12 @@ const CRIMSON: DemoBrand = {
   heroOverlayMode: "dark",
   heroImageAltText: "Crimson & Co. Brewery quiz night campaign image at The Anchor",
   images: {},
+  video: {
+    // Demo placeholder (Big Buck Bunny, Creative Commons) — swap per brewery. External URL or local MP4.
+    tvIntroVideoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+    videoQuestionUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+    sourceNote: "Demo sample clip (CC) — replace with the brewery's own bumper/intro.",
+  },
   ai: aiScripts("Crimson & Co."),
   primary: "#dc2626",
   primaryDark: "#991b1b",

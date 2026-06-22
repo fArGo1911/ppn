@@ -11,6 +11,7 @@ import { DEMO_BRAND } from "../demo/brand";
 import { TvShell } from "../components/shells";
 import { BrandAssetPreview, OfferBadge, AiAnnouncementSlot } from "../components/brandZones";
 import { Carousel } from "../components/Carousel";
+import { VideoSlot } from "../components/VideoSlot";
 import { sponsorSlides, pauseSlides, victorySlides } from "../demo/media";
 
 const BASE = import.meta.env.VITE_PPN_BASE_PATH ?? "/";
@@ -102,12 +103,49 @@ export default function Tv() {
       </TvShell>
     );
 
+  if (state === "media")
+    return (
+      <TvShell>
+        <p className="text-2xl uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>Round 2 · Picture / video round</p>
+        <h1 className="mt-2 text-5xl font-black">What's happening in this clip?</h1>
+        <div className="mt-6 grid w-full max-w-6xl grid-cols-[1.5fr_1fr] items-center gap-8 text-left">
+          {/* Large media area — real brewery video asset (external URL or local MP4) with image fallback */}
+          <VideoSlot url={DEMO_BRAND.video.videoQuestionUrl} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Video question media" />
+          <div className="grid gap-3 text-2xl">
+            {["Brewing day", "Match day", "Quiz night", "Delivery run"].map((o, i) => (
+              <div key={o} className="rounded-2xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-5 py-4">
+                <span className="mr-3 font-black" style={{ color: DEMO_BRAND.primary }}>{"ABCD"[i]}</span>{o}
+              </div>
+            ))}
+          </div>
+        </div>
+        <p className="mt-6 text-2xl text-[var(--ppn-muted)]">Answer on your phones · video on the big screen (phone shows the question + options)</p>
+      </TvShell>
+    );
+
+  if (state === "audio")
+    return (
+      <TvShell>
+        <p className="text-2xl uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>Round 3 · Music / audio round</p>
+        <div className="mt-6 flex items-center justify-center gap-4 text-6xl">
+          <span className="animate-pulse" style={{ color: DEMO_BRAND.primary }}>🎵</span>
+          <span className="text-3xl text-[var(--ppn-muted)]">Now playing… (host triggers audio)</span>
+        </div>
+        <h1 className="mt-6 text-6xl font-black">Name the artist</h1>
+        <p className="mt-4 text-3xl text-[var(--ppn-muted)]">🔊 Listen carefully — answer on your phones</p>
+        <div className="mt-8 w-full max-w-5xl text-left"><AiAnnouncementSlot scriptKey="questionReadout" size="tv" /></div>
+      </TvShell>
+    );
+
   if (state === "closing")
     return (
       <TvShell>
         <h1 className="text-6xl font-black">Thanks for playing!</h1>
         <p className="mt-3 text-3xl" style={{ color: DEMO_BRAND.primary }}>{DEMO_BRAND.cta}</p>
         <p className="mt-2 text-2xl text-[var(--ppn-muted)]">Brought to you by {DEMO_BRAND.sponsorName}</p>
+        <div className="mt-6 w-full max-w-3xl">
+          <VideoSlot url={DEMO_BRAND.video.closingVideoUrl} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Closing sponsor video (optional)" />
+        </div>
         <div className="mt-6"><OfferBadge size="tv" /></div>
       </TvShell>
     );

@@ -7,9 +7,10 @@
 import { DemoShell } from "../components/shells";
 import { BrandAssetPreview } from "../components/brandZones";
 import { Carousel } from "../components/Carousel";
+import { VideoSlot } from "../components/VideoSlot";
 import { DEMO_BRAND } from "../demo/brand";
 import { IMAGE_SLOTS, TEXT_SLOTS, AI_SLOTS, VIDEO_SLOTS, ZONE_MAP, ASSET_USAGE, TRANSPARENCY } from "../demo/brandAssets";
-import { MEDIA_ZONES, CAROUSEL_GUIDANCE, COPY_SLOTS, preEventSlides } from "../demo/media";
+import { MEDIA_ZONES, CAROUSEL_GUIDANCE, COPY_SLOTS, preEventSlides, VIDEO_GUIDANCE, VIDEO_RULES } from "../demo/media";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -159,6 +160,26 @@ export default function BrandAssets() {
           <ul className="mt-3 flex flex-wrap gap-2">
             {COPY_SLOTS.map((c) => <li key={c} className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1.5 text-sm text-[var(--ppn-text)]">{c}</li>)}
           </ul>
+        </Section>
+
+        <Section title="Video assets (real URL or local MP4 — slot/player/fallback, no downloader)">
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <div>
+              <VideoSlot url={DEMO_BRAND.video.videoQuestionUrl} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="videoQuestionUrl" />
+            </div>
+            <div className="text-sm">
+              <p className="font-medium text-[var(--ppn-text)]">Preset fields</p>
+              <ul className="mt-1 space-y-0.5 text-xs text-[var(--ppn-muted)]">
+                {["tvIntroVideoUrl", "sponsorBumperVideoUrl", "videoQuestionUrl", "closingVideoUrl", "fallbackImage", "sourceNote"].map((f) => (
+                  <li key={f}><span className="font-mono" style={{ color: DEMO_BRAND.primary }}>{f}</span>{(DEMO_BRAND.video as Record<string, string | undefined>)[f] ? " ✓ set" : " — empty (fallback shown)"}</li>
+                ))}
+              </ul>
+              <p className="mt-3 font-medium text-[var(--ppn-text)]">Guidance</p>
+              <ul className="mt-1 space-y-0.5 text-xs text-[var(--ppn-muted)]">{VIDEO_GUIDANCE.map((g) => <li key={g}>· {g}</li>)}</ul>
+              <p className="mt-3 font-medium text-[var(--ppn-text)]">Playback rules</p>
+              <ul className="mt-1 space-y-0.5 text-xs text-[var(--ppn-muted)]">{VIDEO_RULES.map((r) => <li key={r}>· {r}</li>)}</ul>
+            </div>
+          </div>
         </Section>
       </div>
     </DemoShell>

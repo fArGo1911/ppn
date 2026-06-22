@@ -19,6 +19,9 @@ export interface MediaZone {
   fallback: string;
   sponsorAllowed: boolean;
   playerActionVisible: boolean;
+  videoUrl?: boolean; // external URL supported
+  localMp4?: boolean; // local/hosted MP4 supported
+  attribution?: boolean; // source/attribution note supported
 }
 
 export const MEDIA_ZONES: MediaZone[] = [
@@ -34,6 +37,38 @@ export const MEDIA_ZONES: MediaZone[] = [
   { id: "presenterCampaignHero", surface: "presenter", screenState: "landing", allowed: ["carousel", "image"], aspect: "16/9", recommended: "1920×1080 (or 3:2)", safeText: "left", overlay: "dark", fallback: "campaign hero", sponsorAllowed: true, playerActionVisible: false },
   { id: "kpiHeader", surface: "KPI", screenState: "report", allowed: ["image", "text"], aspect: "4/1", recommended: "1600×400", safeText: "left", overlay: "dark", fallback: "logo + campaign name", sponsorAllowed: true, playerActionVisible: false },
   { id: "rolloutMapHero", surface: "rollout", screenState: "network", allowed: ["image"], aspect: "16/9", recommended: "1920×1080", safeText: "bottom", overlay: "dark", fallback: "network graphic", sponsorAllowed: true, playerActionVisible: false },
+
+  // ── Player in-play states ──
+  { id: "playerActiveQuestion", surface: "player", screenState: "question", allowed: ["text", "image"], aspect: "1/1", recommended: "—", safeText: "centre", overlay: "none", fallback: "question text + options", sponsorAllowed: false, playerActionVisible: true },
+  { id: "playerSponsoredQuestion", surface: "player", screenState: "sponsored", allowed: ["text", "image"], aspect: "4/5", recommended: "1080×1350", safeText: "top", overlay: "dark", fallback: "sponsored question + brand", sponsorAllowed: true, playerActionVisible: true },
+  { id: "playerAnswerSubmitted", surface: "player", screenState: "submitted", allowed: ["text"], aspect: "1/1", recommended: "—", safeText: "centre", overlay: "none", fallback: "answer locked", sponsorAllowed: true, playerActionVisible: false },
+  { id: "playerAnswerReveal", surface: "player", screenState: "reveal", allowed: ["text", "image"], aspect: "1/1", recommended: "—", safeText: "centre", overlay: "none", fallback: "correct/incorrect", sponsorAllowed: true, playerActionVisible: false },
+  { id: "playerScoreboard", surface: "player", screenState: "scoreboard", allowed: ["text"], aspect: "1/1", recommended: "—", safeText: "centre", overlay: "none", fallback: "standings + final", sponsorAllowed: true, playerActionVisible: false },
+
+  // ── TV media/audio + video zones ──
+  { id: "tvMediaQuestion", surface: "TV", screenState: "media", allowed: ["image", "video", "text"], aspect: "16/9", recommended: "1920×1080", safeText: "bottom", overlay: "dark", fallback: "image if video unavailable", sponsorAllowed: true, playerActionVisible: false, videoUrl: true, localMp4: true, attribution: true },
+  { id: "tvAudioQuestion", surface: "TV", screenState: "audio", allowed: ["text"], aspect: "16/9", recommended: "1920×1080", safeText: "centre", overlay: "none", fallback: "audio status + listen", sponsorAllowed: true, playerActionVisible: false },
+  { id: "tvIntroVideo", surface: "TV", screenState: "welcome", allowed: ["video", "image"], aspect: "16/9", recommended: "1920×1080 short clip", safeText: "bottom", overlay: "dark", fallback: "hero image + QR (never blocked)", sponsorAllowed: true, playerActionVisible: false, videoUrl: true, localMp4: true, attribution: true },
+  { id: "tvSponsorBumperVideo", surface: "TV", screenState: "slideshow", allowed: ["video", "slideshow"], aspect: "16/9", recommended: "1920×1080 short clip", safeText: "centre", overlay: "dark", fallback: "sponsor slides", sponsorAllowed: true, playerActionVisible: false, videoUrl: true, localMp4: true, attribution: true },
+  { id: "tvVideoQuestion", surface: "TV", screenState: "media", allowed: ["video", "image"], aspect: "16/9", recommended: "1920×1080 short clip", safeText: "bottom", overlay: "dark", fallback: "still image + phone fallback", sponsorAllowed: true, playerActionVisible: false, videoUrl: true, localMp4: true, attribution: true },
+  { id: "tvClosingVideo", surface: "TV", screenState: "closing", allowed: ["video", "image"], aspect: "16/9", recommended: "1920×1080 short clip", safeText: "centre", overlay: "dark", fallback: "thanks + offer", sponsorAllowed: true, playerActionVisible: false, videoUrl: true, localMp4: true, attribution: true },
+];
+
+export const VIDEO_GUIDANCE = [
+  "TV intro video: 16:9, 1920×1080, short controlled clip",
+  "Sponsor bumper: 16:9, short controlled clip",
+  "Video question: 16:9, short controlled clip",
+  "Closing video: optional 16:9 sponsor/thanks clip",
+  "Fallback still image REQUIRED for every video slot",
+  "Source/attribution note optional but supported",
+];
+
+export const VIDEO_RULES = [
+  "No autoplay with sound — presenter/host triggers playback",
+  "Every video has a fallback still image",
+  "Video must not block the QR join flow",
+  "Video must not make the TV layout unreadable",
+  "Video must not replace the phone answer experience (phones still show text/options)",
 ];
 
 export const CAROUSEL_GUIDANCE = [

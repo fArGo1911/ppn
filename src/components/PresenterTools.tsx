@@ -17,12 +17,14 @@ const SECTIONS = [
   { to: "/rollout", label: "Rollout" },
   { to: "/capabilities", label: "Beyond quiz" },
 ];
-const TV_STATES = ["welcome", "slideshow", "question", "pause", "reveal", "scoreboard", "victory", "closing"];
+const TV_STATES = ["welcome", "slideshow", "question", "media", "audio", "pause", "reveal", "scoreboard", "victory", "closing"];
+const PLAYER_STATES = ["question", "sponsored", "submitted", "reveal", "scoreboard"];
 
 export function PresenterTools() {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
   const onTv = pathname.startsWith("/tv");
+  const onPlay = pathname.startsWith("/play");
   const active = getActiveBrand();
 
   return (
@@ -48,6 +50,17 @@ export function PresenterTools() {
               <div className="mt-1 flex flex-wrap gap-1">
                 {TV_STATES.map((st) => (
                   <Link key={st} to={`/tv/demo?state=${st}`} onClick={() => setOpen(false)} className="rounded bg-white/5 px-2 py-0.5 text-xs hover:bg-white/10">{st}</Link>
+                ))}
+              </div>
+            </>
+          )}
+          {onPlay && (
+            <>
+              <p className="mt-3 px-1 text-[10px] uppercase tracking-wide text-slate-500">Player state</p>
+              <div className="mt-1 flex flex-wrap gap-1">
+                <Link to="/play/DEMO" onClick={() => setOpen(false)} className="rounded bg-white/5 px-2 py-0.5 text-xs hover:bg-white/10">join</Link>
+                {PLAYER_STATES.map((st) => (
+                  <Link key={st} to={`/play/DEMO?preview=${st}`} onClick={() => setOpen(false)} className="rounded bg-white/5 px-2 py-0.5 text-xs hover:bg-white/10">{st}</Link>
                 ))}
               </div>
             </>
