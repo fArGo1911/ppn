@@ -39,6 +39,7 @@ export default function Tv() {
   else if (live) {
     if (live.setupMode !== "tv_audio") state = "tv_off";
     else if (live.phase === "intro") state = "intro";
+    else if (live.phase === "qintro") state = "qintro";
     else if (live.phase === "question") state = liveQ ? "live_question" : "welcome";
     else if (live.phase === "reveal") state = liveQ ? "live_reveal" : "welcome";
     else if (live.phase === "scoreboard") state = "scoreboard";
@@ -194,6 +195,17 @@ export default function Tv() {
             <p className="text-lg text-[var(--ppn-muted)]">code <span className="font-mono font-bold text-[var(--ppn-text)]">{token}</span></p>
           </div>
         </div>
+      </TvShell>
+    );
+
+  // ── "Question coming up" pre-roll (chime / AI announcement playing on the PA). ──
+  if (state === "qintro")
+    return (
+      <TvShell>
+        <p className="text-3xl uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>🔊 Question coming up</p>
+        <h1 className="mt-4 text-7xl font-black leading-none">{venue}</h1>
+        <p className="mt-3 text-3xl text-[var(--ppn-muted)]">Phones ready — answer on your phones</p>
+        <p className="mt-2 text-2xl" style={{ color: DEMO_BRAND.primary }}>{event} · {DEMO_BRAND.broughtBy}</p>
       </TvShell>
     );
 

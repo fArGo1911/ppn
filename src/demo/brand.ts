@@ -63,10 +63,55 @@ export interface DemoBrand {
     fallbackImage?: string;
     sourceNote?: string;
   };
-  /** AI scripts (text slots — real TTS is a later slice). eventIntro = the optional first-class evening opener. */
+  /** AI scripts (text slots). eventIntro = the optional first-class evening opener. */
   ai: Record<"eventIntro" | "roundIntro" | "sponsoredIntro" | "questionReadout" | "answerReveal" | "intermission" | "winner", string>;
   /** Default for the optional AI evening introduction (host can still include/skip per session). */
   aiIntroEnabled: boolean;
+  /** Pre-generated MP3 audio assets (PLAYBACK ONLY). Reference local demo paths under public/demo/audio/<preset>/.
+   * Files are NOT committed (no copyrighted/voice audio in the repo) — absent files fall back to the on-screen
+   * script. Generate MP3s manually (e.g. ElevenLabs) OUTSIDE the app; the app never calls a TTS API. */
+  audio: {
+    audioBaseDir?: string; // e.g. "/demo/audio/northgate" — per-question files: question-01.mp3, reveal-01.mp3
+    aiEventIntroAudioUrl?: string;
+    aiRoundIntroAudioUrl?: string;
+    aiSponsoredRoundIntroAudioUrl?: string;
+    aiQuestionReadoutAudioUrl?: string;
+    aiAnswerRevealAudioUrl?: string;
+    aiWinnerAnnouncementAudioUrl?: string;
+    questionChimeAudioUrl?: string;
+    sponsorAudioMessageUrl?: string;
+    chimeEnabled: boolean;
+    questionIntroEnabled: boolean;
+    questionIntroVariants: string[]; // varied "next question coming up" lines (avoid robotic feel)
+    questionNumberAnnouncementVariants: string[]; // "{n}" templated, e.g. "Question {n}."
+  };
+}
+
+/** Build the standard demo audio asset map for a preset directory + localised announcement variants. */
+function demoAudio(dir: string, introVariants: string[], numberVariants: string[]): DemoBrand["audio"] {
+  return {
+    audioBaseDir: dir,
+    aiEventIntroAudioUrl: `${dir}/event-intro.mp3`,
+    aiRoundIntroAudioUrl: `${dir}/round-intro.mp3`,
+    aiSponsoredRoundIntroAudioUrl: `${dir}/sponsored-round-intro.mp3`,
+    aiQuestionReadoutAudioUrl: `${dir}/question-readout.mp3`,
+    aiAnswerRevealAudioUrl: `${dir}/answer-reveal.mp3`,
+    aiWinnerAnnouncementAudioUrl: `${dir}/winner.mp3`,
+    questionChimeAudioUrl: `${dir}/question-chime.mp3`,
+    sponsorAudioMessageUrl: `${dir}/sponsor-message.mp3`,
+    chimeEnabled: true,
+    questionIntroEnabled: true,
+    questionIntroVariants: introVariants,
+    questionNumberAnnouncementVariants: numberVariants,
+  };
+}
+
+/** Per-question readout/reveal audio path (e.g. question-01.mp3 / reveal-01.mp3), or the generic clip. */
+export function questionAudio(b: DemoBrand, n: number): { readout?: string; reveal?: string } {
+  const dir = b.audio.audioBaseDir;
+  if (!dir) return { readout: b.audio.aiQuestionReadoutAudioUrl, reveal: b.audio.aiAnswerRevealAudioUrl };
+  const p = String(n).padStart(2, "0");
+  return { readout: `${dir}/question-${p}.mp3`, reveal: `${dir}/reveal-${p}.mp3` };
 }
 
 // Shared demo video references (CC / public samples) — swappable per brewery; local files go in public/demo/.
@@ -102,6 +147,9 @@ const NORTHGATE: DemoBrand = {
   images: {},
   video: { ...DEMO_VIDEO },
   aiIntroEnabled: true,
+  audio: demoAudio("/demo/audio/northgate",
+    ["Next question coming up.", "Get ready for the next one.", "Here comes the next question.", "Eyes down — next question.", "Right then, next up…"],
+    ["Question {n}.", "Question {n} — listen carefully.", "Next up, question {n}.", "Here comes question {n}.", "Right then, question {n}."]),
   ai: {
     eventIntro: "Good evening and welcome to The Anchor for tonight's Quiz Night, brought to you by Northgate Brewing Co. Scan the QR code on your table, give your team a name, and answer right there on your phone — one shared answer per team. Tonight we'll mix general knowledge, a local Manchester round, sport, football, a music round and a Northgate sponsored round, with a tie-breaker to finish. Your hosts are in control all night, so give us a shout if you need a hand. Phones ready — let's play!",
     roundIntro: "Round {n} coming up — phones ready, teams.",
@@ -140,6 +188,9 @@ const ADLERBRAU: DemoBrand = {
   images: {},
   video: { ...DEMO_VIDEO },
   aiIntroEnabled: true,
+  audio: demoAudio("/demo/audio/adlerbrau",
+    ["Gleich kommt die nächste Frage.", "Macht euch bereit.", "Die nächste Frage kommt.", "Aufgepasst — nächste Frage.", "Weiter geht's…"],
+    ["Frage {n}.", "Frage {n} — hört gut zu.", "Als Nächstes: Frage {n}.", "Es kommt Frage {n}.", "Also dann, Frage {n}."]),
   ai: {
     eventIntro: "Herzlich willkommen im Zum Goldenen Hirsch zum heutigen Quizabend, präsentiert von Adlerbräu München. Scannt den QR-Code am Tisch, gebt eurem Team einen Namen und antwortet direkt am Handy — eine gemeinsame Antwort pro Team. Heute mischen wir Allgemeinwissen, eine Münchner Lokalrunde, Sport, Bundesliga, eine Musikrunde und eine Adlerbräu-Sponsorenrunde, mit einem Stechen zum Schluss. Das Personal hat alles im Griff — meldet euch, wenn ihr Hilfe braucht. Handys bereit — auf geht's!",
     roundIntro: "Runde {n} steht an — Handys bereit, Teams.",
@@ -178,6 +229,9 @@ const NORDSTROM: DemoBrand = {
   images: {},
   video: { ...DEMO_VIDEO },
   aiIntroEnabled: true,
+  audio: demoAudio("/demo/audio/nordstrom",
+    ["Strax kommer nästa fråga.", "Gör er redo.", "Nästa fråga kommer nu.", "Skärpning — nästa fråga.", "Vi kör vidare…"],
+    ["Fråga {n}.", "Fråga {n} — lyssna noga.", "Härnäst: fråga {n}.", "Här kommer fråga {n}.", "Nå då så, fråga {n}."]),
   ai: {
     eventIntro: "Varmt välkomna till Kvarteret Krog och kvällens Quizkväll, som presenteras av Nordström Bryggeri. Skanna QR-koden på bordet, döp ert lag och svara direkt i mobilen — ett gemensamt svar per lag. Ikväll blandar vi allmänbildning, en lokal Stockholmsrunda, sport, fotboll, en musikrunda och en Nordström-sponsrad runda, med ett utslagsfrågor på slutet. Personalen styr kvällen — ropa till om ni behöver hjälp. Mobiler redo — nu kör vi!",
     roundIntro: "Runda {n} på gång — mobiler redo, lag.",

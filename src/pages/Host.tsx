@@ -6,7 +6,7 @@
  * The panel always shows a staff-readable script + the current question/answer, so a non-dev can run the whole
  * event with no TV and no AI (local-host mode). Defaults to the seeded DEMO session (?token to override).
  */
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -17,7 +17,9 @@ import {
 } from "../lib/ppnApi";
 import { HostShell } from "../components/shells";
 import { SETUP_MODES, HOSTING_MODES, questionCompatibility } from "../demo/setup";
-import { DEMO_BRAND } from "../demo/brand";
+import { DEMO_BRAND, questionAudio } from "../demo/brand";
+import { AudioCue } from "../components/AudioCue";
+import { playCue, pickVariant } from "../lib/audio";
 
 export default function Host() {
   const [params] = useSearchParams();
@@ -48,6 +50,14 @@ export default function Host() {
   const preGame = phase === "lobby" || phase === "intro";
   const compat = q ? questionCompatibility(q.kind, setupMode) : null;
 
+  // ── Audio layer (playback-only, pre-generated MP3s). Chime + question-intro are presenter settings. ──
+  const audio = DEMO_BRAND.audio;
+  const [chimeOn, setChimeOn] = useState(audio.chimeEnabled);
+  const [qIntroOn, setQIntroOn] = useState(audio.questionIntroEnabled);
+  const useQIntro = chimeOn || qIntroOn; // route Next/Start through a "question coming up" pre-roll
+  const qa = idx >= 0 ? questionAudio(DEMO_BRAND, idx + 1) : { readout: undefined, reveal: undefined };
+  const qIntroLine = `${pickVariant(audio.questionIntroVariants, idx < 0 ? 0 : idx)} ${pickVariant(audio.questionNumberAnnouncementVariants, idx < 0 ? 0 : idx).replace("{n}", String((idx < 0 ? 0 : idx) + 1))}`;
+
   const act = useMutation({
     mutationFn: (fn: () => Promise<unknown>) => fn(),
     onSuccess: () => {
@@ -58,6 +68,20 @@ export default function Host() {
   const run = (fn: () => Promise<unknown>) => act.mutate(fn);
   const busy = act.isPending;
 
+  // Control handlers that also fire audio cues (within the click gesture → playback allowed).
+  const startFirst = () => {
+    if (chimeOn) playCue(audio.questionChimeAudioUrl);
+    run(() => startGame(sid!, questions[0].id, useQIntro ? "qintro" : "question"));
+  };
+  const goNext = () => {
+    if (chimeOn) playCue(audio.questionChimeAudioUrl);
+    run(() => gotoQuestion(sid!, questions[idx + 1].id, useQIntro ? "qintro" : "question"));
+  };
+  const showQuestion = () => {
+    playCue(qa.readout); // reads the question if a clip exists; silent fallback otherwise
+    run(() => setPhase(sid!, "question"));
+  };
+
   // Staff-readable script — the same line the AI would voice; in local-host mode staff reads it via the pub mic.
   const scriptLead = setupMode === "local_host"
     ? "📢 Read aloud via the pub mic/speaker"
@@ -66,6 +90,7 @@ export default function Host() {
       : "🎤 Host reads aloud";
   const scriptBody =
     phase === "intro" ? DEMO_BRAND.ai.eventIntro
+    : phase === "qintro" ? qIntroLine
     : phase === "lobby" ? `Welcome to ${session?.eventTitle ?? "Quiz Night"} at ${session?.venueName ?? "the pub"} — brought to you by ${DEMO_BRAND.sponsorName}. Grab your phones and join your table team!`
     : phase === "reveal" && q ? `The correct answer is ${q.correctAnswer}.`
     : phase === "scoreboard" ? `Here are the current standings${standings[0] ? ` — ${standings[0].name} lead the way.` : "."}`
@@ -155,8 +180,9 @@ export default function Host() {
                 A polished opening before questions start. {setupMode === "local_host" ? "Local-host mode: staff reads it via the mic, or skip it." : hostingMode === "ai_assisted" ? "AI voice will welcome the room (planned voice — text preview below)." : "Read by staff, or skip and introduce the evening yourself."}
               </p>
               <div className="mt-3 rounded-lg border border-dashed border-[var(--ppn-border)] p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-muted)]">Intro script preview · 🔊 planned voice intro (no audio yet)</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-muted)]">Intro script + voice (pre-generated MP3 · plays if present, else read the script)</p>
                 <p className="mt-1 text-sm text-[var(--ppn-text)]">{DEMO_BRAND.ai.eventIntro}</p>
+                <div className="mt-2"><AudioCue url={audio.aiEventIntroAudioUrl} label={phase === "intro" ? "Replay intro" : "Preview intro audio"} primary={phase === "intro"} /></div>
               </div>
               {phase === "lobby" && aiIntroEnabled && <p className="mt-2 text-xs text-[var(--ppn-brand)]">▶ Play intro puts the room into the intro screen before the first question.</p>}
               {phase === "intro" && <p className="mt-2 text-xs text-[var(--ppn-brand)]">Intro is live on the player/TV surfaces — hand over to the first question when ready.</p>}
@@ -166,7 +192,7 @@ export default function Host() {
           {/* ── Current question + read-aloud script (host-only answer) ── */}
           <div className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold">{phase === "lobby" ? "Not started" : phase === "intro" ? "AI evening intro" : q ? `Question ${q.roundSeq}.${q.sequence} of ${questions.length}` : phase}</p>
+              <p className="text-sm font-semibold">{phase === "lobby" ? "Not started" : phase === "intro" ? "AI evening intro" : phase === "qintro" ? "Question coming up" : q ? `Question ${q.roundSeq}.${q.sequence} of ${questions.length}` : phase}</p>
               {q && (
                 <span className="rounded-full px-2 py-0.5 text-xs font-medium"
                   style={compat?.ok
@@ -186,20 +212,52 @@ export default function Host() {
             <div className="mt-3 rounded-lg border border-dashed border-[var(--ppn-border)] p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-muted)]">{scriptLead}</p>
               <p className="mt-1 text-[var(--ppn-text)]">{scriptBody}</p>
+
+              {/* Phase-aware audio cues — playback only, fall back to the script when a file is missing. */}
+              {phase !== "lobby" && phase !== "intro" && (
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[var(--ppn-border)] pt-3">
+                  {phase === "qintro" && <AudioCue url={audio.questionChimeAudioUrl} label="Chime" />}
+                  {phase === "qintro" && <AudioCue url={qa.readout} label="Read question" />}
+                  {phase === "question" && <AudioCue url={qa.readout} label="Replay question" primary />}
+                  {phase === "question" && <AudioCue url={audio.questionChimeAudioUrl} label="Chime" />}
+                  {phase === "question" && q?.kind === "sponsored" && <AudioCue url={audio.sponsorAudioMessageUrl} label="Sponsor message" />}
+                  {phase === "reveal" && <AudioCue url={qa.reveal} label="Play reveal" primary />}
+                  {phase === "scoreboard" && <AudioCue url={audio.aiRoundIntroAudioUrl} label="Round/standings VO" />}
+                  {phase === "ended" && <AudioCue url={audio.aiWinnerAnnouncementAudioUrl} label="Play winner" primary />}
+                  {(setupMode === "local_host") && <span className="text-[10px] text-[var(--ppn-muted)]">local-host: audio optional — read the script via the mic</span>}
+                </div>
+              )}
             </div>
+
+            {/* Audio settings (presenter): chime + question-intro pre-roll */}
+            {preGame && (
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--ppn-muted)]">
+                <span>Audio:</span>
+                <button onClick={() => setChimeOn((v) => !v)} className="rounded-full border px-3 py-1 font-medium"
+                  style={{ borderColor: chimeOn ? "var(--ppn-brand)" : "var(--ppn-border)", color: chimeOn ? "var(--ppn-brand)" : "var(--ppn-muted)" }}>
+                  Chime {chimeOn ? "on" : "off"}
+                </button>
+                <button onClick={() => setQIntroOn((v) => !v)} className="rounded-full border px-3 py-1 font-medium"
+                  style={{ borderColor: qIntroOn ? "var(--ppn-brand)" : "var(--ppn-border)", color: qIntroOn ? "var(--ppn-brand)" : "var(--ppn-muted)" }}>
+                  “Question coming up” {qIntroOn ? "on" : "off"}
+                </button>
+                <span>· cues play through the host device / pub PA</span>
+              </div>
+            )}
           </div>
 
           {/* ── Controls ── */}
           <div className="flex flex-wrap gap-2">
             {phase === "lobby" && aiIntroEnabled && <Btn primary label="▶ Play AI intro" disabled={questions.length === 0} onClick={() => run(() => startIntro(sid!))} />}
-            {phase === "lobby" && <Btn primary={!aiIntroEnabled} label={aiIntroEnabled ? "Skip intro · Start game" : "▶ Start game"} disabled={questions.length === 0} onClick={() => run(() => startGame(sid!, questions[0].id))} />}
-            {phase === "intro" && <Btn primary label="Start first question ▶" disabled={questions.length === 0} onClick={() => run(() => startGame(sid!, questions[0].id))} />}
+            {phase === "lobby" && <Btn primary={!aiIntroEnabled} label={aiIntroEnabled ? "Skip intro · Start game" : "▶ Start game"} disabled={questions.length === 0} onClick={startFirst} />}
+            {phase === "intro" && <Btn primary label="Start first question ▶" disabled={questions.length === 0} onClick={startFirst} />}
             {phase === "intro" && <Btn label="◀ Back to lobby" onClick={() => run(() => setPhase(sid!, "lobby"))} />}
-            {idx > 0 && phase !== "ended" && <Btn label="◀ Previous" onClick={() => run(() => gotoQuestion(sid!, questions[idx - 1].id))} />}
+            {phase === "qintro" && <Btn primary label="Show question ▶" onClick={showQuestion} />}
+            {idx > 0 && phase !== "ended" && phase !== "qintro" && <Btn label="◀ Previous" onClick={() => run(() => gotoQuestion(sid!, questions[idx - 1].id))} />}
             {phase === "question" && <Btn primary label="Reveal & score" onClick={() => run(() => revealAndScore(sid!, q!.id))} />}
             {(phase === "reveal" || phase === "scoreboard") && <Btn label="Scoreboard" onClick={() => run(() => setPhase(sid!, "scoreboard"))} />}
-            {(phase === "reveal" || phase === "scoreboard") && !isLast && <Btn primary label="Next question ▶" onClick={() => run(() => gotoQuestion(sid!, questions[idx + 1].id))} />}
-            {phase === "question" && <Btn label="Skip ▶" disabled={isLast} onClick={() => run(() => gotoQuestion(sid!, questions[idx + 1].id))} />}
+            {(phase === "reveal" || phase === "scoreboard") && !isLast && <Btn primary label="Next question ▶" onClick={goNext} />}
+            {phase === "question" && <Btn label="Skip ▶" disabled={isLast} onClick={goNext} />}
             {phase !== "lobby" && phase !== "ended" && <Btn label="⏹ End game" onClick={() => run(() => endGame(sid!))} />}
             {phase === "ended" && <span className="text-sm text-[var(--ppn-brand)]">Game ended — final standings below.</span>}
           </div>

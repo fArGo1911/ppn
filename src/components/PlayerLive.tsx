@@ -71,6 +71,15 @@ export function PlayerLive({ session, team }: { session: ResolvedSession; team: 
         </>
       )}
 
+      {phase === "qintro" && (
+        <div className="pt-12 text-center">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-brand)]">Get ready</p>
+          <p className="mt-2 text-5xl">🎲</p>
+          <h2 className="mt-1 text-2xl font-bold">Question coming up…</h2>
+          <p className="mt-1 text-[var(--ppn-muted)]">Phones ready — answer here as soon as it appears.</p>
+        </div>
+      )}
+
       {phase === "question" && q && (
         <>
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-brand)]">

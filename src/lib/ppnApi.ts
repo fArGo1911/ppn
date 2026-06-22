@@ -145,7 +145,7 @@ export async function listTeams(sessionId: string): Promise<TeamRow[]> {
 // ─── Game loop + venue setup modes ────────────────────────────────────────────
 export type SetupMode = "tv_audio" | "audio_only" | "local_host";
 export type HostingMode = "staff" | "ai_assisted";
-export type Phase = "lobby" | "intro" | "question" | "reveal" | "scoreboard" | "ended";
+export type Phase = "lobby" | "intro" | "qintro" | "question" | "reveal" | "scoreboard" | "ended";
 
 export interface SessionState {
   sessionId: string;
@@ -204,12 +204,15 @@ export async function setSessionSetup(sessionId: string, setupMode: SetupMode, h
   const { error } = await supabase.from("ppn_game_sessions").update({ setup_mode: setupMode, hosting_mode: hostingMode }).eq("id", sessionId);
   if (error) throw error;
 }
-export async function startGame(sessionId: string, firstQuestionId: string) {
-  const { error } = await supabase.from("ppn_game_sessions").update({ status: "live", phase: "question", current_question_id: firstQuestionId, started_at: new Date().toISOString() }).eq("id", sessionId);
+/** Start the game on the first question. phase 'qintro' = "question coming up" pre-roll; 'question' = straight in. */
+export async function startGame(sessionId: string, firstQuestionId: string, phase: "question" | "qintro" = "question") {
+  const { error } = await supabase.from("ppn_game_sessions").update({ status: "live", phase, current_question_id: firstQuestionId, started_at: new Date().toISOString() }).eq("id", sessionId);
   if (error) throw error;
 }
-export async function gotoQuestion(sessionId: string, questionId: string) {
-  const { error } = await supabase.from("ppn_game_sessions").update({ phase: "question", current_question_id: questionId }).eq("id", sessionId);
+/** Move to a question. phase 'qintro' shows the "question coming up" pre-roll; 'question' shows it immediately.
+ * NOTE: this only changes the current question + phase — it never touches answers or scores (safe to replay/skip). */
+export async function gotoQuestion(sessionId: string, questionId: string, phase: "question" | "qintro" = "question") {
+  const { error } = await supabase.from("ppn_game_sessions").update({ phase, current_question_id: questionId }).eq("id", sessionId);
   if (error) throw error;
 }
 export async function setPhase(sessionId: string, phase: Phase) {
