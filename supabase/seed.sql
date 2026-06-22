@@ -7,7 +7,7 @@ insert into public.ppn_venues (id, name, slug, market) values
 on conflict (id) do nothing;
 
 insert into public.ppn_events (id, venue_id, title, status, host_mode, setup_capabilities, tv_usage) values
-  ('00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000001', 'PubPlay Quiz Night',
+  ('00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000001', 'Quiz Night',
    'live', 'ai_assisted',
    '{"phones":true,"tv_display":true,"audio":true,"ai_voice":true}'::jsonb, 'both')
 on conflict (id) do nothing;

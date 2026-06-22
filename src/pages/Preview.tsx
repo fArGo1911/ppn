@@ -14,12 +14,12 @@ export default function Preview({ title, blurb }: { title: string; blurb: string
           Guided demo · preview
         </p>
         <h1 className="mt-2 text-3xl font-extrabold">{title}</h1>
-        <p className="mt-3 text-slate-400">{blurb}</p>
+        <p className="mt-3 text-[var(--ppn-muted)]">{blurb}</p>
         <div className="mt-8 flex flex-wrap justify-center gap-2">
-          <Link to="/play/DEMO" className="rounded-lg px-4 py-2 font-semibold text-slate-950" style={{ background: DEMO_BRAND.primary }}>
+          <Link to="/play/DEMO" className="rounded-lg px-4 py-2 font-semibold text-[var(--ppn-on-brand)]" style={{ background: DEMO_BRAND.primary }}>
             See the player join
           </Link>
-          <Link to="/host" className="rounded-lg border border-white/15 px-4 py-2 text-slate-200 hover:bg-white/5">
+          <Link to="/host" className="rounded-lg border border-[var(--ppn-border)] px-4 py-2 text-[var(--ppn-text)] hover:bg-[var(--ppn-surface)]">
             Open host panel
           </Link>
         </div>

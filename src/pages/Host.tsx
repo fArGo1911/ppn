@@ -32,7 +32,7 @@ export default function Host() {
       event={session?.eventTitle}
       status={session ? `Lobby · ${teams.length} team${teams.length === 1 ? "" : "s"} · ${totalPlayers} player${totalPlayers === 1 ? "" : "s"}` : undefined}
     >
-      {resolveQ.isLoading && <p className="text-slate-400">Loading…</p>}
+      {resolveQ.isLoading && <p className="text-[var(--ppn-muted)]">Loading…</p>}
       {resolveQ.data?.kind === "invalid" && (
         <p className="text-amber-400">No session for token “{token}”. Try /host?token=DEMO.</p>
       )}
@@ -40,33 +40,33 @@ export default function Host() {
       {session && (
         <>
           {/* Stage / status strip */}
-          <div className="mb-4 flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+          <div className="mb-4 flex items-center justify-between rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-4 py-3">
             <div>
-              <p className="text-sm text-slate-400">Stage</p>
+              <p className="text-sm text-[var(--ppn-muted)]">Stage</p>
               <p className="text-lg font-semibold">Lobby — teams are forming</p>
             </div>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-[var(--ppn-muted)]">
               Join code <span className="font-mono font-bold" style={{ color: DEMO_BRAND.primary }}>{token}</span> · auto‑refresh
             </p>
           </div>
 
           {teams.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-white/10 p-8 text-center text-slate-500">
-              No teams yet. Players join at <span className="font-mono text-slate-300">/play/{token}</span> (or via the TV QR).
+            <p className="rounded-xl border border-dashed border-[var(--ppn-border)] p-8 text-center text-[var(--ppn-muted)]">
+              No teams yet. Players join at <span className="font-mono text-[var(--ppn-text)]">/play/{token}</span> (or via the TV QR).
             </p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {teams.map((t) => (
-                <div key={t.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <div key={t.id} className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
                   <div className="flex items-center justify-between">
                     <span className="text-lg font-semibold">{t.name}</span>
-                    <span className="rounded-full bg-white/5 px-2 py-0.5 text-xs text-slate-400">
+                    <span className="rounded-full bg-[var(--ppn-surface)] px-2 py-0.5 text-xs text-[var(--ppn-muted)]">
                       {t.players.length} player{t.players.length === 1 ? "" : "s"} · {t.score} pts
                     </span>
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {t.players.map((p) => (
-                      <span key={p.id} className="inline-flex items-center gap-1 rounded-lg bg-white/5 px-2 py-1 text-sm">
+                      <span key={p.id} className="inline-flex items-center gap-1 rounded-lg bg-[var(--ppn-surface)] px-2 py-1 text-sm">
                         {p.display_name}
                         {p.id === t.captain_player_id && (
                           <span className="rounded bg-amber-500/20 px-1 text-[10px] font-semibold uppercase text-amber-300">Captain</span>

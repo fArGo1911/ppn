@@ -56,3 +56,55 @@ export const AI_SLOTS: { key: string; label: string }[] = [
   { key: "intermission", label: "Pause / intermission announcement" },
   { key: "winner", label: "Winner announcement" },
 ];
+
+/** Branding zone map — for each surface, the named zones + what shows + which config field controls it. */
+export const ZONE_MAP: { surface: string; zones: { zone: string; shows: string; field: string }[] }[] = [
+  { surface: "Player (phone)", zones: [
+    { zone: "sponsorHeader", shows: "brewery logo · name · tagline", field: "breweryLogo · breweryName · breweryTagline" },
+    { zone: "campaignHero", shows: "campaign/venue image · pub name · event name", field: "campaignHeroImage · pubName · eventName" },
+    { zone: "joinAction", shows: "name / team entry", field: "—" },
+    { zone: "offerStrip", shows: "offer / prize message", field: "offerText" },
+    { zone: "poweredBy", shows: "subtle PPN mark (bottom-right)", field: "poweredByText" },
+  ] },
+  { surface: "Host", zones: [
+    { zone: "eventHeader", shows: "pub name · event name · session status", field: "pubName · eventName" },
+    { zone: "sponsorContext", shows: "brewery name · campaign · offer", field: "breweryName · campaignName · offerText" },
+    { zone: "teamPanel", shows: "teams / players / captains", field: "—" },
+    { zone: "poweredBy", shows: "subtle PPN mark", field: "poweredByText" },
+  ] },
+  { surface: "TV / display", zones: [
+    { zone: "sponsorTop", shows: "brewery logo / name", field: "breweryLogo · breweryName" },
+    { zone: "heroVisual", shows: "campaign / venue image", field: "campaignHeroImage · venueImage" },
+    { zone: "eventTitle", shows: "pub name + event name", field: "pubName · eventName" },
+    { zone: "qrBlock", shows: "QR + join instruction", field: "—" },
+    { zone: "lowerThird", shows: "offer / prize / sponsor message", field: "offerText · sponsorSlideImage" },
+    { zone: "poweredBy", shows: "bottom-right PPN mark", field: "poweredByText" },
+  ] },
+  { surface: "Presenter / demo", zones: [
+    { zone: "campaignHero", shows: "brewery campaign story", field: "campaignHeroImage · campaignName" },
+    { zone: "demoNav", shows: "guided / free click-through", field: "—" },
+    { zone: "previewCards", shows: "player / host / TV / KPI", field: "—" },
+    { zone: "commercialClose", shows: "sponsor pilot package", field: "—" },
+    { zone: "poweredBy", shows: "subtle PPN mark", field: "poweredByText" },
+  ] },
+];
+
+/** Asset usage map — where each prepared asset appears. */
+export const ASSET_USAGE: { asset: string; appears: string }[] = [
+  { asset: "primary logo", appears: "TV welcome · player header · KPI report" },
+  { asset: "square / icon logo", appears: "phone sponsor card · compact banners" },
+  { asset: "TV hero image", appears: "TV welcome · presenter campaign landing" },
+  { asset: "TV sponsor slide", appears: "TV pause / intermission · between rounds" },
+  { asset: "phone sponsor card image", appears: "waiting screen · sponsored question" },
+  { asset: "lower-third banner", appears: "TV offer strip" },
+  { asset: "campaign colour theme", appears: "ALL player / TV / host / presenter surfaces" },
+  { asset: "AI event intro script", appears: "first event announcement (TV + player waiting)" },
+  { asset: "responsible wording", appears: "offer badge · sponsor note" },
+];
+
+/** Transparency + overlay rules. */
+export const TRANSPARENCY = {
+  transparentPreferred: ["logos", "icons", "sponsor marks", "overlay badges", "powered-by marks"],
+  nonTransparent: ["hero images", "campaign backgrounds", "sponsor slides", "venue photos", "question images", "pause/intermission images"],
+  overlaySafe: "For images used behind text: declare supportsTextOverlay (yes/no), darkOverlayNeeded (yes/no), safeTextArea (top/centre/bottom/left/right), and flag 'image too busy' if applicable.",
+};

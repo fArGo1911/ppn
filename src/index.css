@@ -2,8 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Theme token fallbacks (overwritten at runtime by applyTheme from the active brewery preset). */
 :root {
-  color-scheme: dark;
+  --ppn-bg: #0b1220;
+  --ppn-surface: rgba(255, 255, 255, 0.04);
+  --ppn-border: rgba(255, 255, 255, 0.1);
+  --ppn-text: #e2e8f0;
+  --ppn-muted: #94a3b8;
+  --ppn-brand: #f59e0b;
+  --ppn-brand-dark: #b45309;
+  --ppn-on-brand: #0b1220;
 }
 
 html,
@@ -14,6 +22,8 @@ body,
 
 body {
   margin: 0;
-  @apply bg-slate-950 text-slate-100 antialiased;
+  background: var(--ppn-bg);
+  color: var(--ppn-text);
   font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
