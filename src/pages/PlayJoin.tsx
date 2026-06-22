@@ -11,6 +11,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { resolveJoinToken, listTeams, createTeamAndJoin, addPlayer, type ResolvedSession, type TeamRow } from "../lib/ppnApi";
 import { PlayerShell } from "../components/shells";
+import { AiAnnouncementSlot } from "../components/brandZones";
 
 function InviteBox({ joinCode }: { joinCode: string }) {
   const link = `${window.location.origin}${window.location.pathname}?team=${joinCode}`;
@@ -129,6 +130,7 @@ export default function PlayJoin() {
         <p className="text-xs uppercase tracking-wide text-emerald-400">You're in</p>
         <h2 className="mt-1 text-2xl font-bold">{joined.teamName}</h2>
         <p className="mt-2 text-slate-400">Waiting for the host to start…</p>
+        <div className="mt-4"><AiAnnouncementSlot scriptKey="eventIntro" size="phone" /></div>
         {joined.joinCode && <InviteBox joinCode={joined.joinCode} />}
       </PlayerShell>
     );
