@@ -141,3 +141,104 @@ export async function listTeams(sessionId: string): Promise<TeamRow[]> {
   if (error) throw error;
   return (data ?? []) as TeamRow[];
 }
+
+// ─── Game loop + venue setup modes ────────────────────────────────────────────
+export type SetupMode = "tv_audio" | "audio_only" | "local_host";
+export type HostingMode = "staff" | "ai_assisted";
+export type Phase = "lobby" | "question" | "reveal" | "scoreboard" | "ended";
+
+export interface SessionState {
+  sessionId: string;
+  status: SessionStatus;
+  phase: Phase;
+  setupMode: SetupMode;
+  hostingMode: HostingMode;
+  currentQuestionId: string | null;
+}
+
+export interface QuestionRow {
+  id: string;
+  roundSeq: number;
+  sequence: number;
+  kind: string; // text|sport|football|geography|local|music|picture|video|sponsored|tiebreak
+  prompt: string;
+  options: string[] | null;
+  correctAnswer: string | null;
+  points: number;
+}
+
+export async function getSessionState(sessionId: string): Promise<SessionState> {
+  const { data, error } = await supabase
+    .from("ppn_game_sessions")
+    .select("id, status, phase, setup_mode, hosting_mode, current_question_id")
+    .eq("id", sessionId)
+    .single();
+  if (error) throw error;
+  const r = data as { id: string; status: SessionStatus; phase: Phase; setup_mode: SetupMode; hosting_mode: HostingMode; current_question_id: string | null };
+  return { sessionId: r.id, status: r.status, phase: r.phase, setupMode: r.setup_mode, hostingMode: r.hosting_mode, currentQuestionId: r.current_question_id };
+}
+
+type RoundEmbed = { sequence: number; questions: { id: string; sequence: number; kind: string; prompt: string; options: string[] | null; correct_answer: string | null; points: number }[] };
+
+/** Ordered question list for a session (round.sequence, then question.sequence). */
+export async function getSessionQuestions(sessionId: string): Promise<QuestionRow[]> {
+  const { data, error } = await supabase
+    .from("ppn_rounds")
+    .select("sequence, questions:ppn_questions(id, sequence, kind, prompt, options, correct_answer, points)")
+    .eq("session_id", sessionId)
+    .order("sequence", { ascending: true });
+  if (error) throw error;
+  const rounds = (data ?? []) as RoundEmbed[];
+  const out: QuestionRow[] = [];
+  for (const r of rounds) {
+    for (const q of [...(r.questions ?? [])].sort((a, b) => a.sequence - b.sequence)) {
+      out.push({ id: q.id, roundSeq: r.sequence, sequence: q.sequence, kind: q.kind, prompt: q.prompt, options: q.options, correctAnswer: q.correct_answer, points: q.points });
+    }
+  }
+  return out;
+}
+
+// ── Host actions ──
+export async function setSessionSetup(sessionId: string, setupMode: SetupMode, hostingMode: HostingMode) {
+  const { error } = await supabase.from("ppn_game_sessions").update({ setup_mode: setupMode, hosting_mode: hostingMode }).eq("id", sessionId);
+  if (error) throw error;
+}
+export async function startGame(sessionId: string, firstQuestionId: string) {
+  const { error } = await supabase.from("ppn_game_sessions").update({ status: "live", phase: "question", current_question_id: firstQuestionId, started_at: new Date().toISOString() }).eq("id", sessionId);
+  if (error) throw error;
+}
+export async function gotoQuestion(sessionId: string, questionId: string) {
+  const { error } = await supabase.from("ppn_game_sessions").update({ phase: "question", current_question_id: questionId }).eq("id", sessionId);
+  if (error) throw error;
+}
+export async function setPhase(sessionId: string, phase: Phase) {
+  const { error } = await supabase.from("ppn_game_sessions").update({ phase }).eq("id", sessionId);
+  if (error) throw error;
+}
+export async function revealAndScore(sessionId: string, questionId: string) {
+  const rpc = supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ error: unknown }>;
+  const { error } = await rpc("ppn_reveal_and_score", { _session: sessionId, _question: questionId });
+  if (error) throw error;
+}
+export async function endGame(sessionId: string) {
+  const { error } = await supabase.from("ppn_game_sessions").update({ status: "ended", phase: "ended", ended_at: new Date().toISOString() }).eq("id", sessionId);
+  if (error) throw error;
+}
+
+// ── Player answer (shared team answer; any member updates before reveal; scored once per team) ──
+export async function submitTeamAnswer(questionId: string, teamId: string, value: string, playerId?: string) {
+  const { error } = await supabase
+    .from("ppn_answers")
+    .upsert({ question_id: questionId, team_id: teamId, submitted_value: value, submitted_by_player_id: playerId ?? null }, { onConflict: "question_id,team_id" });
+  if (error) throw error;
+}
+export async function getTeamAnswer(questionId: string, teamId: string): Promise<{ submitted_value: string | null; is_correct: boolean | null; awarded_points: number } | null> {
+  const { data, error } = await supabase
+    .from("ppn_answers")
+    .select("submitted_value, is_correct, awarded_points")
+    .eq("question_id", questionId)
+    .eq("team_id", teamId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as { submitted_value: string | null; is_correct: boolean | null; awarded_points: number } | null) ?? null;
+}
