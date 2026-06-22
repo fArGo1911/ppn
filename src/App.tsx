@@ -5,6 +5,8 @@
  * subdomain root (ppn.todeloo.com) or under a /ppn subpath, with no code changes. Local-first, deploy-ready.
  */
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import PlayJoin from "./pages/PlayJoin";
+import Host from "./pages/Host";
 
 const BASENAME = import.meta.env.VITE_PPN_BASE_PATH ?? "/";
 
@@ -46,8 +48,8 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/config" element={<Placeholder name="Brewery preset / config (hidden)" />} />
         <Route path="/setup" element={<Placeholder name="Demo setup — market / venue / brand studio" />} />
-        <Route path="/host" element={<Placeholder name="Staff host panel" />} />
-        <Route path="/play/:joinToken" element={<Placeholder name="Player QR join" />} />
+        <Route path="/host" element={<Host />} />
+        <Route path="/play/:joinToken" element={<PlayJoin />} />
         <Route path="/tv/:sessionId" element={<Placeholder name="TV / display view" />} />
         <Route path="/kpi" element={<Placeholder name="Brewery KPI mock-up" />} />
         <Route path="/rollout" element={<Placeholder name="Rollout / network view" />} />
