@@ -10,12 +10,14 @@ import Tv from "./pages/Tv";
 import BrandAssets from "./pages/BrandAssets";
 import Config from "./pages/Config";
 import Preview from "./pages/Preview";
+import { PresenterTools } from "./components/PresenterTools";
 
 const BASENAME = import.meta.env.VITE_PPN_BASE_PATH ?? "/";
 
 export default function App() {
   return (
     <BrowserRouter basename={BASENAME}>
+      <PresenterTools />
       <Routes>
         <Route path="/" element={<Landing />} />
         {/* Functional surfaces */}

@@ -6,8 +6,10 @@
  */
 import { DemoShell } from "../components/shells";
 import { BrandAssetPreview } from "../components/brandZones";
+import { Carousel } from "../components/Carousel";
 import { DEMO_BRAND } from "../demo/brand";
 import { IMAGE_SLOTS, TEXT_SLOTS, AI_SLOTS, VIDEO_SLOTS, ZONE_MAP, ASSET_USAGE, TRANSPARENCY } from "../demo/brandAssets";
+import { MEDIA_ZONES, CAROUSEL_GUIDANCE, COPY_SLOTS, preEventSlides } from "../demo/media";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -121,6 +123,42 @@ export default function BrandAssets() {
             <p><span className="font-medium text-[var(--ppn-text)]">Non-transparent (photos/backgrounds):</span> <span className="text-[var(--ppn-muted)]">{TRANSPARENCY.nonTransparent.join(" · ")}</span></p>
             <p className="text-[var(--ppn-muted)]">{TRANSPARENCY.overlaySafe}</p>
           </div>
+        </Section>
+
+        <Section title="Media zones (single image · carousel · slideshow · video · text)">
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="text-[var(--ppn-muted)]">
+                <tr>{["zone id", "surface", "state", "allowed", "aspect", "sponsor", "+action"].map((h) => <th key={h} className="py-1 pr-3 font-medium">{h}</th>)}</tr>
+              </thead>
+              <tbody>
+                {MEDIA_ZONES.map((z) => (
+                  <tr key={z.id} className="border-t border-[var(--ppn-border)]">
+                    <td className="py-1.5 pr-3 font-mono" style={{ color: DEMO_BRAND.primary }}>{z.id}</td>
+                    <td className="py-1.5 pr-3">{z.surface}</td>
+                    <td className="py-1.5 pr-3">{z.screenState}</td>
+                    <td className="py-1.5 pr-3 text-[var(--ppn-muted)]">{z.allowed.join(", ")}</td>
+                    <td className="py-1.5 pr-3">{z.aspect}</td>
+                    <td className="py-1.5 pr-3">{z.sponsorAllowed ? "✓" : "—"}</td>
+                    <td className="py-1.5 pr-3">{z.playerActionVisible ? "✓" : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+
+        <Section title="Carousels / slideshows (live example + guidance)">
+          <div className="mt-3 max-w-xl"><Carousel slides={preEventSlides(DEMO_BRAND)} size="presenter" aspect="16/9" /></div>
+          <ul className="mt-3 grid gap-1 text-xs text-[var(--ppn-muted)] sm:grid-cols-2">
+            {CAROUSEL_GUIDANCE.map((g) => <li key={g}>· {g}</li>)}
+          </ul>
+        </Section>
+
+        <Section title="More dynamic copy slots">
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {COPY_SLOTS.map((c) => <li key={c} className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1.5 text-sm text-[var(--ppn-text)]">{c}</li>)}
+          </ul>
         </Section>
       </div>
     </DemoShell>

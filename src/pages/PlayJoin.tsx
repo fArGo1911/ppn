@@ -12,6 +12,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { resolveJoinToken, listTeams, createTeamAndJoin, addPlayer, type ResolvedSession, type TeamRow } from "../lib/ppnApi";
 import { PlayerShell } from "../components/shells";
 import { AiAnnouncementSlot } from "../components/brandZones";
+import { Carousel } from "../components/Carousel";
+import { playerHeroSlides } from "../demo/media";
+import { DEMO_BRAND } from "../demo/brand";
 
 function InviteBox({ joinCode }: { joinCode: string }) {
   const link = `${window.location.origin}${window.location.pathname}?team=${joinCode}`;
@@ -130,6 +133,7 @@ export default function PlayJoin() {
         <p className="text-xs uppercase tracking-wide text-[var(--ppn-brand)]">You're in</p>
         <h2 className="mt-1 text-2xl font-bold">{joined.teamName}</h2>
         <p className="mt-2 text-[var(--ppn-muted)]">Waiting for the host to start…</p>
+        <div className="mt-4"><Carousel slides={playerHeroSlides(DEMO_BRAND)} size="phone" aspect="16/9" auto /></div>
         <div className="mt-4"><AiAnnouncementSlot scriptKey="eventIntro" size="phone" /></div>
         {joined.joinCode && <InviteBox joinCode={joined.joinCode} />}
       </PlayerShell>
