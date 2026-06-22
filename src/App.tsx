@@ -9,6 +9,9 @@ import Host from "./pages/Host";
 import Tv from "./pages/Tv";
 import BrandAssets from "./pages/BrandAssets";
 import Config from "./pages/Config";
+import Kpi from "./pages/Kpi";
+import Rollout from "./pages/Rollout";
+import Capabilities from "./pages/Capabilities";
 import Preview from "./pages/Preview";
 import { PresenterTools } from "./components/PresenterTools";
 
@@ -24,12 +27,12 @@ export default function App() {
         <Route path="/play/:joinToken" element={<PlayJoin />} />
         <Route path="/host" element={<Host />} />
         <Route path="/tv/:sessionId" element={<Tv />} />
-        {/* Commercial surfaces — branded previews this slice (built later in the POC order) */}
+        {/* Commercial surfaces */}
         <Route path="/config" element={<Config />} />
         <Route path="/setup" element={<BrandAssets />} />
-        <Route path="/kpi" element={<Preview title="Brewery KPI report" blurb="The campaign proof a sponsor receives — reach, sponsored-round participation, dwell, venue network. Built later." />} />
-        <Route path="/rollout" element={<Preview title="Rollout / network" blurb="From a pilot to a brewery-funded pub network: 5 → 25 → 100 venues. Built later." />} />
-        <Route path="/capabilities" element={<Preview title="Beyond quiz" blurb="Music nights, match-day games, sponsored mini-games, seasonal & inter-pub events — the same network. Built later." />} />
+        <Route path="/kpi" element={<Kpi />} />
+        <Route path="/rollout" element={<Rollout />} />
+        <Route path="/capabilities" element={<Capabilities />} />
         <Route path="*" element={<Preview title="Not found" blurb="That screen isn't part of the demo. Head back to the overview." />} />
       </Routes>
     </BrowserRouter>

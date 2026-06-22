@@ -53,11 +53,11 @@ export function PlayerLive({ session, team }: { session: ResolvedSession; team: 
         {st && <span>{setupLabel(st.setupMode)}</span>}
       </div>
 
-      {phase === "lobby" && (
+      {(phase === "lobby" || phase === "intro") && (
         <>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-brand)]">You're in</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-brand)]">{phase === "intro" ? "Welcome" : "You're in"}</p>
           <h2 className="mt-1 text-2xl font-bold">{team.teamName}</h2>
-          <p className="mt-1 text-[var(--ppn-muted)]">Waiting for the host to start…</p>
+          <p className="mt-1 text-[var(--ppn-muted)]">{phase === "intro" ? "🔊 Intro starting soon — listen up, first question next." : "Waiting for the host to start…"}</p>
           {team.joinCode && (
             <button
               onClick={() => navigator.clipboard?.writeText(`${window.location.origin}${window.location.pathname}?team=${team.joinCode}`)}

@@ -38,6 +38,7 @@ export default function Tv() {
   if (hasOverride) state = params.get("state") ?? "welcome";
   else if (live) {
     if (live.setupMode !== "tv_audio") state = "tv_off";
+    else if (live.phase === "intro") state = "intro";
     else if (live.phase === "question") state = liveQ ? "live_question" : "welcome";
     else if (live.phase === "reveal") state = liveQ ? "live_reveal" : "welcome";
     else if (live.phase === "scoreboard") state = "scoreboard";
@@ -173,6 +174,26 @@ export default function Tv() {
           <VideoSlot url={DEMO_BRAND.video.closingVideoUrl} sourceType={DEMO_BRAND.video.closingVideoSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Closing sponsor video (optional)" />
         </div>
         <div className="mt-6"><OfferBadge size="tv" /></div>
+      </TvShell>
+    );
+
+  // ── AI evening intro state (TV+audio): brand atmosphere + the AI host opener, QR still available. ──
+  if (state === "intro")
+    return (
+      <TvShell>
+        <p className="text-2xl uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>🔊 AI host intro</p>
+        <Title />
+        <div className="mt-6 grid w-full max-w-6xl grid-cols-[1.5fr_1fr] items-center gap-8 text-left">
+          <div>
+            <VideoSlot url={DEMO_BRAND.video.tvIntroVideoUrl} sourceType={DEMO_BRAND.video.tvIntroVideoSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Intro video (optional campaign visual)" />
+            <div className="mt-4"><AiAnnouncementSlot scriptKey="eventIntro" size="tv" /></div>
+          </div>
+          <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-6">
+            <div className="rounded-2xl bg-white p-3 shadow-2xl"><QRCodeSVG value={joinUrl} size={180} bgColor="#ffffff" fgColor="#0f172a" level="M" /></div>
+            <p className="text-2xl font-bold">Still time to join</p>
+            <p className="text-lg text-[var(--ppn-muted)]">code <span className="font-mono font-bold text-[var(--ppn-text)]">{token}</span></p>
+          </div>
+        </div>
       </TvShell>
     );
 

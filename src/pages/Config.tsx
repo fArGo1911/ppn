@@ -33,8 +33,8 @@ export default function Config() {
                   {brandInitials(p.sponsorName)}
                 </span>
                 <div className="flex-1">
-                  <p className="font-semibold">{p.sponsorName}</p>
-                  <p className="text-xs text-[var(--ppn-muted)]">{p.tagline}</p>
+                  <p className="font-semibold">{p.sponsorName} <span className="ml-1 rounded bg-[var(--ppn-bg)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--ppn-muted)]">{p.market}</span></p>
+                  <p className="text-xs text-[var(--ppn-muted)]">{p.tagline} · {p.pubName}</p>
                 </div>
                 <span className="flex gap-1">
                   {[p.colours.primary, p.colours.bg, p.colours.surface, p.colours.text].map((c, i) => (

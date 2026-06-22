@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   resolveJoinToken, listTeams, getSessionState, getSessionQuestions,
   setSessionSetup, startGame, gotoQuestion, setPhase, revealAndScore, endGame,
+  setAiIntroEnabled, startIntro,
   type SetupMode, type HostingMode,
 } from "../lib/ppnApi";
 import { HostShell } from "../components/shells";
@@ -43,6 +44,8 @@ export default function Host() {
   const phase = st?.phase ?? "lobby";
   const setupMode: SetupMode = st?.setupMode ?? "tv_audio";
   const hostingMode: HostingMode = st?.hostingMode ?? "staff";
+  const aiIntroEnabled = st?.aiIntroEnabled ?? true;
+  const preGame = phase === "lobby" || phase === "intro";
   const compat = q ? questionCompatibility(q.kind, setupMode) : null;
 
   const act = useMutation({
@@ -62,7 +65,8 @@ export default function Host() {
       ? "🤖 AI voice announces"
       : "🎤 Host reads aloud";
   const scriptBody =
-    phase === "lobby" ? `Welcome to ${session?.eventTitle ?? "Quiz Night"} at ${session?.venueName ?? "the pub"} — brought to you by ${DEMO_BRAND.sponsorName}. Grab your phones and join your table team!`
+    phase === "intro" ? DEMO_BRAND.ai.eventIntro
+    : phase === "lobby" ? `Welcome to ${session?.eventTitle ?? "Quiz Night"} at ${session?.venueName ?? "the pub"} — brought to you by ${DEMO_BRAND.sponsorName}. Grab your phones and join your table team!`
     : phase === "reveal" && q ? `The correct answer is ${q.correctAnswer}.`
     : phase === "scoreboard" ? `Here are the current standings${standings[0] ? ` — ${standings[0].name} lead the way.` : "."}`
     : phase === "ended" ? `That's a wrap! ${standings[0]?.name ?? "Our winners"} take it — thanks to ${DEMO_BRAND.sponsorName}, and goodnight!`
@@ -129,10 +133,40 @@ export default function Host() {
             </div>
           </div>
 
+          {/* ── Optional AI evening intro (first-class, include/skip) ── */}
+          {preGame && (
+            <div className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">AI evening intro <span className="font-normal text-[var(--ppn-muted)]">· optional</span></p>
+                <span className="flex items-center gap-2">
+                  <span className="rounded-full px-2 py-0.5 text-xs font-medium"
+                    style={aiIntroEnabled
+                      ? { background: "color-mix(in srgb, var(--ppn-success) 18%, transparent)", color: "var(--ppn-success)" }
+                      : { background: "var(--ppn-bg)", color: "var(--ppn-muted)" }}>
+                    {aiIntroEnabled ? "Available · enabled" : "Disabled"}
+                  </span>
+                  <button onClick={() => run(() => setAiIntroEnabled(sid!, !aiIntroEnabled))} disabled={busy}
+                    className="rounded-full border border-[var(--ppn-border)] px-3 py-1 text-xs font-medium disabled:opacity-50">
+                    {aiIntroEnabled ? "Disable" : "Enable"}
+                  </button>
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-[var(--ppn-muted)]">
+                A polished opening before questions start. {setupMode === "local_host" ? "Local-host mode: staff reads it via the mic, or skip it." : hostingMode === "ai_assisted" ? "AI voice will welcome the room (planned voice — text preview below)." : "Read by staff, or skip and introduce the evening yourself."}
+              </p>
+              <div className="mt-3 rounded-lg border border-dashed border-[var(--ppn-border)] p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-muted)]">Intro script preview · 🔊 planned voice intro (no audio yet)</p>
+                <p className="mt-1 text-sm text-[var(--ppn-text)]">{DEMO_BRAND.ai.eventIntro}</p>
+              </div>
+              {phase === "lobby" && aiIntroEnabled && <p className="mt-2 text-xs text-[var(--ppn-brand)]">▶ Play intro puts the room into the intro screen before the first question.</p>}
+              {phase === "intro" && <p className="mt-2 text-xs text-[var(--ppn-brand)]">Intro is live on the player/TV surfaces — hand over to the first question when ready.</p>}
+            </div>
+          )}
+
           {/* ── Current question + read-aloud script (host-only answer) ── */}
           <div className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold">{phase === "lobby" ? "Not started" : q ? `Question ${q.roundSeq}.${q.sequence} of ${questions.length}` : phase}</p>
+              <p className="text-sm font-semibold">{phase === "lobby" ? "Not started" : phase === "intro" ? "AI evening intro" : q ? `Question ${q.roundSeq}.${q.sequence} of ${questions.length}` : phase}</p>
               {q && (
                 <span className="rounded-full px-2 py-0.5 text-xs font-medium"
                   style={compat?.ok
@@ -157,7 +191,10 @@ export default function Host() {
 
           {/* ── Controls ── */}
           <div className="flex flex-wrap gap-2">
-            {phase === "lobby" && <Btn primary label="▶ Start game" disabled={questions.length === 0} onClick={() => run(() => startGame(sid!, questions[0].id))} />}
+            {phase === "lobby" && aiIntroEnabled && <Btn primary label="▶ Play AI intro" disabled={questions.length === 0} onClick={() => run(() => startIntro(sid!))} />}
+            {phase === "lobby" && <Btn primary={!aiIntroEnabled} label={aiIntroEnabled ? "Skip intro · Start game" : "▶ Start game"} disabled={questions.length === 0} onClick={() => run(() => startGame(sid!, questions[0].id))} />}
+            {phase === "intro" && <Btn primary label="Start first question ▶" disabled={questions.length === 0} onClick={() => run(() => startGame(sid!, questions[0].id))} />}
+            {phase === "intro" && <Btn label="◀ Back to lobby" onClick={() => run(() => setPhase(sid!, "lobby"))} />}
             {idx > 0 && phase !== "ended" && <Btn label="◀ Previous" onClick={() => run(() => gotoQuestion(sid!, questions[idx - 1].id))} />}
             {phase === "question" && <Btn primary label="Reveal & score" onClick={() => run(() => revealAndScore(sid!, q!.id))} />}
             {(phase === "reveal" || phase === "scoreboard") && <Btn label="Scoreboard" onClick={() => run(() => setPhase(sid!, "scoreboard"))} />}

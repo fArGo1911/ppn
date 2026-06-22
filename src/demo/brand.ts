@@ -63,22 +63,26 @@ export interface DemoBrand {
     fallbackImage?: string;
     sourceNote?: string;
   };
+  /** AI scripts (text slots — real TTS is a later slice). eventIntro = the optional first-class evening opener. */
   ai: Record<"eventIntro" | "roundIntro" | "sponsoredIntro" | "questionReadout" | "answerReveal" | "intermission" | "winner", string>;
+  /** Default for the optional AI evening introduction (host can still include/skip per session). */
+  aiIntroEnabled: boolean;
 }
 
-function aiScripts(brewery: string): DemoBrand["ai"] {
-  return {
-    eventIntro: `Welcome to The Anchor for tonight's Quiz Night, brought to you by ${brewery}. Grab your team, scan the QR code, and answer on your phones. Tonight we'll mix general knowledge, local questions, music, sport, and a sponsored round. Staff are in control, so shout if you need help. Let's get started.`,
-    roundIntro: "Round {n} coming up — phones ready, teams.",
-    sponsoredIntro: `This round is brought to you by ${brewery} — answer for bonus bragging rights.`,
-    questionReadout: "Here's your question…",
-    answerReveal: "And the correct answer is…",
-    intermission: `Quick breather — grab a drink. Next round in a moment, courtesy of ${brewery}.`,
-    winner: `Tonight's champions are {team}! Well played. Thanks to ${brewery} — see you next week.`,
-  };
-}
+// Shared demo video references (CC / public samples) — swappable per brewery; local files go in public/demo/.
+const DEMO_VIDEO: DemoBrand["video"] = {
+  tvIntroVideoSourceType: "embed",
+  tvIntroVideoUrl: "https://www.youtube.com/watch?v=aqz-KE-bpKQ", // Big Buck Bunny (CC, embeddable)
+  sponsorBumperVideoSourceType: "local",
+  sponsorBumperVideoUrl: "/demo/sponsor-bumper.mp4", // not bundled → shows fallback (drop a file in public/demo/)
+  videoQuestionSourceType: "external",
+  videoQuestionUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+  closingVideoSourceType: "external",
+  closingVideoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+  sourceNote: "Demo references (CC / public samples) — replace with the brewery's own clips.",
+};
 
-// ── Preset A: Northgate (dark theme, amber) ──────────────────────────────────
+// ── Demo C — UK: Northgate Brewing Co. (default; matches the seeded venue "The Anchor") ──────────
 const NORTHGATE: DemoBrand = {
   id: "northgate",
   sponsorName: "Northgate Brewing Co.",
@@ -88,7 +92,7 @@ const NORTHGATE: DemoBrand = {
   pubName: "The Anchor",
   eventName: "Quiz Night",
   offer: "Tonight: 20% off the kitchen for every team",
-  responsibleNote: "Please drink responsibly. 18+. Prize: food discount — no alcohol required.",
+  responsibleNote: "Please drink responsibly. 18+. Prize is a food discount — no alcohol required. Ask staff for tonight's offer.",
   cta: "Back next Thursday — see you then!",
   market: "UK",
   network: "PubPlay Network",
@@ -96,19 +100,17 @@ const NORTHGATE: DemoBrand = {
   heroOverlayMode: "dark",
   heroImageAltText: "Northgate Brewing Co. quiz night campaign image at The Anchor",
   images: {},
-  video: {
-    // Demo references (CC / public samples) — swap per brewery. Local files go in public/demo/.
-    tvIntroVideoSourceType: "embed",
-    tvIntroVideoUrl: "https://www.youtube.com/watch?v=aqz-KE-bpKQ", // Big Buck Bunny (CC, embeddable)
-    sponsorBumperVideoSourceType: "local",
-    sponsorBumperVideoUrl: "/demo/sponsor-bumper.mp4", // not bundled → shows fallback (drop a file in public/demo/)
-    videoQuestionSourceType: "external",
-    videoQuestionUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-    closingVideoSourceType: "external",
-    closingVideoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-    sourceNote: "Demo references (CC / public samples) — replace with the brewery's own clips.",
+  video: { ...DEMO_VIDEO },
+  aiIntroEnabled: true,
+  ai: {
+    eventIntro: "Good evening and welcome to The Anchor for tonight's Quiz Night, brought to you by Northgate Brewing Co. Scan the QR code on your table, give your team a name, and answer right there on your phone — one shared answer per team. Tonight we'll mix general knowledge, a local Manchester round, sport, football, a music round and a Northgate sponsored round, with a tie-breaker to finish. Your hosts are in control all night, so give us a shout if you need a hand. Phones ready — let's play!",
+    roundIntro: "Round {n} coming up — phones ready, teams.",
+    sponsoredIntro: "This round is brought to you by Northgate Brewing Co. — answer well for bonus bragging rights.",
+    questionReadout: "Here's your question…",
+    answerReveal: "And the correct answer is…",
+    intermission: "Quick breather — grab a drink at the bar. Next round in a moment, courtesy of Northgate Brewing Co.",
+    winner: "Tonight's champions are {team}! Brilliantly played. Thanks to Northgate Brewing Co. — and we'll see you next Thursday.",
   },
-  ai: aiScripts("Northgate Brewing Co."),
   primary: "#f59e0b",
   primaryDark: "#b45309",
   colours: {
@@ -118,47 +120,85 @@ const NORTHGATE: DemoBrand = {
   },
 };
 
-// ── Preset B: Crimson (LIGHT theme, red/white) — proves full theme re-skin ────
-const CRIMSON: DemoBrand = {
-  id: "crimson",
-  sponsorName: "Crimson & Co. Brewery",
-  tagline: "Bold ales · proper pub quizzes",
-  broughtBy: "Brought to you by Crimson & Co.",
-  campaignName: "Crimson Pub League",
-  pubName: "The Anchor",
-  eventName: "Quiz Night",
-  offer: "Winning team: a Crimson & Co. food platter",
-  responsibleNote: "Please drink responsibly. 18+. Non-alcohol prize.",
-  cta: "Next match-day special soon — see you then!",
-  market: "UK",
+// ── Demo B — Germany: Adlerbräu (Bavarian regional-premium style; inspired-not-copied) ──────────
+const ADLERBRAU: DemoBrand = {
+  id: "adlerbrau",
+  sponsorName: "Adlerbräu München",
+  tagline: "Bayerische Braukunst seit 1516",
+  broughtBy: "Präsentiert von Adlerbräu München",
+  campaignName: "Adlerbräu Quizabend",
+  pubName: "Zum Goldenen Hirsch",
+  eventName: "Quizabend",
+  offer: "Heute Abend: eine Brotzeit-Platte für das Siegerteam",
+  responsibleNote: "Bitte trinke verantwortungsvoll. Ab 18. Preis ohne Alkohol — frag das Personal nach dem heutigen Angebot.",
+  cta: "Nächste Woche wieder — bis dann!",
+  market: "DE",
   network: "PubPlay Network",
-  poweredBy: "powered by PubPlay Network",
+  poweredBy: "ermöglicht durch PubPlay Network",
   heroOverlayMode: "dark",
-  heroImageAltText: "Crimson & Co. Brewery quiz night campaign image at The Anchor",
+  heroImageAltText: "Adlerbräu München Quizabend-Kampagnenbild im Zum Goldenen Hirsch",
   images: {},
-  video: {
-    // Demo references (CC / public samples) — swap per brewery. Local files go in public/demo/.
-    tvIntroVideoSourceType: "embed",
-    tvIntroVideoUrl: "https://www.youtube.com/watch?v=aqz-KE-bpKQ", // Big Buck Bunny (CC, embeddable)
-    sponsorBumperVideoSourceType: "local",
-    sponsorBumperVideoUrl: "/demo/sponsor-bumper.mp4", // not bundled → shows fallback (drop a file in public/demo/)
-    videoQuestionSourceType: "external",
-    videoQuestionUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-    closingVideoSourceType: "external",
-    closingVideoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-    sourceNote: "Demo references (CC / public samples) — replace with the brewery's own clips.",
+  video: { ...DEMO_VIDEO },
+  aiIntroEnabled: true,
+  ai: {
+    eventIntro: "Herzlich willkommen im Zum Goldenen Hirsch zum heutigen Quizabend, präsentiert von Adlerbräu München. Scannt den QR-Code am Tisch, gebt eurem Team einen Namen und antwortet direkt am Handy — eine gemeinsame Antwort pro Team. Heute mischen wir Allgemeinwissen, eine Münchner Lokalrunde, Sport, Bundesliga, eine Musikrunde und eine Adlerbräu-Sponsorenrunde, mit einem Stechen zum Schluss. Das Personal hat alles im Griff — meldet euch, wenn ihr Hilfe braucht. Handys bereit — auf geht's!",
+    roundIntro: "Runde {n} steht an — Handys bereit, Teams.",
+    sponsoredIntro: "Diese Runde wird euch von Adlerbräu München präsentiert — antwortet gut für Bonus-Ruhm.",
+    questionReadout: "Hier kommt eure Frage…",
+    answerReveal: "Und die richtige Antwort ist…",
+    intermission: "Kurze Pause — holt euch ein Getränk. Gleich geht's weiter, mit freundlicher Unterstützung von Adlerbräu München.",
+    winner: "Die heutigen Sieger sind {team}! Stark gespielt. Danke an Adlerbräu München — bis nächste Woche!",
   },
-  ai: aiScripts("Crimson & Co."),
-  primary: "#dc2626",
-  primaryDark: "#991b1b",
+  primary: "#16a34a",
+  primaryDark: "#15803d",
   colours: {
-    primary: "#dc2626", primaryDark: "#991b1b", secondary: "#1f2937", accent: "#dc2626",
-    bg: "#f8fafc", surface: "#ffffff", border: "rgba(15,23,42,0.12)",
-    text: "#0f172a", muted: "#64748b", onBrand: "#ffffff", success: "#16a34a", warning: "#b45309",
+    primary: "#16a34a", primaryDark: "#15803d", secondary: "#ca8a04", accent: "#facc15",
+    bg: "#0c130f", surface: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.10)",
+    text: "#e7efe9", muted: "#9bb0a2", onBrand: "#ffffff", success: "#22c55e", warning: "#ca8a04",
   },
 };
 
-export const PRESETS: DemoBrand[] = [NORTHGATE, CRIMSON];
+// ── Demo A — Sweden: Nordström Bryggeri (Swedish craft style) ───────────────────────────────────
+const NORDSTROM: DemoBrand = {
+  id: "nordstrom",
+  sponsorName: "Nordström Bryggeri",
+  tagline: "Svenskt hantverk · god stämning",
+  broughtBy: "Presenteras av Nordström Bryggeri",
+  campaignName: "Nordström Quizkväll",
+  pubName: "Kvarteret Krog",
+  eventName: "Quizkväll",
+  offer: "Ikväll: 20% på köket för varje lag",
+  responsibleNote: "Drick ansvarsfullt. 18+. Priset är alkoholfritt — fråga personalen om kvällens erbjudande.",
+  cta: "Tillbaka nästa torsdag — vi ses!",
+  market: "SE",
+  network: "PubPlay Network",
+  poweredBy: "drivs av PubPlay Network",
+  heroOverlayMode: "dark",
+  heroImageAltText: "Nordström Bryggeri quizkväll-kampanjbild på Kvarteret Krog",
+  images: {},
+  video: { ...DEMO_VIDEO },
+  aiIntroEnabled: true,
+  ai: {
+    eventIntro: "Varmt välkomna till Kvarteret Krog och kvällens Quizkväll, som presenteras av Nordström Bryggeri. Skanna QR-koden på bordet, döp ert lag och svara direkt i mobilen — ett gemensamt svar per lag. Ikväll blandar vi allmänbildning, en lokal Stockholmsrunda, sport, fotboll, en musikrunda och en Nordström-sponsrad runda, med ett utslagsfrågor på slutet. Personalen styr kvällen — ropa till om ni behöver hjälp. Mobiler redo — nu kör vi!",
+    roundIntro: "Runda {n} på gång — mobiler redo, lag.",
+    sponsoredIntro: "Den här rundan presenteras av Nordström Bryggeri — svara rätt för bonuspoäng i ära.",
+    questionReadout: "Här kommer er fråga…",
+    answerReveal: "Och det rätta svaret är…",
+    intermission: "Kort paus — hämta något att dricka. Nästa runda strax, tack vare Nordström Bryggeri.",
+    winner: "Kvällens mästare är {team}! Snyggt spelat. Tack till Nordström Bryggeri — vi ses nästa vecka!",
+  },
+  primary: "#2563eb",
+  primaryDark: "#1d4ed8",
+  colours: {
+    primary: "#2563eb", primaryDark: "#1d4ed8", secondary: "#f5c518", accent: "#f5c518",
+    bg: "#0a1120", surface: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.10)",
+    text: "#e4ecf7", muted: "#93a4bd", onBrand: "#ffffff", success: "#22c55e", warning: "#f5c518",
+  },
+};
+
+/** Demo A (SE) · Demo B (DE) · Demo C (UK) — swappable presets, one per market. UK is the default
+ * because the seeded live venue is The Anchor (UK). Switch at /config (persists + reloads). */
+export const PRESETS: DemoBrand[] = [NORDSTROM, ADLERBRAU, NORTHGATE];
 
 const STORAGE_KEY = "ppn_brand";
 

@@ -145,7 +145,7 @@ export async function listTeams(sessionId: string): Promise<TeamRow[]> {
 // ─── Game loop + venue setup modes ────────────────────────────────────────────
 export type SetupMode = "tv_audio" | "audio_only" | "local_host";
 export type HostingMode = "staff" | "ai_assisted";
-export type Phase = "lobby" | "question" | "reveal" | "scoreboard" | "ended";
+export type Phase = "lobby" | "intro" | "question" | "reveal" | "scoreboard" | "ended";
 
 export interface SessionState {
   sessionId: string;
@@ -154,6 +154,7 @@ export interface SessionState {
   setupMode: SetupMode;
   hostingMode: HostingMode;
   currentQuestionId: string | null;
+  aiIntroEnabled: boolean;
 }
 
 export interface QuestionRow {
@@ -170,12 +171,12 @@ export interface QuestionRow {
 export async function getSessionState(sessionId: string): Promise<SessionState> {
   const { data, error } = await supabase
     .from("ppn_game_sessions")
-    .select("id, status, phase, setup_mode, hosting_mode, current_question_id")
+    .select("id, status, phase, setup_mode, hosting_mode, current_question_id, ai_intro_enabled")
     .eq("id", sessionId)
     .single();
   if (error) throw error;
-  const r = data as { id: string; status: SessionStatus; phase: Phase; setup_mode: SetupMode; hosting_mode: HostingMode; current_question_id: string | null };
-  return { sessionId: r.id, status: r.status, phase: r.phase, setupMode: r.setup_mode, hostingMode: r.hosting_mode, currentQuestionId: r.current_question_id };
+  const r = data as { id: string; status: SessionStatus; phase: Phase; setup_mode: SetupMode; hosting_mode: HostingMode; current_question_id: string | null; ai_intro_enabled: boolean };
+  return { sessionId: r.id, status: r.status, phase: r.phase, setupMode: r.setup_mode, hostingMode: r.hosting_mode, currentQuestionId: r.current_question_id, aiIntroEnabled: r.ai_intro_enabled };
 }
 
 type RoundEmbed = { sequence: number; questions: { id: string; sequence: number; kind: string; prompt: string; options: string[] | null; correct_answer: string | null; points: number }[] };
@@ -213,6 +214,16 @@ export async function gotoQuestion(sessionId: string, questionId: string) {
 }
 export async function setPhase(sessionId: string, phase: Phase) {
   const { error } = await supabase.from("ppn_game_sessions").update({ phase }).eq("id", sessionId);
+  if (error) throw error;
+}
+/** Toggle the optional AI evening introduction for this session. */
+export async function setAiIntroEnabled(sessionId: string, enabled: boolean) {
+  const { error } = await supabase.from("ppn_game_sessions").update({ ai_intro_enabled: enabled }).eq("id", sessionId);
+  if (error) throw error;
+}
+/** Move the session into the optional AI intro state (pre-game). */
+export async function startIntro(sessionId: string) {
+  const { error } = await supabase.from("ppn_game_sessions").update({ phase: "intro", status: "live" }).eq("id", sessionId);
   if (error) throw error;
 }
 export async function revealAndScore(sessionId: string, questionId: string) {
