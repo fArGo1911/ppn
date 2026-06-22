@@ -23,7 +23,17 @@ export interface TeamRow {
   id: string;
   name: string;
   score: number;
+  join_code: string | null;
+  captain_player_id: string | null;
   players: { id: string; display_name: string }[];
+}
+
+/** Short, unambiguous invite code (POC: client-generated; collision risk negligible at demo scale). */
+function genJoinCode(): string {
+  const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // no I/O/0/1/L
+  let s = "";
+  for (let i = 0; i < 4; i++) s += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return s;
 }
 
 /** Shape returned by the embedded select (loosely typed — Supabase embeds resolve to nested objects). */
@@ -76,21 +86,36 @@ export async function resolveSessionId(token: string): Promise<string | null> {
   return r.kind === "invalid" ? null : r.session.sessionId;
 }
 
-/** Create a new team in the session, then add the player to it. Returns ids. */
+/** Create a new team (with an invite code), add the creating player, and mark them captain (visual only). */
 export async function createTeamAndJoin(
   sessionId: string,
   teamName: string,
   displayName: string,
-): Promise<{ teamId: string; playerId: string }> {
+): Promise<{ teamId: string; playerId: string; joinCode: string }> {
+  const joinCode = genJoinCode();
   const { data: team, error: teamErr } = await supabase
     .from("ppn_teams")
-    .insert({ session_id: sessionId, name: teamName })
+    .insert({ session_id: sessionId, name: teamName, join_code: joinCode })
     .select("id")
     .single();
   if (teamErr) throw teamErr;
   const teamId = (team as { id: string }).id;
   const playerId = await addPlayer(sessionId, teamId, displayName);
-  return { teamId, playerId };
+  // First player = captain (contextual only; no permissions).
+  await supabase.from("ppn_teams").update({ captain_player_id: playerId }).eq("id", teamId);
+  return { teamId, playerId, joinCode };
+}
+
+/** Find a team in a session by its invite code (for the /play/:token?team=<code> preselect). */
+export async function findTeamByCode(sessionId: string, code: string): Promise<{ id: string; name: string } | null> {
+  const { data, error } = await supabase
+    .from("ppn_teams")
+    .select("id, name")
+    .eq("session_id", sessionId)
+    .eq("join_code", code)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as { id: string; name: string } | null) ?? null;
 }
 
 /** Add a player to an existing team. */
@@ -108,7 +133,9 @@ export async function addPlayer(sessionId: string, teamId: string, displayName: 
 export async function listTeams(sessionId: string): Promise<TeamRow[]> {
   const { data, error } = await supabase
     .from("ppn_teams")
-    .select("id, name, score, players:ppn_players(id, display_name)")
+    // Disambiguate: ppn_teams now has TWO relationships to ppn_players (team_id + captain_player_id), so the
+    // players embed must name the team_id FK explicitly, else PostgREST errors (PGRST201).
+    .select("id, name, score, join_code, captain_player_id, players:ppn_players!ppn_players_team_id_fkey(id, display_name)")
     .eq("session_id", sessionId)
     .order("created_at", { ascending: true });
   if (error) throw error;

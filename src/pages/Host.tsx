@@ -60,7 +60,19 @@ export default function Host() {
                     </span>
                   </div>
                   {t.players.length > 0 && (
-                    <p className="mt-1 text-sm text-slate-400">{t.players.map((p) => p.display_name).join(" · ")}</p>
+                    <p className="mt-1 text-sm text-slate-400">
+                      {t.players.map((p, i) => (
+                        <span key={p.id}>
+                          {i > 0 && " · "}
+                          {p.display_name}
+                          {p.id === t.captain_player_id && (
+                            <span className="ml-1 rounded bg-amber-500/20 px-1 text-[10px] font-semibold uppercase text-amber-300">
+                              Captain
+                            </span>
+                          )}
+                        </span>
+                      ))}
+                    </p>
                   )}
                 </div>
               ))
