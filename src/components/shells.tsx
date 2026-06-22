@@ -22,22 +22,26 @@ function BreweryChip() {
 }
 
 // ── Player (phone) ──────────────────────────────────────────────────────────
-export function PlayerShell({ venue, event, children }: { venue?: string; event?: string; children: ReactNode }) {
+// `focus` trims the hero + sponsor strip for gameplay states (active question / qintro / reveal) so the
+// player's action is the only thing on screen — sponsor stays only as the subtle top brewery banner.
+export function PlayerShell({ venue, event, focus = false, children }: { venue?: string; event?: string; focus?: boolean; children: ReactNode }) {
   const pub = venue ?? DEMO_BRAND.pubName;
   const ev = event ?? DEMO_BRAND.eventName;
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col bg-[var(--ppn-bg)] text-[var(--ppn-text)]">
       <BrandBanner size="phone" />
-      <div className="px-4">
-        <BrandAssetPreview aspect="16/9" overlay="dark" alt={DEMO_BRAND.heroImageAltText} className="max-h-44 w-full">
-          <div>
-            <h1 className="text-2xl font-extrabold leading-tight text-white drop-shadow">{pub}</h1>
-            <p className="text-sm font-semibold text-white/90 drop-shadow">{ev} · {DEMO_BRAND.sponsorName}</p>
-          </div>
-        </BrandAssetPreview>
-      </div>
+      {!focus && (
+        <div className="px-4">
+          <BrandAssetPreview aspect="16/9" overlay="dark" alt={DEMO_BRAND.heroImageAltText} className="max-h-44 w-full">
+            <div>
+              <h1 className="text-2xl font-extrabold leading-tight text-white drop-shadow">{pub}</h1>
+              <p className="text-sm font-semibold text-white/90 drop-shadow">{ev} · {DEMO_BRAND.sponsorName}</p>
+            </div>
+          </BrandAssetPreview>
+        </div>
+      )}
       <div className="flex-1 px-4 pt-4">{children}</div>
-      <SponsorStrip size="phone" />
+      {focus ? <div className="h-3" /> : <SponsorStrip size="phone" />}
     </div>
   );
 }

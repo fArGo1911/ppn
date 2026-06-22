@@ -45,9 +45,11 @@ export function PlayerLive({ session, team }: { session: ResolvedSession; team: 
   const chosen = answerQ.data?.submitted_value ?? null;
 
   const phase = st?.phase ?? "lobby";
+  // Gameplay states get a focused, sponsor-suppressed shell so answering is distraction-free.
+  const focus = phase === "qintro" || phase === "question" || phase === "reveal";
 
   return (
-    <PlayerShell venue={session.venueName} event={session.eventTitle}>
+    <PlayerShell venue={session.venueName} event={session.eventTitle} focus={focus}>
       <div className="mb-2 flex items-center justify-between text-xs text-[var(--ppn-muted)]">
         <span>Team <span className="font-semibold text-[var(--ppn-text)]">{team.teamName}</span></span>
         {st && <span>{setupLabel(st.setupMode)}</span>}
