@@ -16,13 +16,15 @@ import { DEMO_BRAND } from "../demo/brand";
 type StoredTeam = { teamId: string; playerId: string; teamName: string; joinCode?: string | null };
 function storeTeam(sid: string, t: StoredTeam) { try { localStorage.setItem(`ppn_team_${sid}`, JSON.stringify(t)); } catch { /* ignore */ } }
 function readTeam(sid: string): StoredTeam | null { try { const r = localStorage.getItem(`ppn_team_${sid}`); return r ? (JSON.parse(r) as StoredTeam) : null; } catch { return null; } }
+/** Device-local reset only — forgets this device's team. Never deletes DB teams/players or affects scores. */
+function clearStoredTeam(sid: string) { try { localStorage.removeItem(`ppn_team_${sid}`); } catch { /* ignore */ } }
 
 function inviteLink(joinCode?: string | null) {
   return `${window.location.origin}${window.location.pathname}?team=${joinCode ?? ""}`;
 }
 
 /** Join-success payoff — a branded "you're in" moment before the lobby. Auto-continues after a few seconds. */
-function JoinSuccess({ session, team, onContinue }: { session: ResolvedSession; team: StoredTeam; onContinue: () => void }) {
+function JoinSuccess({ session, team, onContinue, onChooseAgain }: { session: ResolvedSession; team: StoredTeam; onContinue: () => void; onChooseAgain: () => void }) {
   const cb = useRef(onContinue); cb.current = onContinue;
   useEffect(() => { const t = setTimeout(() => cb.current(), 4500); return () => clearTimeout(t); }, []);
   return (
@@ -45,6 +47,7 @@ function JoinSuccess({ session, team, onContinue }: { session: ResolvedSession; 
         <button onClick={onContinue} className="mt-3 w-full rounded-xl px-4 py-3.5 text-lg font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>
           Let's play →
         </button>
+        <button onClick={onChooseAgain} className="mt-3 text-xs text-[var(--ppn-muted)] underline">Wrong team? Choose again</button>
       </div>
     </PlayerShell>
   );
@@ -134,13 +137,18 @@ export default function PlayJoin() {
   if (resolveQ.data?.kind === "ended") return <PlayerShell venue={session?.venueName} event={session?.eventTitle}><p className="mt-2 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4 text-[var(--ppn-muted)]">This game has ended — joining is closed.</p></PlayerShell>;
   if (!session) return null;
 
+  // Device-local "change team / start over" — forgets this device's team and returns to the join flow.
+  // No DB rows are deleted; the team stays in the session and other players/scores are unaffected.
+  const leaveTeam = () => { clearStoredTeam(session.sessionId); setJoined(null); setEnteredLobby(false); setStep("name"); };
+  const chooseAgain = () => { clearStoredTeam(session.sessionId); setJoined(null); setEnteredLobby(false); setStep("team"); };
+
   // Returning player (joined this session, or a previous visit) → straight into the live game.
   const stored = readTeam(session.sessionId);
   const myTeam = joined ?? stored;
-  if (myTeam && (enteredLobby || (stored && !joined))) return <PlayerLive session={session} team={myTeam} />;
+  if (myTeam && (enteredLobby || (stored && !joined))) return <PlayerLive session={session} team={myTeam} onLeaveTeam={leaveTeam} />;
 
   // Fresh join → payoff moment before the lobby.
-  if (joined && !enteredLobby) return <JoinSuccess session={session} team={joined} onContinue={() => setEnteredLobby(true)} />;
+  if (joined && !enteredLobby) return <JoinSuccess session={session} team={joined} onContinue={() => setEnteredLobby(true)} onChooseAgain={chooseAgain} />;
 
   // ── A. Event splash / confirmation (you're in the right place) ──
   if (step === "splash") {

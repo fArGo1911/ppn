@@ -9,13 +9,11 @@ import {
   type ResolvedSession,
 } from "../lib/ppnApi";
 import { PlayerShell } from "./shells";
-import { AiAnnouncementSlot, OfferBadge } from "./brandZones";
-import { Carousel } from "./Carousel";
-import { playerHeroSlides } from "../demo/media";
+import { OfferBadge } from "./brandZones";
 import { setupLabel } from "../demo/setup";
 import { DEMO_BRAND } from "../demo/brand";
 
-export function PlayerLive({ session, team }: { session: ResolvedSession; team: { teamId: string; playerId: string; teamName: string; joinCode?: string | null } }) {
+export function PlayerLive({ session, team, onLeaveTeam }: { session: ResolvedSession; team: { teamId: string; playerId: string; teamName: string; joinCode?: string | null }; onLeaveTeam?: () => void }) {
   const qc = useQueryClient();
   const sid = session.sessionId;
 
@@ -59,17 +57,18 @@ export function PlayerLive({ session, team }: { session: ResolvedSession; team: 
         <>
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-brand)]">{phase === "intro" ? "Welcome" : "You're in"}</p>
           <h2 className="mt-1 text-2xl font-bold">{team.teamName}</h2>
-          <p className="mt-1 text-[var(--ppn-muted)]">{phase === "intro" ? "🔊 Intro starting soon — listen up, first question next." : "Waiting for the host to start…"}</p>
+          <p className="mt-2 text-[var(--ppn-muted)]">{phase === "intro" ? "Listen up — the intro will start soon. Questions will appear here." : "Waiting for the host to start… Keep this page open — questions will appear right here."}</p>
           {team.joinCode && (
             <button
               onClick={() => navigator.clipboard?.writeText(`${window.location.origin}${window.location.pathname}?team=${team.joinCode}`)}
-              className="mt-4 w-full rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-4 py-2.5 text-sm"
+              className="mt-5 w-full rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-4 py-2.5 text-sm"
             >
-              Copy invite link · code <span className="font-mono font-bold">{team.joinCode}</span>
+              Invite teammates · code <span className="font-mono font-bold">{team.joinCode}</span>
             </button>
           )}
-          <div className="mt-4"><Carousel slides={playerHeroSlides(DEMO_BRAND)} size="phone" aspect="16/9" auto /></div>
-          <div className="mt-4"><AiAnnouncementSlot scriptKey="eventIntro" size="phone" /></div>
+          {onLeaveTeam && (
+            <button onClick={onLeaveTeam} className="mt-4 text-xs text-[var(--ppn-muted)] underline">Wrong team? Change team</button>
+          )}
         </>
       )}
 
@@ -138,6 +137,7 @@ export function PlayerLive({ session, team }: { session: ResolvedSession; team: 
           </div>
           <p className="mt-3 text-sm text-[var(--ppn-muted)]">Your team: #{myRank} · {myScore} pts</p>
           {phase === "ended" && <div className="mt-4"><OfferBadge size="phone" /></div>}
+          {phase === "ended" && onLeaveTeam && <button onClick={onLeaveTeam} className="mt-4 text-xs text-[var(--ppn-muted)] underline">Start over on this device</button>}
         </>
       )}
 
