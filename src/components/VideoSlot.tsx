@@ -6,7 +6,7 @@
  * POC capability proof only: NO downloader/scraper/ripping. Rules: no autoplay-with-sound (presenter presses
  * play), always a still-image fallback, never blocks the QR/answer flow, swappable per brewery preset.
  */
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { BrandAssetPreview } from "./brandZones";
 
 type SourceType = "embed" | "local" | "external";
@@ -27,6 +27,7 @@ export function VideoSlot({
   sourceNote,
   aspect = "16/9",
   label,
+  fallback,
 }: {
   url?: string;
   sourceType?: SourceType;
@@ -34,14 +35,17 @@ export function VideoSlot({
   sourceNote?: string;
   aspect?: string;
   label?: string;
+  /** Audience-safe fallback when no real video URL exists. When provided it replaces the default branded panel
+   * (used on public TV to show a polished sponsor moment instead of an empty/fake placeholder). */
+  fallback?: ReactNode;
 }) {
   const [errored, setErrored] = useState(false);
 
-  const Fallback = (
+  // No real clip → a polished branded fallback, never a fake/playable "▶ video" placeholder.
+  // Caller-supplied `fallback` (e.g. a sponsor-feature panel) wins; otherwise a clean brand-gradient/still panel.
+  const Fallback = fallback !== undefined ? <>{fallback}</> : (
     <div>
-      <BrandAssetPreview aspect={aspect} image={fallbackImage} label={label ?? "Video slot"}>
-        <span className="rounded-full bg-black/50 px-4 py-2 text-white">▶ Brewery video</span>
-      </BrandAssetPreview>
+      <BrandAssetPreview aspect={aspect} image={fallbackImage} label={label} />
       {sourceNote && <p className="mt-1 text-xs text-[var(--ppn-muted)]">{sourceNote}</p>}
     </div>
   );

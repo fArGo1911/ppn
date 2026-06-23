@@ -104,6 +104,28 @@ export function OfferBadge({ size = "phone" }: { size?: Size }) {
   );
 }
 
+/** Audience-safe sponsor feature panel — the polished fallback for a TV video slot when no real clip is set.
+ * A branded sponsor MOMENT (logo/initials + sponsor + line) for a public venue screen, never a fake/playable
+ * "▶ video" placeholder. Follows the client-facing identity so a mismatched brief shows neutral initials. */
+export function SponsorFeature({ aspect = "16/9", caption }: { aspect?: string; caption?: string }) {
+  const id = clientFacingIdentity();
+  const [broken, setBroken] = useState(false);
+  return (
+    <BrandAssetPreview aspect={aspect} overlay="dark">
+      <div className="flex w-full items-center gap-5">
+        {id.logoUrl && !broken
+          ? <img src={id.logoUrl} alt={id.sponsorName} onError={() => setBroken(true)} className="h-20 w-20 rounded-2xl object-contain" style={{ background: "var(--ppn-surface)" }} />
+          : <div className="grid h-20 w-20 place-items-center rounded-2xl text-3xl font-black" style={onBrand} aria-hidden>{id.initials}</div>}
+        <div className="min-w-0 text-left text-white">
+          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-white/80">Sponsor feature</p>
+          <p className="truncate text-4xl font-black drop-shadow">{id.sponsorName}</p>
+          <p className="mt-1 text-xl text-white/90 drop-shadow">{caption ?? id.tagline}</p>
+        </div>
+      </div>
+    </BrandAssetPreview>
+  );
+}
+
 export function SponsorMessageSlot({ size = "phone" }: { size?: Size }) {
   const tv = size === "tv";
   const id = clientFacingIdentity();

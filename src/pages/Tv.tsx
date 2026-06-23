@@ -17,7 +17,7 @@ import { resolveJoinToken, listTeams, getSessionState, getSessionQuestions } fro
 import { DEMO_BRAND } from "../demo/brand";
 import { clientFacingIdentity, clientFacingBrand, clientVideoUrl } from "../lib/clientFacingDemo";
 import { TvShell } from "../components/shells";
-import { OfferBadge, AiAnnouncementSlot } from "../components/brandZones";
+import { OfferBadge, SponsorFeature } from "../components/brandZones";
 import { Carousel } from "../components/Carousel";
 import { VideoSlot } from "../components/VideoSlot";
 import { sponsorSlides, pauseSlides } from "../demo/media";
@@ -125,7 +125,6 @@ export default function Tv() {
       <Kicker>Answer{q.kind === "sponsored" ? ` · ${ci.sponsorName}` : ""}</Kicker>
       <h1 className="mt-4 text-8xl font-black">{q.correctAnswer}</h1>
       {q.explanation && <p className="mt-4 max-w-4xl text-3xl text-[var(--ppn-muted)]">{q.explanation}</p>}
-      <div className="mt-8 w-full max-w-4xl"><AiAnnouncementSlot scriptKey="answerReveal" size="tv" /></div>
     </>
   ));
 
@@ -146,13 +145,10 @@ export default function Tv() {
   if (state === "intro")
     return wrap(false, (
       <>
-        <Kicker>🔊 Tonight's intro</Kicker>
+        <Kicker>Welcome — brought to you by {ci.sponsorName}</Kicker>
         <Title />
         <div className="mt-8 grid w-full max-w-6xl grid-cols-[1.5fr_1fr] items-center gap-8 text-left">
-          <div>
-            <VideoSlot url={clientVideoUrl("intro")} aspect="16/9" label="Intro video (optional campaign visual)" />
-            <div className="mt-4"><AiAnnouncementSlot scriptKey="eventIntro" size="tv" /></div>
-          </div>
+          <VideoSlot url={clientVideoUrl("intro")} aspect="16/9" fallback={<SponsorFeature caption={ci.tagline} />} />
           <QrCard size={170} caption="Still time to join" />
         </div>
       </>
@@ -180,7 +176,7 @@ export default function Tv() {
         <h1 className="mt-4 text-8xl font-black">{winner}</h1>
         <p className="mt-5 text-3xl">Thanks to <span className="font-bold" style={{ color: "var(--ppn-brand)" }}>{ci.sponsorName}</span></p>
         <div className="mt-6"><OfferBadge size="tv" /></div>
-        <div className="mt-8 w-full max-w-4xl"><AiAnnouncementSlot scriptKey="winner" size="tv" /></div>
+        <p className="mt-8 text-2xl text-[var(--ppn-muted)]">See you next time at {venue}</p>
       </>
     ));
 
@@ -198,7 +194,7 @@ export default function Tv() {
   if (state === "slideshow")
     return wrap(false, (
       <div className="grid w-full max-w-6xl gap-6">
-        <VideoSlot url={clientVideoUrl("bumper")} aspect="16/9" label="Sponsor bumper" />
+        <VideoSlot url={clientVideoUrl("bumper")} aspect="16/9" fallback={<SponsorFeature caption="Sponsor moment" />} />
         <Carousel slides={sponsorSlides(cb)} auto size="tv" />
       </div>
     ));
@@ -218,7 +214,7 @@ export default function Tv() {
         <Kicker>Picture / video round</Kicker>
         <h1 className="mt-2 text-5xl font-black">What's happening in this clip?</h1>
         <div className="mt-6 grid w-full max-w-6xl grid-cols-[1.5fr_1fr] items-center gap-8 text-left">
-          <VideoSlot aspect="16/9" label="Video question media" />
+          <VideoSlot aspect="16/9" label="Picture / video round media" />
           <div className="grid gap-3 text-3xl">
             {["Brewing day", "Match day", "Quiz night", "Delivery run"].map((o, i) => (
               <div key={o} className="rounded-2xl border-2 px-6 py-5 font-semibold" style={{ borderColor: "var(--ppn-border)", background: "var(--ppn-surface)", color: "var(--ppn-text)" }}>
@@ -247,7 +243,7 @@ export default function Tv() {
         <h1 className="text-7xl font-black">Thanks for playing!</h1>
         <p className="mt-4 text-3xl" style={{ color: "var(--ppn-brand)" }}>{cb.cta}</p>
         <p className="mt-2 text-2xl text-[var(--ppn-muted)]">Brought to you by {ci.sponsorName}</p>
-        <div className="mt-6 w-full max-w-3xl"><VideoSlot url={clientVideoUrl("closing")} aspect="16/9" label="Closing sponsor video (optional)" /></div>
+        <div className="mt-6 w-full max-w-3xl"><VideoSlot url={clientVideoUrl("closing")} aspect="16/9" fallback={<SponsorFeature caption={cb.cta} />} /></div>
         <div className="mt-6"><OfferBadge size="tv" /></div>
       </>
     ));
@@ -257,16 +253,16 @@ export default function Tv() {
   if (state === "question") return QuestionView({ prompt: "Which planet is known as the Red Planet?", options: ["Mars", "Venus", "Jupiter", "Mercury"], roundSeq: 1, sequence: 1 });
   if (state === "reveal") return RevealView({ correctAnswer: "Mars", explanation: "The Red Planet — its colour comes from iron oxide (rust)." });
 
-  // ── Default: welcome / QR (room-facing start screen) ──
+  // ── Default: welcome / QR (room-facing start screen) — audience-safe, no host script ──
   return wrap(false, (
     <>
       <Title />
       <div className="mt-4"><OfferBadge size="tv" /></div>
       <div className="mt-7 grid w-full max-w-6xl grid-cols-[1.4fr_1fr] items-center gap-8 text-left">
-        <VideoSlot url={clientVideoUrl("intro")} aspect="16/9" label="Intro video" />
+        <VideoSlot url={clientVideoUrl("intro")} aspect="16/9" fallback={<SponsorFeature caption="Tonight's quiz starts soon" />} />
         <QrCard size={220} />
       </div>
-      <div className="mt-8 w-full max-w-6xl text-left"><AiAnnouncementSlot scriptKey="eventIntro" size="tv" /></div>
+      <p className="mt-8 text-3xl font-semibold text-[var(--ppn-muted)]">Tonight's quiz starts soon — grab a team and scan to join</p>
     </>
   ));
 }

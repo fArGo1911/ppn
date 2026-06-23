@@ -1,10 +1,14 @@
 /**
  * Presenter tools — on-demand demo control, NEVER audience navigation. A subtle top-right pill opens a jump menu
- * + TV/player state switch + preset switch + reset demo + audience-mode toggle. In AUDIENCE mode it renders no
- * visible chrome at all (so /play and /tv look like a real event) — only an invisible corner hotspot to exit.
+ * + TV/player state switch + preset switch + reset demo + audience-mode toggle.
+ *
+ * SAFE BY DEFAULT: the pill renders ONLY in an explicit presenter context — the operator gate is unlocked on this
+ * device, OR the URL carries ?present (or ?presenter). So public /tv, /play and buyer/client pages show NO
+ * presenter chrome by default; an operator (unlocked) keeps full access everywhere. In AUDIENCE mode it renders
+ * no visible chrome either — only an invisible corner hotspot to exit.
  */
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { PRESETS, getActiveBrand, setActiveBrand, brandInitials } from "../demo/brand";
 import { resolveJoinToken, resetDemo } from "../lib/ppnApi";
@@ -32,6 +36,7 @@ const PLAYER_STATES = ["question", "sponsored", "submitted", "reveal", "scoreboa
 export function PresenterTools() {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
+  const [params] = useSearchParams();
   const [audience, setAudience] = useAudienceMode();
   const opUnlocked = useOperatorUnlocked();
   const onTv = pathname.startsWith("/tv");
@@ -41,6 +46,12 @@ export function PresenterTools() {
   const sessionQ = useQuery({ queryKey: ["pt-demo-session"], queryFn: () => resolveJoinToken("DEMO") });
   const sid = sessionQ.data && sessionQ.data.kind !== "invalid" ? sessionQ.data.session.sessionId : undefined;
   const doReset = async () => { if (sid) { await resetDemo(sid); } window.location.reload(); };
+
+  // Presenter context = operator unlocked on this device, or an explicit ?present / ?presenter on the URL.
+  // Without it, public/audience surfaces (/, /tv, /play, buyer pages) show nothing at all (no pill, no hotspot).
+  // Placed after all hooks so the Rules of Hooks hold.
+  const presenterContext = opUnlocked || params.has("present") || params.has("presenter");
+  if (!presenterContext) return null;
 
   // Audience mode: zero visible chrome. Only an invisible bottom-right hotspot to exit (for touch demos).
   if (audience) {
