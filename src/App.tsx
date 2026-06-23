@@ -10,6 +10,7 @@ import Tv from "./pages/Tv";
 import BrandAssets from "./pages/BrandAssets";
 import Config from "./pages/Config";
 import Operator from "./pages/Operator";
+import SetupWizard from "./pages/SetupWizard";
 import Kpi from "./pages/Kpi";
 import Rollout from "./pages/Rollout";
 import Report from "./pages/Report";
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/tv/:sessionId" element={<Tv />} />
         {/* Operator hub + detailed setup (gated) */}
         <Route path="/operator" element={<OperatorGate><Operator /></OperatorGate>} />
+        <Route path="/operator/setup-wizard" element={<OperatorGate><SetupWizard /></OperatorGate>} />
         <Route path="/config" element={<OperatorGate><Config /></OperatorGate>} />
         <Route path="/setup" element={<BrandAssets />} />
         <Route path="/kpi" element={<Kpi />} />

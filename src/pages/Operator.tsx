@@ -11,6 +11,8 @@ import { activeMarket } from "../demo/markets";
 import { resolveJoinToken, getSessionState, listTeams } from "../lib/ppnApi";
 import { listAssetPacks } from "../lib/ppnAssets";
 import { overrideStatus, anyOverrideActive, clearClientOverrides } from "../lib/demoStatus";
+import { getDemoBrief, clearDemoBrief, briefToScenario } from "../lib/demoBrief";
+import { applyScenarioToSeed, deriveKpi, setupModeLabel } from "../demo/kpiModel";
 
 type Step = { t: string; i: string; to?: string; href?: string; label: string };
 const JOURNEY: Step[] = [
@@ -42,6 +44,9 @@ export default function Operator() {
   const stateQ = useQuery({ queryKey: ["op-state", sid], queryFn: () => getSessionState(sid!), enabled: !!sid, retry: false });
   const teamsQ = useQuery({ queryKey: ["op-teams", sid], queryFn: () => listTeams(sid!), enabled: !!sid, retry: false });
   const healthQ = useQuery({ queryKey: ["op-asset-health"], queryFn: listAssetPacks, retry: false });
+
+  const brief = getDemoBrief();
+  const briefKpi = brief ? deriveKpi(applyScenarioToSeed(activeMarket().kpiSeed, briefToScenario(brief))) : null;
 
   const Chip = ({ label, on, onText = "on", offText = "off" }: { label: string; on: boolean; onText?: string; offText?: string }) => (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1 text-xs">
@@ -84,6 +89,38 @@ export default function Operator() {
             </div>
           ) : <p className="mt-2 text-xs text-[var(--ppn-muted)]">No client overrides — showing preset defaults. Switching brewery in /config will ask before carrying any overrides over.</p>}
           {healthQ.isError && <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Storage-backed asset uploads need the local PPN Supabase running (ports 553xx). Manual URL/path mode still works without it.</p>}
+        </div>
+
+        {/* A2. Internal setup wizard — set up a client demo before anyone sees it */}
+        <div className="mt-4 rounded-xl border-2 bg-[var(--ppn-surface)] p-4" style={{ borderColor: "color-mix(in srgb, var(--ppn-brand) 30%, var(--ppn-border))" }}>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold">Set up a client demo</p>
+            {brief
+              ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-success) 18%, transparent)", color: "var(--ppn-success)" }}>Brief saved</span>
+              : <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>No brief yet</span>}
+          </div>
+          <p className="mt-1 text-xs text-[var(--ppn-muted)]">Configure the client, outcome, scale and scenario before adding graphics. Internal setup — not shown to the client.</p>
+
+          {brief && briefKpi ? (
+            <>
+              <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Client: <span className="font-semibold text-[var(--ppn-text)]">{brief.clientName || "—"}</span></span>
+                <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Campaign: <span className="font-semibold text-[var(--ppn-text)]">{brief.campaignName || "—"}</span></span>
+                <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Target venues: <span className="font-semibold text-[var(--ppn-text)]">{brief.targetVenues}</span></span>
+                <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Target reach: <span className="font-semibold text-[var(--ppn-text)]">~{briefKpi.campaignReachEstimate.toLocaleString()}</span></span>
+                <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Setup: <span className="font-semibold text-[var(--ppn-text)]">{setupModeLabel(brief.setupMode)}</span></span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link to="/operator/setup-wizard" className={surfaceBtn} style={{ background: "var(--ppn-brand)" }}>Edit setup wizard</Link>
+                <button onClick={() => { clearDemoBrief(); window.location.reload(); }} className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-sm font-semibold">Clear demo brief</button>
+              </div>
+            </>
+          ) : (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs" style={{ color: "var(--ppn-warning)" }}>⚠ No demo brief yet — define the client and scenario before the demo.</span>
+              <Link to="/operator/setup-wizard" className={surfaceBtn} style={{ background: "var(--ppn-brand)" }}>Start setup wizard</Link>
+            </div>
+          )}
         </div>
 
         {/* B. Guided journey */}
