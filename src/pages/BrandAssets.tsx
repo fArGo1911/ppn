@@ -129,7 +129,7 @@ export default function BrandAssets() {
                     <div><span className="text-[var(--ppn-text)]">Size:</span> {s.recommended}</div>
                     <div><span className="text-[var(--ppn-text)]">Aspect:</span> {s.aspect}</div>
                     <div><span className="text-[var(--ppn-text)]">Type:</span> {fileType(s.key)}</div>
-                    <div><span className="text-[var(--ppn-text)]">Media:</span> {s.key === "questionMedia" ? "image or short video (not wired yet)" : "image / GIF (no video on this slot)"}</div>
+                    <div><span className="text-[var(--ppn-text)]">Media:</span> {["tvHero", "campaignHero", "venue"].includes(s.key) ? "image / GIF / video (renders on the surface)" : s.key === "questionMedia" ? "image or short video (not wired yet)" : "image / GIF (no video on this slot)"}</div>
                     <div><span className="text-[var(--ppn-text)]">Appears:</span> {s.appearsOn.join(" · ")}</div>
                   </dl>
                   {s.notes && <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">{s.notes}</p>}

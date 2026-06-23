@@ -7,6 +7,7 @@ import { useState, useEffect, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DemoShell } from "../components/shells";
+import { isVideoUrl } from "../components/brandZones";
 import { PRESETS, getActiveBrand, brandInitials, type ThemeColours } from "../demo/brand";
 import { switchPresetGuarded, overrideStatus, anyOverrideActive, clearClientOverrides } from "../lib/demoStatus";
 import { activeMarket } from "../demo/markets";
@@ -50,18 +51,23 @@ const PACK_COPY_FIELDS: { key: string; label: string }[] = [
 // Slot-based asset manager catalogue. Each media slot maps to an AssetPack override field (manual path) AND an
 // AssetType (storage upload), so each slot gets its own upload/replace/clear — reusing the existing primitives.
 type SlotGroup = "Required" | "Recommended" | "Optional";
-interface MediaSlot { group: SlotGroup; field: keyof AssetPack; type: AssetType; label: string; size: string; aspect: string; fileType: string; accept: string; appears: string; kind: "image" | "video"; live: "live" | "preview-only" }
+type SlotMedia = "image" | "image+video" | "video";
+interface MediaSlot { group: SlotGroup; field: keyof AssetPack; type: AssetType; label: string; size: string; aspect: string; fileType: string; accept: string; appears: string; kind: "image" | "video"; media: SlotMedia; fit: "contain" | "cover"; live: "live" | "preview-only" }
 const MEDIA_SLOTS: MediaSlot[] = [
-  { group: "Required", field: "logoUrl", type: "logo", label: "Brewery / client logo", size: "≥512px · transparent", aspect: "1/1", fileType: "PNG · SVG · JPG · GIF", accept: "image/*", appears: "TV banner · player header · KPI", kind: "image", live: "live" },
-  { group: "Required", field: "heroUrl", type: "hero", label: "TV hero / campaign background", size: "1920×1080", aspect: "16/9", fileType: "JPG · PNG · GIF", accept: "image/*", appears: "TV welcome · presentation landing", kind: "image", live: "live" },
-  { group: "Required", field: "sponsorSlideUrl", type: "sponsor_slide", label: "TV sponsor slide / offer card", size: "1920×1080", aspect: "16/9", fileType: "JPG · PNG · GIF", accept: "image/*", appears: "TV sponsor slideshow / pause", kind: "image", live: "live" },
-  { group: "Recommended", field: "phoneCardUrl", type: "phone_card", label: "Phone sponsor card", size: "1080×1350", aspect: "4/5", fileType: "JPG · PNG · GIF", accept: "image/*", appears: "player waiting / sponsored Q", kind: "image", live: "preview-only" },
-  { group: "Recommended", field: "lowerThirdUrl", type: "lower_third", label: "TV lower-third / offer strip", size: "1920×240", aspect: "8/1", fileType: "PNG (transparent)", accept: "image/*", appears: "TV offer strip", kind: "image", live: "preview-only" },
-  { group: "Recommended", field: "venueUrl", type: "venue_image", label: "Venue / background image", size: "1600×900", aspect: "16/9", fileType: "JPG · PNG", accept: "image/*", appears: "presentation venue", kind: "image", live: "preview-only" },
-  { group: "Optional", field: "tvIntroVideoUrl", type: "intro_video", label: "Intro video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 · WebM", accept: "video/*", appears: "TV intro", kind: "video", live: "live" },
-  { group: "Optional", field: "sponsorBumperVideoUrl", type: "sponsor_bumper_video", label: "Sponsor bumper video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 · WebM", accept: "video/*", appears: "TV sponsor bumper", kind: "video", live: "live" },
-  { group: "Optional", field: "closingVideoUrl", type: "closing_video", label: "Closing video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 · WebM", accept: "video/*", appears: "TV closing", kind: "video", live: "live" },
+  { group: "Required", field: "logoUrl", type: "logo", label: "Brewery / client logo", size: "≥512px · transparent", aspect: "1/1", fileType: "PNG · SVG · JPG · GIF", accept: "image/*", appears: "TV banner · player header · KPI", kind: "image", media: "image", fit: "contain", live: "live" },
+  { group: "Required", field: "heroUrl", type: "hero", label: "TV hero / campaign background", size: "1920×1080", aspect: "16/9", fileType: "JPG · PNG · GIF · MP4 · WebM", accept: "image/*,video/*", appears: "presentation landing · player splash", kind: "image", media: "image+video", fit: "cover", live: "live" },
+  { group: "Required", field: "sponsorSlideUrl", type: "sponsor_slide", label: "TV sponsor slide / offer card", size: "1920×1080", aspect: "16/9", fileType: "JPG · PNG · GIF", accept: "image/*", appears: "TV sponsor slideshow / pause", kind: "image", media: "image", fit: "cover", live: "live" },
+  { group: "Recommended", field: "phoneCardUrl", type: "phone_card", label: "Phone sponsor card", size: "1080×1350", aspect: "4/5", fileType: "JPG · PNG · GIF", accept: "image/*", appears: "player waiting / sponsored Q", kind: "image", media: "image", fit: "cover", live: "preview-only" },
+  { group: "Recommended", field: "lowerThirdUrl", type: "lower_third", label: "TV lower-third / offer strip", size: "1920×240", aspect: "8/1", fileType: "PNG (transparent)", accept: "image/*", appears: "TV offer strip", kind: "image", media: "image", fit: "contain", live: "preview-only" },
+  { group: "Recommended", field: "venueUrl", type: "venue_image", label: "Venue / background visual", size: "1600×900", aspect: "16/9", fileType: "JPG · PNG · GIF · MP4 · WebM", accept: "image/*,video/*", appears: "presentation venue", kind: "image", media: "image+video", fit: "cover", live: "preview-only" },
+  { group: "Optional", field: "tvIntroVideoUrl", type: "intro_video", label: "Intro video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 · WebM", accept: "video/*", appears: "TV intro", kind: "video", media: "video", fit: "cover", live: "live" },
+  { group: "Optional", field: "sponsorBumperVideoUrl", type: "sponsor_bumper_video", label: "Sponsor bumper video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 · WebM", accept: "video/*", appears: "TV sponsor bumper", kind: "video", media: "video", fit: "cover", live: "live" },
+  { group: "Optional", field: "closingVideoUrl", type: "closing_video", label: "Closing video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 · WebM", accept: "video/*", appears: "TV closing", kind: "video", media: "video", fit: "cover", live: "live" },
 ];
+const mediaCapabilityLabel = (m: SlotMedia): string =>
+  m === "video" ? "video (MP4/WebM) · host presses play · muted, no autoplay"
+  : m === "image+video" ? "image / GIF / video — video renders on the surface (cover, muted, looping)"
+  : "image / GIF (no video on this slot)";
 // Hash-controlled in-page section tabs: only the active section's work area renders, so /config#brand-media,
 // /config#demo-numbers and /config#session each show a clearly DIFFERENT working section (not just a scroll).
 const SECTIONS = [
@@ -210,8 +216,7 @@ export default function Config() {
     : st === "missing" ? { background: "color-mix(in srgb, var(--ppn-warning) 20%, transparent)", color: "var(--ppn-warning)" }
     : { background: "var(--ppn-bg)", color: "var(--ppn-muted)" };
   // Fit behaviour matches the real surfaces: logo + lower-third render object-contain (no crop); the rest cover.
-  const slotFit = (s: MediaSlot): "contain" | "cover" => (s.field === "logoUrl" || s.field === "lowerThirdUrl" ? "contain" : "cover");
-  const slotFitLabel = (s: MediaSlot): string => (slotFit(s) === "contain" ? "contain · letterbox, no crop (transparent recommended)" : "cover · crops to fill");
+  const slotFitLabel = (s: MediaSlot): string => (s.fit === "contain" ? "contain · letterbox, no crop (transparent recommended)" : "cover · crops to fill");
   // Aspect status from client-side natural dimensions vs the slot's preferred aspect ratio.
   const aspectStatus = (s: MediaSlot, w: number, h: number): { label: string; tone: string } => {
     const [aw, ah] = s.aspect.split("/").map(Number);
@@ -361,7 +366,9 @@ export default function Config() {
                   {/* TV / audience — 16:9 mock: hero (cover) + logo banner + sponsor + intro-video state */}
                   <a href="/tv/DEMO" target="_blank" rel="noreferrer" className="group rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-2 hover:border-[var(--ppn-brand)]">
                     <div className="relative overflow-hidden rounded" style={{ aspectRatio: "16/9", background: "var(--ppn-surface)" }}>
-                      {previewHeroUrl && <img src={previewHeroUrl} alt="hero" className="absolute inset-0 h-full w-full object-cover opacity-90" />}
+                      {previewHeroUrl && (isVideoUrl(previewHeroUrl)
+                        ? <video src={previewHeroUrl} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover opacity-90" />
+                        : <img src={previewHeroUrl} alt="hero" className="absolute inset-0 h-full w-full object-cover opacity-90" />)}
                       <div className="absolute left-1.5 top-1.5 flex items-center gap-1.5"><Logo size="h-6 w-6" /><span className="truncate rounded bg-black/40 px-1.5 py-0.5 text-[9px] font-semibold text-white">{effSponsor}</span></div>
                       <div className="absolute bottom-1.5 left-1.5 rounded bg-black/40 px-1.5 py-0.5 text-[8px] text-white">Scan to join</div>
                     </div>
@@ -372,7 +379,9 @@ export default function Config() {
                   <a href="/play/DEMO" target="_blank" rel="noreferrer" className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-2 hover:border-[var(--ppn-brand)]">
                     <div className="overflow-hidden rounded border border-[var(--ppn-border)]">
                       <div className="flex items-center gap-1.5 p-1.5" style={{ background: "var(--ppn-surface)" }}><Logo size="h-6 w-6" /><span className="truncate text-[10px] font-semibold">{effSponsor}</span></div>
-                      <div className="h-12" style={{ background: previewHeroUrl ? `center/cover url(${previewHeroUrl})` : "var(--ppn-surface)" }} />
+                      {previewHeroUrl && isVideoUrl(previewHeroUrl)
+                        ? <video src={previewHeroUrl} autoPlay muted loop playsInline className="h-12 w-full object-cover" />
+                        : <div className="h-12" style={{ background: previewHeroUrl ? `center/cover url(${previewHeroUrl})` : "var(--ppn-surface)" }} />}
                     </div>
                     <p className="mt-1 flex items-center gap-1 text-[10px] font-semibold">Player phone <span className="text-[var(--ppn-brand)]">↗</span></p>
                     <p className="mt-0.5 flex flex-wrap gap-1 text-[9px] text-[var(--ppn-muted)]">logo <Tag s={logoStatus} /> hero <Tag s={heroStatus} /></p>
@@ -419,10 +428,10 @@ export default function Config() {
                           <p className="mt-1 text-[9px] font-semibold uppercase" style={{ color: ss.applied ? "var(--ppn-success)" : "var(--ppn-warning)" }}>{ss.applied ? "● applied" : "● uploaded · not applied"}</p>
                         )}
                         <div className="mt-2 flex items-center gap-2">
-                          {ss.url && s.kind === "image"
-                            ? <img src={ss.url} alt={s.label} onLoad={(e) => { const t = e.currentTarget; if (t.naturalWidth) setDims((d) => ({ ...d, [s.field]: { w: t.naturalWidth, h: t.naturalHeight } })); }} className="h-10 w-14 shrink-0 rounded border border-[var(--ppn-border)]" style={{ background: "var(--ppn-surface)", objectFit: slotFit(s) }} />
-                            : ss.url && s.kind === "video"
+                          {ss.url && isVideoUrl(ss.url)
                             ? <video src={ss.url} muted playsInline preload="metadata" className="h-10 w-14 shrink-0 rounded border border-[var(--ppn-border)] object-cover" style={{ background: "var(--ppn-surface)" }} />
+                            : ss.url
+                            ? <img src={ss.url} alt={s.label} onLoad={(e) => { const t = e.currentTarget; if (t.naturalWidth) setDims((d) => ({ ...d, [s.field]: { w: t.naturalWidth, h: t.naturalHeight } })); }} className="h-10 w-14 shrink-0 rounded border border-[var(--ppn-border)]" style={{ background: "var(--ppn-surface)", objectFit: s.fit }} />
                             : <span className="grid h-10 w-14 shrink-0 place-items-center rounded border border-dashed border-[var(--ppn-border)] text-[8px] text-[var(--ppn-muted)]" aria-hidden>no file</span>}
                           <div className="min-w-0 text-[10px] text-[var(--ppn-muted)]">
                             <p>{s.size} · {s.aspect}</p>
@@ -430,9 +439,9 @@ export default function Config() {
                           </div>
                         </div>
                         <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">Appears: {s.appears}</p>
-                        <p className="text-[10px] text-[var(--ppn-muted)]">Media: {s.kind === "video" ? "video (MP4/WebM) · host presses play · muted, no autoplay" : "image / GIF (no video on this slot)"}</p>
+                        <p className="text-[10px] text-[var(--ppn-muted)]">Media: {mediaCapabilityLabel(s.media)}</p>
                         <p className="text-[10px] text-[var(--ppn-muted)]">Fit: {slotFitLabel(s)}</p>
-                        {s.kind === "image" && (dims[s.field]
+                        {s.kind === "image" && !isVideoUrl(ss.url) && (dims[s.field]
                           ? (() => { const d = dims[s.field]; const st = aspectStatus(s, d.w, d.h); return <p className="text-[10px] font-medium" style={{ color: slotTone(st.tone).color }}>Uploaded {d.w}×{d.h} · {st.label}</p>; })()
                           : <p className="text-[10px] text-[var(--ppn-muted)]">Dimensions: shown after a file loads · status: unknown</p>)}
                         {/* Primary action: upload a real file from the machine */}
@@ -457,6 +466,15 @@ export default function Config() {
               </div>
             ))}
           </Card>
+
+          {/* Audio cues — truthful: uploadable to storage, but no override field + surfaces play fixed files → stored-only */}
+          <div className="rounded-xl border border-dashed border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold">Audio cues</p>
+              <span className="rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase" style={slotTone("missing")}>stored-only · not wired</span>
+            </div>
+            <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">Audio cues (event intro · round intro · sponsored-round intro · question readout · answer reveal · pause · winner · closing) are <span className="font-semibold text-[var(--ppn-text)]">not yet wired</span> through this manager: the demo override carries no audio fields and host/TV play fixed files under <span className="font-mono">public/demo/audio/…</span>. Files can be stored, but uploaded cue audio is not applied to surfaces. No AI voice — the operator supplies the files.</p>
+          </div>
 
           {/* Brand identity & offer copy (a required "slot") */}
           <Card title="Brand identity &amp; offer copy">

@@ -25,6 +25,26 @@ test("/config#brand-media lists video slots as live media slots with capability 
   await expect(page.getByText(/picture\/video question media/i)).toBeVisible();
 });
 
+// ── Branded visual slots are media-capable: hero/venue = image+video; logo/sponsor-slide = image only ──
+test("/config#brand-media classifies hero/venue as image+video and image-only slots truthfully", async ({ page }) => {
+  await unlockOperator(page);
+  await page.goto("/config#brand-media");
+  await expect(page.getByText(/Media: image \/ GIF \/ video — video renders on the surface/i).first()).toBeVisible();
+  await expect(page.getByText(/Media: image \/ GIF \(no video on this slot\)/i).first()).toBeVisible();
+  // Video-capable slots accept video; image-only slots don't.
+  const heroAccept = await page.locator('input[type="file"][accept="image/*,video/*"]').count();
+  expect(heroAccept).toBeGreaterThanOrEqual(2); // hero + venue
+});
+
+// ── Audio is honestly stored-only / not wired (no override field; surfaces play fixed files) ──
+test("/config#brand-media audio cues are stored-only / not wired (truthful, no false claim)", async ({ page }) => {
+  await unlockOperator(page);
+  await page.goto("/config#brand-media");
+  await expect(page.getByText("Audio cues", { exact: true })).toBeVisible();
+  await expect(page.getByText(/stored-only · not wired/i).first()).toBeVisible();
+  await expect(page.getByText(/not yet wired/i)).toBeVisible();
+});
+
 // ── /setup: slim reference, video live, statuses distinguished ──
 test("/setup is a slim reference (Technical appendix only) with live video slots", async ({ page }) => {
   await page.goto("/setup");
@@ -39,8 +59,9 @@ test("/setup is a slim reference (Technical appendix only) with live video slots
   await expect(page.getByText("TV intro video", { exact: true })).toBeVisible();
   await expect(page.getByText(/live \(TV\)/i).first()).toBeVisible();
   await expect(page.getByText("not built", { exact: true }).first()).toBeVisible();
-  // Image slot media classification + configure/upload link still present.
+  // Image slot media classification + the video-capable hero/venue classification, + configure/upload link.
   await expect(page.getByText(/Media:.*image \/ GIF/i).first()).toBeVisible();
+  await expect(page.getByText(/Media:.*image \/ GIF \/ video \(renders on the surface\)/i).first()).toBeVisible();
   await expect(page.locator('a[href="/config#brand-media"]').first()).toBeVisible();
 });
 

@@ -30,7 +30,7 @@ test("/config#brand-media is a slot manager: required/recommended/optional group
     await expect(page.getByText(g, { exact: true }).first()).toBeVisible();
   }
   // Individually addressable key slots.
-  for (const slot of ["Brewery / client logo", "TV hero / campaign background", "TV sponsor slide / offer card", "Phone sponsor card", "Venue / background image"]) {
+  for (const slot of ["Brewery / client logo", "TV hero / campaign background", "TV sponsor slide / offer card", "Phone sponsor card", "Venue / background visual"]) {
     await expect(page.getByText(slot, { exact: true })).toBeVisible();
   }
   // Each slot has its own upload control + manual path — not one generic box.

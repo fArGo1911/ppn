@@ -21,7 +21,14 @@ export function BrandLogo({ size = "phone" }: { size?: Size }) {
   return <div className={`grid place-items-center rounded-xl font-black ${LOGO[size]}`} style={onBrand} aria-hidden>{brandInitials(DEMO_BRAND.sponsorName)}</div>;
 }
 
-/** Premium campaign-image slot — brand-tinted gradient (implies real asset space) or a provided image. */
+/** True when a URL points at a video file (so a branded visual area can render it as muted, looping background). */
+export function isVideoUrl(url?: string): boolean {
+  return !!url && /\.(mp4|webm|mov|m4v|ogv)(\?|#|$)/i.test(url);
+}
+
+/** Premium campaign-visual slot — renders a provided IMAGE (cover) or VIDEO (muted/looping, object-cover) over a
+ * brand-tinted gradient (so a missing/broken asset degrades gracefully). Video is background-style: muted, looped,
+ * autoplay, no controls — safe for hero/venue branded areas. No re-encoding/cropping. */
 export function BrandAssetPreview({
   aspect = "16/9",
   image,
@@ -39,6 +46,7 @@ export function BrandAssetPreview({
   className?: string;
   children?: ReactNode;
 }) {
+  const video = isVideoUrl(image);
   return (
     <div
       role={alt ? "img" : undefined}
@@ -47,11 +55,12 @@ export function BrandAssetPreview({
       style={{
         aspectRatio: aspect,
         // Layer the image OVER the brand gradient so a missing/broken path degrades gracefully to the gradient.
-        background: image
+        background: image && !video
           ? `center/cover url(${image}), radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--ppn-brand) 35%, transparent), transparent 60%), linear-gradient(135deg, var(--ppn-brand-dark), #0b1220)`
           : `radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--ppn-brand) 35%, transparent), transparent 60%), linear-gradient(135deg, var(--ppn-brand-dark), #0b1220)`,
       }}
     >
+      {video && <video src={image} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover" />}
       {overlay !== "none" && <div className={`absolute inset-0 ${overlay === "light" ? "bg-white/30" : "bg-black/35"}`} />}
       {children && <div className="absolute inset-0 flex items-center p-5">{children}</div>}
       {label && <span className="absolute right-2 top-2 rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-white">{label}</span>}
