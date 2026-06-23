@@ -13,6 +13,7 @@ import { lockOperator, useOperatorUnlocked } from "../lib/operator";
 
 const SECTIONS = [
   { to: "/operator", label: "Demo control" },
+  { to: "/presentation", label: "Presentation" },
   { to: "/", label: "Campaign" },
   { to: "/play/DEMO", label: "Player" },
   { to: "/host", label: "Host" },

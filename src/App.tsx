@@ -16,6 +16,7 @@ import Rollout from "./pages/Rollout";
 import Report from "./pages/Report";
 import RunSheet from "./pages/RunSheet";
 import Capabilities from "./pages/Capabilities";
+import Presentation from "./pages/Presentation";
 import Preview from "./pages/Preview";
 import { PresenterTools } from "./components/PresenterTools";
 import { OperatorGate } from "./components/OperatorGate";
@@ -38,6 +39,8 @@ export default function App() {
         <Route path="/operator/setup-wizard" element={<OperatorGate><SetupWizard /></OperatorGate>} />
         <Route path="/config" element={<OperatorGate><Config /></OperatorGate>} />
         <Route path="/setup" element={<BrandAssets />} />
+        {/* Client-facing guided presentation (read-only, client-safe — never gated). */}
+        <Route path="/presentation" element={<Presentation />} />
         <Route path="/kpi" element={<Kpi />} />
         <Route path="/rollout" element={<Rollout />} />
         <Route path="/report" element={<Report />} />

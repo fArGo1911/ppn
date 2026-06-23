@@ -123,6 +123,15 @@ export default function Operator() {
           )}
         </div>
 
+        {/* A3. Client presentation — the client-facing showcase (distinct from internal setup) */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Client presentation</p>
+            <p className="text-xs text-[var(--ppn-muted)]">Internal setup prepares the demo · the client presentation shows the demo story. Read-only and client-safe.</p>
+          </div>
+          <Link to="/presentation" className={surfaceBtn} style={{ background: "var(--ppn-brand)" }}>Open client presentation →</Link>
+        </div>
+
         {/* B. Guided journey */}
         <h2 className="mt-8 text-sm font-semibold uppercase tracking-wider text-[var(--ppn-muted)]">Guided demo journey</h2>
         <div className="mt-3 space-y-2">
