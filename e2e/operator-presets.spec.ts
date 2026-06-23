@@ -44,6 +44,16 @@ test("/operator shows a concept-only Custom client demo card", async ({ page }) 
   await expect(page.getByText(/no self-service builder/i)).toBeVisible();
 });
 
+// ── Demo model clarification: presets vs one active demo vs no saved-demo library ──
+test("/operator clarifies how the POC handles multiple demos", async ({ page }) => {
+  await unlockOperator(page);
+  await page.goto("/operator");
+  await expect(page.getByText(/How this POC handles multiple demos/i)).toBeVisible();
+  await expect(page.getByText(/branded presets exist/i)).toBeVisible();
+  await expect(page.getByText(/only one active demo is loaded at a time/i)).toBeVisible();
+  await expect(page.getByText(/no saved-demo library or create-demo workflow/i)).toBeVisible();
+});
+
 // ── Lanes + appendix preserved ──
 test("/operator keeps the three lanes and appendix", async ({ page }) => {
   await unlockOperator(page);

@@ -165,6 +165,11 @@ export default function Operator() {
           <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Switching the active preset (and customising it) happens in <Link to="/config#brand-media" className="text-[var(--ppn-brand)]">detailed config / brand &amp; media setup</Link> — it asks before carrying client overrides across.</p>
         </div>
 
+        {/* A1a. Demo model note — preset (reusable start) vs active demo (one loaded) vs saved client demo (concept) */}
+        <div className="mt-3 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-3 py-2 text-[11px] text-[var(--ppn-muted)]">
+          <span className="font-semibold text-[var(--ppn-text)]">How this POC handles multiple demos:</span> {PRESETS.length} branded presets exist, but only one active demo is loaded at a time. A future product would save separate client demos — this POC has no saved-demo library or create-demo workflow; prepare the current demo from a preset using the existing setup wizard and detailed config.
+        </div>
+
         {/* A1b. Custom client demo — concept-only; shows multi-demo support without a self-service builder */}
         <div className="mt-4 rounded-xl border border-dashed border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
