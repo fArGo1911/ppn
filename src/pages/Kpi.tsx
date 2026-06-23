@@ -16,6 +16,25 @@ export default function Kpi() {
   const rounds = perRound(s, d.teamsCreated);
   const sponsored = rounds.find((r) => r.sponsor);
   const n = (x: number) => x.toLocaleString();
+  const vr = m.venueReport;
+  const yn = (b: boolean) => (b ? "Yes" : "No");
+
+  // Where the brewery appears across the evening (status = how real it is in the POC).
+  type Live = "live" | "presenter" | "future";
+  const phoneExposure: { m: string; s: Live }[] = [
+    { m: "Splash / arrival", s: "live" }, { m: "Join success", s: "live" }, { m: "Lobby / waiting", s: "live" }, { m: "Sponsored question", s: "live" }, { m: "Winner / post-event card", s: "live" },
+  ];
+  const tvExposure: { m: string; s: Live }[] = [
+    { m: "Welcome + QR", s: "live" }, { m: "AI intro", s: "live" }, { m: "Question coming up", s: "live" }, { m: "Sponsor slide / pause", s: "presenter" }, { m: "Sponsored question", s: "live" }, { m: "Victory / winner", s: "live" }, { m: "Closing / thanks", s: "presenter" },
+  ];
+  const hostExposure: { m: string; s: Live }[] = [
+    { m: "Evening intro mention", s: "live" }, { m: "Sponsored round readout", s: "live" }, { m: "Winner / thanks", s: "live" },
+  ];
+  const StatusChip = ({ s }: { s: Live }) => s === "live"
+    ? <Tag text="live in POC" />
+    : s === "presenter"
+      ? <span className="rounded-full bg-[var(--ppn-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--ppn-muted)]">presenter demo</span>
+      : <Tag text="future" warn />;
 
   const Section = ({ title }: { title: string }) => (
     <h2 className="mt-9 text-sm font-semibold uppercase tracking-wider text-[var(--ppn-muted)]">{title}</h2>
@@ -75,6 +94,23 @@ export default function Kpi() {
             <li className="rounded-lg bg-[var(--ppn-bg)] p-3"><span className="font-semibold">Repeatability &amp; rollout</span> — {d.repeatVenuesEstimate} venues rebooked: evidence to justify a wider regional rollout.</li>
           </ul>
         </div>
+
+        {/* Brand exposure delivered */}
+        <Section title="Brand exposure delivered" />
+        <p className="mt-1 text-xs text-[var(--ppn-muted)]">Where {DEMO_BRAND.sponsorName} appears across the evening.</p>
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          {[{ head: "On the phone", items: phoneExposure }, { head: "On the TV", items: tvExposure }, { head: "Host / AI script", items: hostExposure }].map((col) => (
+            <div key={col.head} className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
+              <p className="text-sm font-semibold">{col.head}</p>
+              <ul className="mt-2 space-y-1.5 text-sm">
+                {col.items.map((it) => (
+                  <li key={it.m} className="flex items-center justify-between gap-2"><span>{it.m}</span><StatusChip s={it.s} /></li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-[var(--ppn-muted)]"><span className="font-semibold" style={{ color: DEMO_BRAND.primary }}>live in POC</span> runs in the live demo · <span className="font-semibold">presenter demo</span> shown on demand · <span className="font-semibold" style={{ color: "var(--ppn-warning)" }}>future</span> not built yet.</p>
 
         {/* D. Decision support after pilot */}
         <Section title="Decision support after a pilot" />
@@ -162,6 +198,65 @@ export default function Kpi() {
           ))}
         </div>
 
+        {/* Commercial outcome evidence — four clearly-separated categories */}
+        <Section title="Commercial outcome evidence" />
+        <p className="mt-1 text-xs text-[var(--ppn-muted)]">PPN measures engagement · the venue reports commercial outcomes · POS can support it later · estimates are labelled. These are never mixed.</p>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div className="rounded-xl border-2 bg-[var(--ppn-surface)] p-4" style={{ borderColor: "color-mix(in srgb, var(--ppn-brand) 30%, var(--ppn-border))" }}>
+            <div className="flex items-center justify-between"><p className="text-sm font-semibold">Measured by PubPlay</p><Tag text="measured" /></div>
+            <ul className="mt-2 space-y-1 text-sm">
+              <li className="flex justify-between"><span>Players joined</span><span className="font-semibold">{n(d.playersJoined)}</span></li>
+              <li className="flex justify-between"><span>Teams created</span><span className="font-semibold">{n(d.teamsCreated)}</span></li>
+              <li className="flex justify-between"><span>Sponsored teams answered</span><span className="font-semibold">{n(d.sponsoredTeamsAnswered)}</span></li>
+              <li className="flex justify-between"><span>Completion rate</span><span className="font-semibold">{pct(s.completionRate)}</span></li>
+              <li className="flex justify-between"><span>Dwell-time proxy</span><span className="font-semibold">~{d.eventDurationEstimate}m</span></li>
+            </ul>
+          </div>
+          <div className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
+            <div className="flex items-center justify-between"><p className="text-sm font-semibold">Reported by venue</p><span className="rounded-full bg-[var(--ppn-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--ppn-muted)]">venue-reported</span></div>
+            <ul className="mt-2 space-y-1 text-sm text-[var(--ppn-muted)]">
+              <li>Event attendance estimate</li><li>Sponsored product units sold</li><li>Offer / voucher redemptions</li><li>Busier than usual · stock-out</li><li>Staff feedback · would run again</li>
+            </ul>
+            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Reported by the venue — not measured by PubPlay. See the example report below.</p>
+          </div>
+          <div className="rounded-xl border border-dashed border-[var(--ppn-border)] p-4">
+            <div className="flex items-center justify-between"><p className="text-sm font-semibold">POS-supported (future / optional)</p><Tag text="future" warn /></div>
+            <ul className="mt-2 space-y-1 text-sm text-[var(--ppn-muted)]">
+              <li>Till / POS screenshot</li><li>POS / EPOS export</li><li>Stock report</li><li>Distributor / EPOS integration</li>
+            </ul>
+            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Not connected in the POC. PPN does not measure bar sales directly.</p>
+          </div>
+          <div className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
+            <div className="flex items-center justify-between"><p className="text-sm font-semibold">Estimated</p><Tag text="estimate" warn /></div>
+            <ul className="mt-2 space-y-1 text-sm">
+              <li className="flex justify-between"><span>Campaign reach</span><span className="font-semibold">~{n(d.campaignReachEstimate)}</span></li>
+              <li className="text-[var(--ppn-muted)]">Potential occasion value (assumption)</li>
+              <li className="text-[var(--ppn-muted)]">Cost per engaged player (later — needs spend input)</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Post-event venue report (mock — manual, POS optional later) */}
+        <Section title="Post-event venue report" />
+        <p className="mt-1 text-xs text-[var(--ppn-muted)]">Example venue-reported outcome — manual entry is enough for the POC; POS is future / optional.</p>
+        <div className="mt-3 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
+          <div className="flex items-center justify-between"><p className="font-semibold">{m.venueExample}</p><span className="rounded-full bg-[var(--ppn-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--ppn-muted)]">venue-reported</span></div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 text-sm">
+            {[
+              ["Total guests during event window", `${vr.attendanceEstimate}`],
+              ["Sponsored product units sold", `${vr.sponsorUnitsSold}`],
+              ["Offer / voucher redemptions", `${vr.offerRedemptions}`],
+              ["Busier than a normal night?", yn(vr.busierThanUsual)],
+              ["Sponsor stock ran out?", yn(vr.stockOut)],
+              ["Would the venue run this again?", yn(vr.wouldRunAgain)],
+            ].map(([k, v]) => (
+              <div key={k} className="flex justify-between rounded-lg bg-[var(--ppn-bg)] px-3 py-2"><span className="text-[var(--ppn-muted)]">{k}</span><span className="font-semibold">{v}</span></div>
+            ))}
+          </div>
+          <p className="mt-3 text-sm italic text-[var(--ppn-text)]">“{vr.staffComment}”</p>
+          <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">POS evidence: {vr.posEvidenceStatus} · Manual venue report is enough for the POC; PPN does not claim to measure bar sales directly.</p>
+        </div>
+
         {/* Occasion-value lens (ROI — clearly an assumption) */}
         {s.valuePerVisit != null && (
           <>
@@ -201,6 +296,25 @@ export default function Kpi() {
             </ul>
           </div>
         </div>
+
+        {/* What the brewery can prove after a pilot */}
+        <Section title="What the brewery can prove after a pilot" />
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 text-sm">
+          {[
+            ["Event participation proof", "measured by PubPlay"],
+            ["Sponsored-round engagement proof", "measured by PubPlay"],
+            ["Venue-level performance comparison", "measured by PubPlay"],
+            ["Venue-reported commercial outcome", "venue-reported"],
+            ["Optional POS / till evidence", "future / optional"],
+            ["Rollout recommendation", "derived"],
+          ].map(([t, src]) => (
+            <div key={t} className="flex items-center justify-between gap-2 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3">
+              <span><span style={{ color: DEMO_BRAND.primary }}>›</span> {t}</span>
+              <span className="shrink-0 text-[10px] uppercase text-[var(--ppn-muted)]">{src}</span>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-[var(--ppn-muted)]">The bridge from demo to ROI conversation: PPN provides measured engagement, the venue provides commercial outcome, POS can support it later. PPN does not claim to measure bar sales.</p>
 
         {/* G. Measurement model (S4 — kept, now at the bottom) */}
         <Section title="How this is calculated" />

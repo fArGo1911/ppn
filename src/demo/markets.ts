@@ -9,6 +9,19 @@ import type { KpiSeed } from "./kpiModel";
 
 export type Market = "SE" | "DE" | "UK";
 
+/** Seeded EXAMPLE of what a venue reports back after an event (manual in the POC; POS optional later).
+ * These are venue-REPORTED outcomes — NOT measured by PubPlay and never presented as PPN-measured sales. */
+export interface VenueReport {
+  attendanceEstimate: number;
+  sponsorUnitsSold: number;
+  offerRedemptions: number;
+  busierThanUsual: boolean;
+  stockOut: boolean;
+  wouldRunAgain: boolean;
+  staffComment: string;
+  posEvidenceStatus: string;
+}
+
 export interface RolloutTier {
   id: "pilot" | "regional" | "campaign";
   label: string;
@@ -32,6 +45,7 @@ export interface MarketData {
   rollout: RolloutTier[];
   pilotVenues: string[];
   nextVenues: string[];
+  venueReport: VenueReport;
 }
 
 export const MARKETS: Record<Market, MarketData> = {
@@ -64,6 +78,11 @@ export const MARKETS: Record<Market, MarketData> = {
     ],
     pilotVenues: ["Kvarteret Krog", "Söder Pub & Kök", "Vasa Värdshus", "Gamla Stan Taverna", "Kungsholmen Krog"],
     nextVenues: ["Hamnkrogen Göteborg", "Lilla Torg Malmö", "Uppsala Studentkrog"],
+    venueReport: {
+      attendanceEstimate: 84, sponsorUnitsSold: 66, offerRedemptions: 15, busierThanUsual: true, stockOut: false, wouldRunAgain: true,
+      staffComment: "Quizkvällen höll borden längre och gav personalen ett tydligt sponsormoment.",
+      posEvidenceStatus: "Manuell rapport i POC; POS-bevis valfritt senare.",
+    },
   },
   DE: {
     market: "DE",
@@ -94,6 +113,11 @@ export const MARKETS: Record<Market, MarketData> = {
     ],
     pilotVenues: ["Zum Goldenen Hirsch", "Augustiner Eck", "Hofbräu Stüberl", "Schwabinger Wirtshaus", "Isartor Klause"],
     nextVenues: ["Rheinterrasse Köln", "Kiez-Kneipe Hamburg", "Altstadt Brauhaus Düsseldorf"],
+    venueReport: {
+      attendanceEstimate: 110, sponsorUnitsSold: 88, offerRedemptions: 22, busierThanUsual: true, stockOut: false, wouldRunAgain: true,
+      staffComment: "Der Quizabend hat die Gäste länger gehalten und Adlerbräu klar in Szene gesetzt.",
+      posEvidenceStatus: "Manuelle Rückmeldung im POC; POS-Beleg später optional.",
+    },
   },
   UK: {
     market: "UK",
@@ -124,6 +148,11 @@ export const MARKETS: Record<Market, MarketData> = {
     ],
     pilotVenues: ["The Anchor", "The Crown & Anchor", "The Railway Tap", "The Old Wharf", "The Northern Quarter Arms"],
     nextVenues: ["The Bridgewater Tap (Salford)", "The Dockside (Liverpool)", "The Headingley Taps (Leeds)"],
+    venueReport: {
+      attendanceEstimate: 92, sponsorUnitsSold: 74, offerRedemptions: 18, busierThanUsual: true, stockOut: false, wouldRunAgain: true,
+      staffComment: "Quiz night kept tables in longer and gave staff a clear sponsor moment.",
+      posEvidenceStatus: "Manual venue report in POC; POS proof optional later.",
+    },
   },
 };
 
