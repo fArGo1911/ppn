@@ -40,7 +40,7 @@ test("/config#session shows only the Session & run section + active nav state", 
   await page.goto("/config#session");
   await expect(page.getByText(SESSION, { exact: true })).toBeVisible();
   await expect(page.getByText("Demo session", { exact: true })).toBeVisible();
-  await expect(page.getByText("Presentation mode", { exact: true })).toBeVisible();
+  await expect(page.getByText("Audience mode (presentation)", { exact: true })).toBeVisible();
   await expect(page.getByText(BRAND)).toHaveCount(0);
   await expect(page.getByText(NUMBERS)).toHaveCount(0);
   await expect(page.getByRole("link", { name: /Session & run/i })).toHaveAttribute("aria-current", "page");

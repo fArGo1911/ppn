@@ -9,7 +9,7 @@ import { test, expect, type Page } from "@playwright/test";
 async function unlockOperator(page: Page) {
   await page.addInitScript(() => localStorage.setItem("ppn_operator_unlocked", "1"));
 }
-const pill = (page: Page) => page.getByRole("button", { name: "Presenter", exact: true });
+const pill = (page: Page) => page.getByRole("button", { name: /Presenter tools/ });
 const exitBtn = (page: Page) => page.getByRole("button", { name: /Exit audience mode/i });
 
 async function openMenu(page: Page) {
@@ -29,7 +29,7 @@ test("entering audience mode shows a VISIBLE exit control and recovers in one cl
   await unlockOperator(page);
   await page.goto("/operator");
   await openMenu(page);
-  await page.getByRole("button", { name: "▶ Audience mode", exact: true }).click();
+  await page.getByRole("button", { name: "▶ Enter audience mode", exact: true }).click();
   // Presenter pill is hidden, but a genuinely visible recovery control is present (not an invisible hotspot).
   await expect(pill(page)).toHaveCount(0);
   await expect(exitBtn(page)).toBeVisible();

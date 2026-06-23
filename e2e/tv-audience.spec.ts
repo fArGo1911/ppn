@@ -7,7 +7,7 @@ import { test, expect, type Page } from "@playwright/test";
  * from the client-facing identity / DEMO fallback).
  */
 
-const pill = (page: Page) => page.getByRole("button", { name: "Presenter", exact: true });
+const pill = (page: Page) => page.getByRole("button", { name: /Presenter tools/ });
 
 async function unlockOperator(page: Page) {
   await page.addInitScript(() => localStorage.setItem("ppn_operator_unlocked", "1"));

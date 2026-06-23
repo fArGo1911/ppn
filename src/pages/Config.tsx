@@ -162,6 +162,7 @@ export default function Config() {
   const activePack = packsQ.data?.find((p) => p.id === activePackId) ?? null;
   const assetsQ = useQuery({ queryKey: ["assets", activePackId], queryFn: () => listAssets(activePackId!), enabled: !!activePackId, retry: false });
   const [assetErr, setAssetErr] = useState<string | null>(null);
+  const [dims, setDims] = useState<Record<string, { w: number; h: number }>>({}); // client-side natural sizes per slot
   const [packCopy, setPackCopy] = useState<Record<string, string>>({});
   useEffect(() => {
     if (activePack) setPackCopy(Object.fromEntries(PACK_COPY_FIELDS.map((f) => [f.key, (activePack as unknown as Record<string, string | null>)[f.key] ?? ""])));
@@ -201,11 +202,25 @@ export default function Config() {
     return { status: "missing", applied: false };
   };
   const clearSlot = (s: MediaSlot) => { updatePack(s.field, ""); const db = dbAssetByType(s.type); if (db) runA(() => updateAssetStatus(db.id, "archived")); };
+  const previewLogoUrl = slotState(MEDIA_SLOTS.find((s) => s.field === "logoUrl")!).url; // current brand logo for the preview cards
   const requiredReady = MEDIA_SLOTS.filter((s) => s.group === "Required" && slotState(s).status !== "missing").length + 2; // + identity copy + brand colours (always preset)
   const slotTone = (st: string): React.CSSProperties =>
     st === "uploaded" ? { background: "color-mix(in srgb, var(--ppn-success) 18%, transparent)", color: "var(--ppn-success)" }
     : st === "missing" ? { background: "color-mix(in srgb, var(--ppn-warning) 20%, transparent)", color: "var(--ppn-warning)" }
     : { background: "var(--ppn-bg)", color: "var(--ppn-muted)" };
+  // Fit behaviour matches the real surfaces: logo + lower-third render object-contain (no crop); the rest cover.
+  const slotFit = (s: MediaSlot): "contain" | "cover" => (s.field === "logoUrl" || s.field === "lowerThirdUrl" ? "contain" : "cover");
+  const slotFitLabel = (s: MediaSlot): string => (slotFit(s) === "contain" ? "contain · letterbox, no crop (transparent recommended)" : "cover · crops to fill");
+  // Aspect status from client-side natural dimensions vs the slot's preferred aspect ratio.
+  const aspectStatus = (s: MediaSlot, w: number, h: number): { label: string; tone: string } => {
+    const [aw, ah] = s.aspect.split("/").map(Number);
+    const want = aw && ah ? aw / ah : 1;
+    const got = h ? w / h : 1;
+    const diff = Math.abs(got - want) / want;
+    if (diff <= 0.03) return { label: "aspect: ideal", tone: "uploaded" };
+    if (diff <= 0.15) return { label: "aspect: acceptable", tone: "preset" };
+    return { label: `aspect: warning (${got.toFixed(2)}:1, want ${s.aspect})`, tone: "missing" };
+  };
 
   const choose = (id: string) => switchPresetGuarded(id);
   const Card = ({ title, children }: { title: string; children: ReactNode }) => (
@@ -331,6 +346,24 @@ export default function Config() {
             {assetErr && <p className="mt-2 text-xs text-red-400">{assetErr}</p>}
           </div>
 
+          {/* Preview active demo — placed high so the operator sees what they're preparing while uploading.
+              Read-only surface links (no iframe / no preview engine); the chip shows the current logo state. */}
+          <Card title="Preview active demo">
+            <p className="text-xs text-[var(--ppn-muted)]">What the active demo looks like with the current asset state — open any surface (read-only). Apply changes to see uploads live.</p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {PREVIEW_SURFACES.map((s) => (
+                <a key={s.to} href={s.to} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-2.5 hover:border-[var(--ppn-brand)]">
+                  {previewLogoUrl
+                    ? <img src={previewLogoUrl} alt="current logo" className="h-9 w-9 shrink-0 rounded-lg border border-[var(--ppn-border)] object-contain" style={{ background: "var(--ppn-surface)" }} />
+                    : <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[10px] font-black" style={{ background: active.colours.primary, color: active.colours.onBrand }}>{s.icon}</span>}
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{s.label}</span>
+                  <span className="shrink-0 text-[var(--ppn-brand)]">↗</span>
+                </a>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Chips show the current logo (uploaded → preset → neutral initials) — no generated or decorative images. Apply first to see uploads on the live surfaces.</p>
+          </Card>
+
           {/* Upload by slot — the primary workflow */}
           <Card title="Upload by slot">
             <p className="text-xs text-[var(--ppn-muted)]">Click <span className="font-semibold text-[var(--ppn-text)]">Upload file</span> on any slot and pick a file from your machine — no setup first. The <span className="font-semibold text-[var(--ppn-text)]">live</span> / <span className="font-semibold text-[var(--ppn-text)]">preview-only</span> badge says whether that slot renders on the live demo or only in preview. Manual URL/path is an advanced fallback. Spec: <Link to="/setup#asset-slots" className="text-[var(--ppn-brand)]">asset reference / slot guide</Link>.</p>
@@ -354,7 +387,7 @@ export default function Config() {
                         )}
                         <div className="mt-2 flex items-center gap-2">
                           {ss.url && s.kind === "image"
-                            ? <img src={ss.url} alt={s.label} className="h-10 w-14 shrink-0 rounded border border-[var(--ppn-border)] object-contain" style={{ background: "var(--ppn-surface)" }} />
+                            ? <img src={ss.url} alt={s.label} onLoad={(e) => { const t = e.currentTarget; if (t.naturalWidth) setDims((d) => ({ ...d, [s.field]: { w: t.naturalWidth, h: t.naturalHeight } })); }} className="h-10 w-14 shrink-0 rounded border border-[var(--ppn-border)]" style={{ background: "var(--ppn-surface)", objectFit: slotFit(s) }} />
                             : <span className="grid h-10 w-14 shrink-0 place-items-center rounded border border-dashed border-[var(--ppn-border)] text-[8px] text-[var(--ppn-muted)]" aria-hidden>{ss.url ? "video set" : "no file"}</span>}
                           <div className="min-w-0 text-[10px] text-[var(--ppn-muted)]">
                             <p>{s.size} · {s.aspect}</p>
@@ -362,6 +395,10 @@ export default function Config() {
                           </div>
                         </div>
                         <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">Appears: {s.appears}</p>
+                        <p className="text-[10px] text-[var(--ppn-muted)]">Fit: {slotFitLabel(s)}</p>
+                        {s.kind === "image" && (dims[s.field]
+                          ? (() => { const d = dims[s.field]; const st = aspectStatus(s, d.w, d.h); return <p className="text-[10px] font-medium" style={{ color: slotTone(st.tone).color }}>Uploaded {d.w}×{d.h} · {st.label}</p>; })()
+                          : <p className="text-[10px] text-[var(--ppn-muted)]">Dimensions: shown after a file loads · status: unknown</p>)}
                         {/* Primary action: upload a real file from the machine */}
                         <div className="mt-2 flex items-center justify-between gap-2">
                           <label className="cursor-pointer" title={packsQ.isError ? "Storage unavailable — use the manual fallback below" : "Upload a file to this slot"}>
@@ -516,21 +553,6 @@ export default function Config() {
             </div>
           </Card>
 
-          {/* Preview active demo — read-only surface previews that link to the real routes (no iframe / no engine) */}
-          <Card title="Preview active demo">
-            <p className="text-xs text-[var(--ppn-muted)]">What {active.sponsorName} looks like on the key surfaces with the current asset state — open any to see the real page (read-only). Apply changes first to see uploads live.</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {PREVIEW_SURFACES.map((s) => (
-                <a key={s.to} href={s.to} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-2.5 hover:border-[var(--ppn-brand)]">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[10px] font-black" style={{ background: active.colours.primary, color: active.colours.onBrand }}>{s.icon}</span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{s.label}</span>
-                  <span className="shrink-0 text-[var(--ppn-brand)]">↗</span>
-                </a>
-              ))}
-            </div>
-            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Previews use the current asset state (uploaded → manual → preset → neutral placeholder) — no generated or decorative images.</p>
-          </Card>
-
           </>)}
 
           {activeSection === "demo-numbers" && (<>
@@ -668,12 +690,15 @@ export default function Config() {
             </p>
           </Card>
 
-          <Card title="Presentation mode">
-            <div className="flex flex-wrap items-center gap-2">
-              <button onClick={() => setAudience(true)} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>▶ Enter audience mode (hide all chrome)</button>
-              <button onClick={() => setAudience(false)} className="rounded-xl border border-[var(--ppn-border)] px-4 py-2.5 text-sm font-semibold">Exit audience mode</button>
-              <span className="text-xs text-[var(--ppn-muted)]">Currently: {audience ? "audience (clean)" : "presenter (chrome on)"}</span>
+          <Card title="Audience mode (presentation)">
+            <p className="text-xs text-[var(--ppn-muted)]">Audience mode hides the presenter helper / chrome so a screen looks like a real event. It is display-only — it never changes the game. You can always toggle it back here.</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="rounded-full px-2.5 py-1 text-xs font-semibold" style={slotTone(audience ? "uploaded" : "preset")}>Currently: {audience ? "audience (chrome hidden)" : "presenter (chrome on)"}</span>
+              {audience
+                ? <button onClick={() => setAudience(false)} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>Exit audience mode</button>
+                : <button onClick={() => setAudience(true)} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>Enter audience mode</button>}
             </div>
+            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">When in audience mode, a small <span className="font-semibold text-[var(--ppn-text)]">Exit audience mode</span> control also stays in the corner of presenter windows, and you can always return here.</p>
           </Card>
 
           <Card title="Content / KPI / rollout profiles">

@@ -100,16 +100,20 @@ export function PresenterTools() {
     <div className="fixed right-3 top-3 z-50 print:hidden">
       <button
         onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
         className="rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-xs text-white/70 backdrop-blur hover:text-white"
-        title="Presenter tools (on demand)"
+        title="Presenter tools — operator route helper (on demand)"
       >
-        Presenter
+        {open ? "✕ Presenter tools" : "Presenter tools"}
       </button>
       {open && (
-        <div data-testid="presenter-menu" className="mt-2 max-h-[80vh] w-80 overflow-y-auto rounded-xl border border-white/15 bg-slate-900/95 p-3 text-slate-200 shadow-2xl backdrop-blur">
-          <div className="flex items-center justify-between">
-            <p className="px-1 text-[10px] uppercase tracking-wide text-slate-500">Jump to (POC route map)</p>
-            <button onClick={() => { setAudience(true); setOpen(false); }} className="rounded bg-white/5 px-2 py-0.5 text-[10px] hover:bg-white/10" title="Hide all presenter chrome (a visible Exit control stays available)">▶ Audience mode</button>
+        <div data-testid="presenter-menu" className="mt-2 max-h-[80vh] w-80 max-w-[calc(100vw-1.5rem)] overflow-y-auto overflow-x-hidden rounded-xl border border-white/15 bg-slate-900/95 p-3 text-slate-200 shadow-2xl backdrop-blur">
+          <div className="flex items-center justify-between gap-2">
+            <p className="px-1 text-[10px] uppercase tracking-wide text-slate-500">Presenter tools · route helper</p>
+            <div className="flex items-center gap-1">
+              <button onClick={() => { setAudience(true); setOpen(false); }} className="rounded bg-white/5 px-2 py-0.5 text-[10px] hover:bg-white/10" title="Hide presenter chrome (a visible Exit control stays available)">▶ Enter audience mode</button>
+              <button onClick={() => setOpen(false)} aria-label="Close presenter tools" className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] hover:bg-white/10">✕</button>
+            </div>
           </div>
           {ROUTE_GROUPS.map((g) => (
             <div key={g.title} className="mt-2">
@@ -146,7 +150,7 @@ export function PresenterTools() {
             </>
           )}
           <p className="mt-3 px-1 text-[10px] uppercase tracking-wide text-slate-500">Brewery preset</p>
-          <div className="mt-1 flex gap-1">
+          <div className="mt-1 flex flex-wrap gap-1">
             {PRESETS.map((p) => (
               <button
                 key={p.id}
