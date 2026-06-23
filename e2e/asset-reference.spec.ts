@@ -63,19 +63,22 @@ test("/setup has stable anchors for the four sections", async ({ page }) => {
   }
 });
 
-test("/setup lists the minimum asset pack", async ({ page }) => {
+test("/setup lists required / recommended / optional minimum asset pack", async ({ page }) => {
   await page.goto("/setup");
   await expect(page.getByRole("heading", { name: /Minimum asset pack/i }).first()).toBeVisible();
-  await expect(page.getByText(/TV welcome \/ hero image/i)).toBeVisible();
+  await expect(page.getByText("Required for a credible demo", { exact: true })).toBeVisible();
+  await expect(page.getByText("Recommended polish", { exact: true })).toBeVisible();
+  await expect(page.getByText("Optional / later", { exact: true })).toBeVisible();
+  await expect(page.getByText(/TV hero \/ campaign background/i).first()).toBeVisible();
 });
 
-test("/setup asset slots include size, aspect, placement, status and where to configure", async ({ page }) => {
+test("/setup asset slots include size, aspect, placement, status and a per-card configure action", async ({ page }) => {
   await page.goto("/setup");
   const slots = page.locator("#asset-slots");
   await expect(slots.getByText(/Size:/).first()).toBeVisible();
   await expect(slots.getByText(/Aspect:/).first()).toBeVisible();
   await expect(slots.getByText(/Appears:/).first()).toBeVisible();
-  await expect(slots.getByText(/Configure:/).first()).toBeVisible();
+  await expect(slots.getByRole("link", { name: /Configure in detailed config/i }).first()).toBeVisible();
   await expect(slots.getByText(/live in demo/i).first()).toBeVisible();
   await expect(slots.getByText(/preview-only/i).first()).toBeVisible();
 });

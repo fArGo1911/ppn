@@ -18,15 +18,15 @@ for (const route of ["/setup", "/play/DEMO", "/presentation", "/", "/config"]) {
   });
 }
 
-// ── /setup still shows honest spec slots (size + aspect + placement + status + configure) as plain placeholders ──
-test("/setup asset slots are plain spec placeholders with full spec retained", async ({ page }) => {
+// ── /setup shows honest compact spec cards (size + aspect + placement + status + configure), no fake pictures ──
+test("/setup asset slots are compact spec cards with no picture content", async ({ page }) => {
   await page.goto("/setup#asset-slots");
   const slots = page.locator("#asset-slots");
-  await expect(slots.getByText(/Asset slot ·/i).first()).toBeVisible(); // plain placeholder, not a fake picture
+  await expect(slots.locator("img")).toHaveCount(0); // no picture/image content in the slot cards
   await expect(slots.getByText(/Size:/).first()).toBeVisible();
   await expect(slots.getByText(/Aspect:/).first()).toBeVisible();
   await expect(slots.getByText(/Appears:/).first()).toBeVisible();
-  await expect(slots.getByText(/Configure:/).first()).toBeVisible();
+  await expect(slots.getByRole("link", { name: /Configure in detailed config/i }).first()).toBeVisible();
   await expect(slots.getByText(/live in demo/i).first()).toBeVisible();
   await expect(slots.getByText(/preview-only/i).first()).toBeVisible();
 });

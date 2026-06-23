@@ -46,7 +46,7 @@ export const TEXT_SLOTS = [
   "KPI report header text",
 ];
 
-/** AI voice/script slots (planning only — generated/spoken in the later AI slice). */
+/** Host-script text slots (reference copy only — nothing is generated; no AI voice/asset created here). */
 export const AI_SLOTS: { key: string; label: string }[] = [
   { key: "eventIntro", label: "Event intro (welcome + how to play + sponsor)" },
   { key: "roundIntro", label: "Round intro" },
@@ -98,7 +98,7 @@ export const ASSET_USAGE: { asset: string; appears: string }[] = [
   { asset: "phone sponsor card image", appears: "waiting screen · sponsored question" },
   { asset: "lower-third banner", appears: "TV offer strip" },
   { asset: "campaign colour theme", appears: "ALL player / TV / host / presenter surfaces" },
-  { asset: "AI event intro script", appears: "first event announcement (TV + player waiting)" },
+  { asset: "Event intro script", appears: "first event announcement (TV + player waiting)" },
   { asset: "responsible wording", appears: "offer badge · sponsor note" },
 ];
 

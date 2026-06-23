@@ -61,7 +61,7 @@ test("an unlocked operator still sees the Presenter pill on /tv", async ({ page 
 // ── 5. Host-script / narration material is retained where it belongs (not on public TV) ──
 test("/setup retains the host-script reference material (not leaked onto /tv)", async ({ page }) => {
   await page.goto("/setup");
-  await expect(page.getByText(/Host scripts — reference text only/i)).toBeVisible();
+  await expect(page.getByText(/Host script reference/i)).toBeVisible();
 });
 
 // ── 6. Existing TV client-safety invariants still hold (no sample video embed) ──
