@@ -159,6 +159,7 @@ export interface Scenario {
   campaignVenues?: number;
   venueProfile?: VenueProfile;
   templateId?: string;
+  venueMix?: VenueMixEntry[]; // when set, drives venues/events/players (weighted) for /kpi + /rollout
 }
 
 const SCENARIO_KEY = "ppn_scenario";
@@ -175,6 +176,14 @@ export function hasScenario(): boolean { return Object.keys(getScenario()).lengt
 export function applyScenarioToSeed(seed: KpiSeed, sc: Scenario): KpiSeed {
   const out: KpiSeed = { ...seed };
   for (const k of SEED_KEYS) { const v = sc[k]; if (v != null) (out as unknown as Record<string, number>)[k] = v; }
+  // A venue mix is authoritative for the activation aggregates (so /kpi reconciles to the mix totals).
+  if (sc.venueMix && sc.venueMix.length) {
+    const d = deriveVenueMix(sc.venueMix, sc.campaignReachMultiplier ?? out.campaignReachMultiplier, sc.avgPlayersPerTeam ?? out.avgPlayersPerTeam);
+    out.venuesActivated = d.totalVenues;
+    out.avgEventsPerVenue = d.totalEvents / Math.max(1, d.totalVenues);
+    out.avgPlayersPerEvent = d.weightedPlayersPerEvent;
+    out.avgPlayersPerTeam = d.weightedPlayersPerTeam;
+  }
   return out;
 }
 export function getEffectiveKpiSeed(seed: KpiSeed): KpiSeed {
@@ -195,13 +204,133 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
     scenario: { venueProfile: "neighbourhood", venuesActivated: 16, avgEventsPerVenue: 4, avgPlayersPerEvent: 48, avgPlayersPerTeam: 4.5, completionRate: 0.92, sponsoredAnswerRate: 0.87, campaignReachMultiplier: 1.4, valuePerVisit: 6, pilotVenues: 5, regionalVenues: 20, campaignVenues: 80, templateId: "neighbourhood" } },
   { id: "sports", name: "Sports bar activation", tone: "Ambitious", assumes: "Higher attendance, ~80 players/event, football/sports focus.",
     scenario: { venueProfile: "sports", venuesActivated: 14, avgEventsPerVenue: 4, avgPlayersPerEvent: 80, avgPlayersPerTeam: 5, completionRate: 0.90, sponsoredAnswerRate: 0.88, campaignReachMultiplier: 1.6, valuePerVisit: 7, pilotVenues: 6, regionalVenues: 24, campaignVenues: 90, templateId: "sports" } },
-  { id: "mixed", name: "Mixed venue campaign", tone: "Standard", assumes: "Blend of small pubs, sports bars & larger venues, ~58 players/event.",
-    scenario: { venueProfile: "mixed", venuesActivated: 20, avgEventsPerVenue: 4, avgPlayersPerEvent: 58, avgPlayersPerTeam: 4.5, completionRate: 0.91, sponsoredAnswerRate: 0.87, campaignReachMultiplier: 1.5, valuePerVisit: 6, pilotVenues: 5, regionalVenues: 25, campaignVenues: 100, templateId: "mixed" } },
-  { id: "popup", name: "Large pop-up / event activation", tone: "Ambitious", assumes: "Special-event only: ~150 players/event across a few large venues.",
-    scenario: { venueProfile: "popup", venuesActivated: 6, avgEventsPerVenue: 2, avgPlayersPerEvent: 150, avgPlayersPerTeam: 5, completionRate: 0.88, sponsoredAnswerRate: 0.85, campaignReachMultiplier: 1.8, valuePerVisit: 8, pilotVenues: 3, regionalVenues: 12, campaignVenues: 40, templateId: "popup" } },
-  { id: "reach6500", name: "~6,500 reach scenario", tone: "Standard", assumes: "Mixed venues, ~60 players/event over ~3 events × 24 venues → ~6,500 estimated reach (target).",
-    scenario: { venueProfile: "mixed", venuesActivated: 24, avgEventsPerVenue: 3, avgPlayersPerEvent: 60, avgPlayersPerTeam: 4.5, completionRate: 0.90, sponsoredAnswerRate: 0.86, campaignReachMultiplier: 1.5, valuePerVisit: 6, pilotVenues: 6, regionalVenues: 24, campaignVenues: 100, templateId: "reach6500" } },
+  { id: "mixed", name: "Mixed venue campaign", tone: "Standard", assumes: "Blend of neighbourhood pubs, sports bars, large venues & small pubs across TV/audio/manual setups.",
+    scenario: { venueProfile: "mixed", completionRate: 0.91, sponsoredAnswerRate: 0.87, campaignReachMultiplier: 1.5, valuePerVisit: 6, pilotVenues: 5, regionalVenues: 25, campaignVenues: 100, templateId: "mixed",
+      venueMix: [
+        { categoryId: "neighbourhood", venues: 8, eventsPerVenue: 4, avgPlayersPerEvent: 45, avgPlayersPerTeam: 4.5, setupMode: "audio_only" },
+        { categoryId: "sports", venues: 6, eventsPerVenue: 4, avgPlayersPerEvent: 75, avgPlayersPerTeam: 5, setupMode: "tv_audio" },
+        { categoryId: "large", venues: 3, eventsPerVenue: 4, avgPlayersPerEvent: 110, avgPlayersPerTeam: 5, setupMode: "tv_audio" },
+        { categoryId: "small", venues: 3, eventsPerVenue: 4, avgPlayersPerEvent: 30, avgPlayersPerTeam: 4, setupMode: "phones_hosted" },
+      ] } },
+  { id: "popup", name: "Large pop-up / event activation", tone: "Ambitious", assumes: "Special-event only: pop-up/festival + student venues, ~150+ players/event. Not normal pubs.",
+    scenario: { venueProfile: "popup", completionRate: 0.88, sponsoredAnswerRate: 0.85, campaignReachMultiplier: 1.8, valuePerVisit: 8, pilotVenues: 3, regionalVenues: 12, campaignVenues: 40, templateId: "popup",
+      venueMix: [
+        { categoryId: "popup", venues: 4, eventsPerVenue: 2, avgPlayersPerEvent: 180, avgPlayersPerTeam: 5, setupMode: "tv_audio" },
+        { categoryId: "student", venues: 2, eventsPerVenue: 2, avgPlayersPerEvent: 110, avgPlayersPerTeam: 5, setupMode: "tv_audio" },
+      ] } },
+  { id: "reach6500", name: "~6,500 reach scenario", tone: "Standard", assumes: "Mixed venues over ~3 events → ~6,500 estimated reach (target, not guaranteed).",
+    scenario: { venueProfile: "mixed", completionRate: 0.90, sponsoredAnswerRate: 0.86, campaignReachMultiplier: 1.5, valuePerVisit: 6, pilotVenues: 6, regionalVenues: 24, campaignVenues: 100, templateId: "reach6500",
+      venueMix: [
+        { categoryId: "neighbourhood", venues: 4, eventsPerVenue: 3, avgPlayersPerEvent: 45, avgPlayersPerTeam: 4.5, setupMode: "audio_only" },
+        { categoryId: "neighbourhood", venues: 4, eventsPerVenue: 3, avgPlayersPerEvent: 45, avgPlayersPerTeam: 4.5, setupMode: "phones_hosted" },
+        { categoryId: "sports", venues: 8, eventsPerVenue: 3, avgPlayersPerEvent: 75, avgPlayersPerTeam: 5, setupMode: "tv_audio" },
+        { categoryId: "large", venues: 4, eventsPerVenue: 3, avgPlayersPerEvent: 120, avgPlayersPerTeam: 5, setupMode: "tv_audio" },
+      ] } },
 ];
+
+// ── Setup / output mode REPORTING model (decoupled from the live-session SetupMode in setup.ts) ──
+export type SetupModeId = "tv_audio" | "audio_only" | "phones_hosted";
+export const SETUP_MODE_INFO: Record<SetupModeId, { label: string; meaning: string }> = {
+  tv_audio: { label: "TV + audio", meaning: "Laptop/room engine on TV/projector + sound where possible: TV shows QR, questions, reveal, scoreboard, sponsor moments; audio/chimes/AI voice through room output; host on a tablet." },
+  audio_only: { label: "Audio-only", meaning: "No TV dependency. Audio/AI/host readout supports the room; phones carry questions/options/reveal/scoreboard; sponsor surfaces mainly phone/audio/reporting." },
+  phones_hosted: { label: "Manual live / phones-only", meaning: "Staff/host reads from the host panel; phones carry questions/options/reveal/scoreboard. No TV and no platform audio required." },
+};
+export const setupModeLabel = (id: SetupModeId) => SETUP_MODE_INFO[id].label;
+
+// ── Venue category model (richer than the broad VenueProfile; for believable venue MIX) ──
+export type VenueCategoryId = "small" | "neighbourhood" | "sports" | "large" | "taproom" | "corporate" | "popup" | "student";
+export interface VenueCategory {
+  id: VenueCategoryId; label: string;
+  ppeLo: number; ppeHi: number; tpeLo: number; tpeHi: number;
+  recommendedSetup: SetupModeId[]; note: string;
+  special?: boolean; // pop-up/festival — not a normal pub
+  oneOff?: boolean;  // hotel/corporate — private/one-off, not core pub-network scale
+}
+export const VENUE_CATEGORIES: VenueCategory[] = [
+  { id: "small", label: "Small local pub", ppeLo: 20, ppeHi: 40, tpeLo: 5, tpeHi: 10, recommendedSetup: ["phones_hosted", "tv_audio"], note: "Phones-only / manual live; TV optional." },
+  { id: "neighbourhood", label: "Neighbourhood pub", ppeLo: 35, ppeHi: 65, tpeLo: 8, tpeHi: 16, recommendedSetup: ["phones_hosted", "audio_only", "tv_audio"], note: "Phones + host; TV optional." },
+  { id: "sports", label: "Sports bar", ppeLo: 60, ppeHi: 100, tpeLo: 12, tpeHi: 24, recommendedSetup: ["tv_audio"], note: "TV + audio strongly preferred." },
+  { id: "large", label: "Large city pub / venue", ppeLo: 90, ppeHi: 160, tpeLo: 18, tpeHi: 35, recommendedSetup: ["tv_audio"], note: "TV + audio." },
+  { id: "taproom", label: "Brewery taproom", ppeLo: 40, ppeHi: 90, tpeLo: 8, tpeHi: 20, recommendedSetup: ["tv_audio", "phones_hosted"], note: "TV + audio, or manual live host." },
+  { id: "corporate", label: "Hotel bar / corporate venue", ppeLo: 25, ppeHi: 60, tpeLo: 6, tpeHi: 14, recommendedSetup: ["phones_hosted", "audio_only"], note: "One-off / private / company event — not core pub-network model.", oneOff: true },
+  { id: "popup", label: "Pop-up / festival / special event", ppeLo: 120, ppeHi: 250, tpeLo: 25, tpeHi: 60, recommendedSetup: ["tv_audio"], note: "Special event — not a normal pub. TV + audio required.", special: true },
+  { id: "student", label: "Student bar / campus venue", ppeLo: 70, ppeHi: 140, tpeLo: 15, tpeHi: 35, recommendedSetup: ["tv_audio"], note: "TV + audio preferred." },
+];
+export const venueCategory = (id: VenueCategoryId) => VENUE_CATEGORIES.find((c) => c.id === id)!;
+
+export interface VenueMixEntry {
+  categoryId: VenueCategoryId;
+  venues: number;
+  eventsPerVenue: number;
+  avgPlayersPerEvent: number;
+  avgPlayersPerTeam?: number;
+  setupMode: SetupModeId;
+}
+
+export interface SetupMixRow { mode: SetupModeId; label: string; venues: number; events: number; players: number; pctVenues: number; pctEvents: number; pctPlayers: number }
+export interface CategoryMixRow { categoryId: VenueCategoryId; label: string; venues: number; events: number; players: number; special?: boolean; oneOff?: boolean }
+export interface VenueMixDerived {
+  totalVenues: number; totalEvents: number; totalPlayers: number; totalTeams: number;
+  weightedPlayersPerEvent: number; weightedPlayersPerTeam: number; reach: number;
+  setupMix: SetupMixRow[]; categoryMix: CategoryMixRow[];
+}
+
+const DEFAULT_PPT = 4.5;
+
+export function deriveVenueMix(mix: VenueMixEntry[], reachMultiplier: number, defaultPpt = DEFAULT_PPT): VenueMixDerived {
+  let totalVenues = 0, totalEvents = 0, totalPlayers = 0, totalTeams = 0;
+  const setup = new Map<SetupModeId, { venues: number; events: number; players: number }>();
+  const cat = new Map<VenueCategoryId, { venues: number; events: number; players: number }>();
+  for (const e of mix) {
+    const events = e.venues * e.eventsPerVenue;
+    const players = events * e.avgPlayersPerEvent;
+    const teams = players / (e.avgPlayersPerTeam ?? defaultPpt);
+    totalVenues += e.venues; totalEvents += events; totalPlayers += players; totalTeams += teams;
+    const su = setup.get(e.setupMode) ?? { venues: 0, events: 0, players: 0 };
+    su.venues += e.venues; su.events += events; su.players += players; setup.set(e.setupMode, su);
+    const cm = cat.get(e.categoryId) ?? { venues: 0, events: 0, players: 0 };
+    cm.venues += e.venues; cm.events += events; cm.players += players; cat.set(e.categoryId, cm);
+  }
+  const p = (x: number, t: number) => (t > 0 ? Math.round((x / t) * 100) : 0);
+  const setupMix: SetupMixRow[] = [...setup.entries()].map(([mode, v]) => ({
+    mode, label: setupModeLabel(mode), venues: v.venues, events: Math.round(v.events), players: Math.round(v.players),
+    pctVenues: p(v.venues, totalVenues), pctEvents: p(v.events, totalEvents), pctPlayers: p(v.players, totalPlayers),
+  })).sort((a, b) => b.pctVenues - a.pctVenues);
+  const categoryMix: CategoryMixRow[] = [...cat.entries()].map(([categoryId, v]) => {
+    const c = venueCategory(categoryId);
+    return { categoryId, label: c.label, venues: v.venues, events: Math.round(v.events), players: Math.round(v.players), special: c.special, oneOff: c.oneOff };
+  }).sort((a, b) => b.venues - a.venues);
+  return {
+    totalVenues, totalEvents: Math.round(totalEvents), totalPlayers: Math.round(totalPlayers), totalTeams: Math.round(totalTeams),
+    weightedPlayersPerEvent: totalEvents > 0 ? totalPlayers / totalEvents : 0,
+    weightedPlayersPerTeam: totalTeams > 0 ? totalPlayers / totalTeams : DEFAULT_PPT,
+    reach: Math.round(totalPlayers * reachMultiplier),
+    setupMix, categoryMix,
+  };
+}
+
+/** The active scenario's venue mix (null if none). Pages read this to show venue/setup mix. */
+export function getEffectiveVenueMix(): VenueMixEntry[] | null {
+  const mix = getScenario().venueMix;
+  return mix && mix.length ? mix : null;
+}
+
+/** Operator-only realism warnings for a venue MIX (per-category bounds + setup suitability). */
+export function venueMixWarnings(mix: VenueMixEntry[]): string[] {
+  const w: string[] = [];
+  for (const e of mix) {
+    const c = venueCategory(e.categoryId);
+    const ppt = e.avgPlayersPerTeam ?? DEFAULT_PPT;
+    const tpe = e.avgPlayersPerEvent / ppt;
+    if (e.avgPlayersPerEvent < c.ppeLo || e.avgPlayersPerEvent > c.ppeHi) w.push(`${c.label}: ${e.avgPlayersPerEvent} players/event is outside its ${c.ppeLo}–${c.ppeHi} range.`);
+    if (tpe < c.tpeLo || tpe > c.tpeHi) w.push(`${c.label}: ~${tpe.toFixed(1)} teams/event is outside its ${c.tpeLo}–${c.tpeHi} range.`);
+    if (e.avgPlayersPerEvent >= 120 && !c.special) w.push(`${c.label}: ${e.avgPlayersPerEvent} players/event is special-event scale — use the Pop-up / festival category.`);
+    if (c.special && e.setupMode !== "tv_audio") w.push(`${c.label} requires TV + audio — current setup is ${setupModeLabel(e.setupMode)}.`);
+    else if (!c.recommendedSetup.includes(e.setupMode)) w.push(`${c.label}: ${setupModeLabel(e.setupMode)} isn't a recommended setup (prefer ${c.recommendedSetup.map(setupModeLabel).join(" / ")}).`);
+    if (c.oneOff && e.venues >= 8) w.push(`${c.label}: ${e.venues} venues treats a one-off/private format as core pub-network scale.`);
+  }
+  return w;
+}
 
 /** Operator-only realism warnings for a scenario (demo guardrails, not market research). */
 export function scenarioWarnings(seed: KpiSeed, profile: VenueProfile = "mixed"): string[] {

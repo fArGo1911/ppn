@@ -6,11 +6,16 @@
 import { DemoShell } from "../components/shells";
 import { DEMO_BRAND } from "../demo/brand";
 import { activeMarket } from "../demo/markets";
-import { deriveKpi, perVenue, perRound, pct, getEffectiveKpiSeed } from "../demo/kpiModel";
+import { deriveKpi, perVenue, perRound, pct, getEffectiveKpiSeed, getEffectiveVenueMix, deriveVenueMix } from "../demo/kpiModel";
 
 export default function Kpi() {
   const m = activeMarket();
   const s = getEffectiveKpiSeed(m.kpiSeed); // market default + any operator scenario override (/config)
+  const mix = getEffectiveVenueMix();
+  const setupMix = mix ? deriveVenueMix(mix, s.campaignReachMultiplier, s.avgPlayersPerTeam).setupMix : null;
+  const setupLine = setupMix
+    ? setupMix.map((su) => `${su.pctVenues}% ${su.label}`).join(" · ")
+    : "TV + audio where available, with audio-only and manual live / phones-only fallbacks";
   const d = deriveKpi(s);
   const venues = perVenue(s);
   const rounds = perRound(s, d.teamsCreated);
@@ -65,7 +70,8 @@ export default function Kpi() {
 
         {/* B. Executive snapshot */}
         <Section title="Campaign performance snapshot" />
-        <p className="mt-1 text-xs text-[var(--ppn-muted)]">All figures are campaign totals across {s.venuesActivated} venues and {n(d.eventsRun)} events (~{s.avgPlayersPerEvent} players/event, ~{d.avgTeamsPerEvent} teams/event) — not one pub night.</p>
+        <p className="mt-1 text-xs text-[var(--ppn-muted)]">All figures are campaign totals across {s.venuesActivated} venues and {n(d.eventsRun)} events (~{Math.round(s.avgPlayersPerEvent)} players/event, ~{d.avgTeamsPerEvent} teams/event) — not one pub night.</p>
+        <p className="mt-1 text-xs text-[var(--ppn-muted)]">Operating setup: <span className="text-[var(--ppn-text)]">{setupLine}</span> <span className="opacity-80">· scenario assumption for demo planning, not measured operational data.</span></p>
         <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3">
           {exec.map((c) => (
             <div key={c.label} className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">

@@ -7,7 +7,7 @@
 import { DemoShell } from "../components/shells";
 import { DEMO_BRAND } from "../demo/brand";
 import { activeMarket } from "../demo/markets";
-import { deriveStage, getEffectiveKpiSeed, getEffectiveStageVenues } from "../demo/kpiModel";
+import { deriveStage, getEffectiveKpiSeed, getEffectiveStageVenues, getEffectiveVenueMix, deriveVenueMix } from "../demo/kpiModel";
 import { SETUP_MODES } from "../demo/setup";
 
 const STAGE: Record<string, { title: string; purpose: string[]; gate: string; evidence: string }> = {
@@ -41,6 +41,9 @@ export default function Rollout() {
     regional: m.rollout.find((r) => r.id === "regional")?.venues ?? 25,
     campaign: m.rollout.find((r) => r.id === "campaign")?.venues ?? 100,
   });
+  const mix = getEffectiveVenueMix();
+  const mixD = mix ? deriveVenueMix(mix, s.campaignReachMultiplier, s.avgPlayersPerTeam) : null;
+  const hasSpecial = mixD?.categoryMix.some((c) => c.special);
 
   const Section = ({ title }: { title: string }) => (
     <h2 className="mt-9 text-sm font-semibold uppercase tracking-wider text-[var(--ppn-muted)]">{title}</h2>
@@ -71,6 +74,23 @@ export default function Rollout() {
         <h1 className="mt-2 text-3xl font-extrabold">From pilot night to {DEMO_BRAND.sponsorName} activation</h1>
         <p className="mt-1 text-[var(--ppn-muted)]">{m.context}</p>
         <p className="mt-2 text-sm text-[var(--ppn-text)]">An illustrative plan: how a controlled pilot proves the format, what evidence the brewery gets, and what must be true before scaling. Numbers are estimated from the campaign assumptions — not live operations data.</p>
+
+        {/* ── Venue & setup mix (when a scenario mix is set in /config) ── */}
+        {mixD && (
+          <>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3 text-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-muted)]">Venue mix</p>
+                <p className="mt-1">{mixD.categoryMix.map((c) => `${c.venues}× ${c.label}`).join(" · ")}</p>
+              </div>
+              <div className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3 text-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-muted)]">Setup / output mix (by venues)</p>
+                <p className="mt-1">{mixD.setupMix.map((su) => `${su.pctVenues}% ${su.label}`).join(" · ")}</p>
+              </div>
+            </div>
+            {hasSpecial && <p className="mt-2 text-xs text-[var(--ppn-muted)]">Pop-up / festival venues are special events, not ordinary pubs — shown separately from the core pub-network model.</p>}
+          </>
+        )}
 
         {/* ── Decision-gated stages ── */}
         <Section title="Pilot → regional → wider activation" />

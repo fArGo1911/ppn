@@ -14,7 +14,8 @@ import { useAudienceMode } from "../lib/audience";
 import { applyTheme, getThemeOverride, setThemeOverride, clearThemeOverride, themeWarnings, type ColourOverride } from "../demo/theme";
 import {
   deriveKpi, applyScenarioToSeed, getScenario, setScenario, clearScenario, scenarioWarnings,
-  SCENARIO_TEMPLATES, type Scenario, type VenueProfile,
+  SCENARIO_TEMPLATES, deriveVenueMix, venueMixWarnings, venueCategory, setupModeLabel,
+  type Scenario, type VenueProfile,
 } from "../demo/kpiModel";
 import { resolveJoinToken, getSessionState, setSessionSetup, resetDemo, clearTeams, seedDemoTeams, listTeams } from "../lib/ppnApi";
 
@@ -84,7 +85,9 @@ export default function Config() {
   const effSeed = applyScenarioToSeed(market.kpiSeed, scenario);
   const effD = deriveKpi(effSeed);
   const profile: VenueProfile = scenario.venueProfile ?? "mixed";
-  const scWarns = scenarioWarnings(effSeed, profile);
+  const mix = scenario.venueMix ?? null;
+  const mixD = mix ? deriveVenueMix(mix, scenario.campaignReachMultiplier ?? effSeed.campaignReachMultiplier, scenario.avgPlayersPerTeam ?? effSeed.avgPlayersPerTeam) : null;
+  const sWarns = mix ? venueMixWarnings(mix) : scenarioWarnings(effSeed, profile);
   const hasScenarioOver = Object.keys(scenario).length > 0;
 
   // ── Internal theme studio (operator-only colour override; localStorage; applies live) ──
@@ -232,14 +235,42 @@ export default function Config() {
               <p className="mt-1 text-[var(--ppn-muted)]">{effD.eventsRun.toLocaleString()} events · {effD.playersJoined.toLocaleString()} player visits · {effD.teamsCreated.toLocaleString()} teams · ~{effSeed.avgPlayersPerEvent}/event · {effD.avgTeamsPerEvent} teams/event · est. reach ~{effD.campaignReachEstimate.toLocaleString()}</p>
             </div>
 
+            {mixD && (
+              <div className="mt-3 space-y-2">
+                <div>
+                  <p className="text-xs font-semibold text-[var(--ppn-muted)]">Venue mix</p>
+                  <div className="mt-1 grid gap-1 sm:grid-cols-2">
+                    {mix!.map((e, i) => (
+                      <div key={i} className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-3 py-2 text-xs">
+                        <span className="font-semibold text-[var(--ppn-text)]">{e.venues}× {venueCategory(e.categoryId).label}</span>
+                        <span className="text-[var(--ppn-muted)]"> · {e.avgPlayersPerEvent}/event · {e.eventsPerVenue} events · {setupModeLabel(e.setupMode)}</span>
+                        {venueCategory(e.categoryId).special && <span className="ml-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase" style={{ background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>special event</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-2 text-xs">
+                    <p className="font-semibold text-[var(--ppn-text)]">Category mix</p>
+                    <p className="mt-1 text-[var(--ppn-muted)]">{mixD.categoryMix.map((c) => `${c.venues}× ${c.label}`).join(" · ")}</p>
+                  </div>
+                  <div className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-2 text-xs">
+                    <p className="font-semibold text-[var(--ppn-text)]">Setup / output mix (by venues)</p>
+                    <p className="mt-1 text-[var(--ppn-muted)]">{mixD.setupMix.map((su) => `${su.pctVenues}% ${su.label}`).join(" · ")}</p>
+                  </div>
+                </div>
+                <p className="text-[11px] text-[var(--ppn-muted)]">Venue mix drives venues/events/players (weighted) — clear the scenario to edit those scalars directly.</p>
+              </div>
+            )}
+
             <div className="mt-3 flex flex-wrap gap-2">
               <button onClick={resetScenario} disabled={!hasScenarioOver} className="rounded-lg border border-[var(--ppn-border)] px-3 py-2 text-sm font-semibold disabled:opacity-40">↺ Reset to market defaults</button>
             </div>
 
-            {scWarns.length > 0 ? (
+            {sWarns.length > 0 ? (
               <div className="mt-3 rounded-lg border p-3" style={{ borderColor: "color-mix(in srgb, var(--ppn-warning) 45%, transparent)", background: "color-mix(in srgb, var(--ppn-warning) 12%, transparent)" }}>
                 <p className="text-xs font-semibold" style={{ color: "var(--ppn-warning)" }}>⚠ Realism warnings (operator-only)</p>
-                <ul className="mt-1 list-disc pl-5 text-xs text-[var(--ppn-muted)]">{scWarns.map((w) => <li key={w}>{w}</li>)}</ul>
+                <ul className="mt-1 list-disc pl-5 text-xs text-[var(--ppn-muted)]">{sWarns.map((w) => <li key={w}>{w}</li>)}</ul>
               </div>
             ) : <p className="mt-2 text-xs" style={{ color: "var(--ppn-success)" }}>✓ Scenario looks realistic.</p>}
           </Card>
