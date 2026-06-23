@@ -15,7 +15,7 @@ import { QRCodeSVG } from "qrcode.react";
 import type { ReactNode } from "react";
 import { resolveJoinToken, listTeams, getSessionState, getSessionQuestions } from "../lib/ppnApi";
 import { DEMO_BRAND } from "../demo/brand";
-import { clientFacingIdentity } from "../lib/clientFacingDemo";
+import { clientFacingIdentity, clientFacingBrand, clientVideoUrl } from "../lib/clientFacingDemo";
 import { TvShell } from "../components/shells";
 import { OfferBadge, AiAnnouncementSlot } from "../components/brandZones";
 import { Carousel } from "../components/Carousel";
@@ -39,6 +39,7 @@ export default function Tv() {
   // Controlled POC: a prepared demo brief's client/venue identity takes precedence over the DB session label so
   // a client never sees another brewery's pub/event. Display-only — never mutates the session or join logic.
   const ci = clientFacingIdentity();
+  const cb = clientFacingBrand(); // brief-safe brand for seeded slide collections
   const venue = ci.hasBrief ? ci.venueName : (session?.venueName ?? DEMO_BRAND.pubName);
   const event = ci.hasBrief ? ci.eventName : (session?.eventTitle ?? DEMO_BRAND.eventName);
 
@@ -145,11 +146,11 @@ export default function Tv() {
   if (state === "intro")
     return wrap(false, (
       <>
-        <Kicker>🔊 AI host intro</Kicker>
+        <Kicker>🔊 Tonight's intro</Kicker>
         <Title />
         <div className="mt-8 grid w-full max-w-6xl grid-cols-[1.5fr_1fr] items-center gap-8 text-left">
           <div>
-            <VideoSlot url={DEMO_BRAND.video.tvIntroVideoUrl} sourceType={DEMO_BRAND.video.tvIntroVideoSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Intro video (optional campaign visual)" />
+            <VideoSlot url={clientVideoUrl("intro")} aspect="16/9" label="Intro video (optional campaign visual)" />
             <div className="mt-4"><AiAnnouncementSlot scriptKey="eventIntro" size="tv" /></div>
           </div>
           <QrCard size={170} caption="Still time to join" />
@@ -197,8 +198,8 @@ export default function Tv() {
   if (state === "slideshow")
     return wrap(false, (
       <div className="grid w-full max-w-6xl gap-6">
-        <VideoSlot url={DEMO_BRAND.video.sponsorBumperVideoUrl} sourceType={DEMO_BRAND.video.sponsorBumperVideoSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Sponsor bumper" />
-        <Carousel slides={sponsorSlides(DEMO_BRAND)} auto size="tv" />
+        <VideoSlot url={clientVideoUrl("bumper")} aspect="16/9" label="Sponsor bumper" />
+        <Carousel slides={sponsorSlides(cb)} auto size="tv" />
       </div>
     ));
 
@@ -206,7 +207,7 @@ export default function Tv() {
     return wrap(false, (
       <>
         <p className="mb-4 text-4xl font-bold">Back in a moment…</p>
-        <div className="w-full max-w-6xl"><Carousel slides={pauseSlides(DEMO_BRAND)} auto size="tv" /></div>
+        <div className="w-full max-w-6xl"><Carousel slides={pauseSlides(cb)} auto size="tv" /></div>
         <div className="mt-6"><QrCard size={150} caption="Join anytime" /></div>
       </>
     ));
@@ -217,7 +218,7 @@ export default function Tv() {
         <Kicker>Picture / video round</Kicker>
         <h1 className="mt-2 text-5xl font-black">What's happening in this clip?</h1>
         <div className="mt-6 grid w-full max-w-6xl grid-cols-[1.5fr_1fr] items-center gap-8 text-left">
-          <VideoSlot url={DEMO_BRAND.video.videoQuestionUrl} sourceType={DEMO_BRAND.video.videoQuestionSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Video question media" />
+          <VideoSlot aspect="16/9" label="Video question media" />
           <div className="grid gap-3 text-3xl">
             {["Brewing day", "Match day", "Quiz night", "Delivery run"].map((o, i) => (
               <div key={o} className="rounded-2xl border-2 px-6 py-5 font-semibold" style={{ borderColor: "var(--ppn-border)", background: "var(--ppn-surface)", color: "var(--ppn-text)" }}>
@@ -244,9 +245,9 @@ export default function Tv() {
     return wrap(false, (
       <>
         <h1 className="text-7xl font-black">Thanks for playing!</h1>
-        <p className="mt-4 text-3xl" style={{ color: "var(--ppn-brand)" }}>{DEMO_BRAND.cta}</p>
+        <p className="mt-4 text-3xl" style={{ color: "var(--ppn-brand)" }}>{cb.cta}</p>
         <p className="mt-2 text-2xl text-[var(--ppn-muted)]">Brought to you by {ci.sponsorName}</p>
-        <div className="mt-6 w-full max-w-3xl"><VideoSlot url={DEMO_BRAND.video.closingVideoUrl} sourceType={DEMO_BRAND.video.closingVideoSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Closing sponsor video (optional)" /></div>
+        <div className="mt-6 w-full max-w-3xl"><VideoSlot url={clientVideoUrl("closing")} aspect="16/9" label="Closing sponsor video (optional)" /></div>
         <div className="mt-6"><OfferBadge size="tv" /></div>
       </>
     ));
@@ -262,7 +263,7 @@ export default function Tv() {
       <Title />
       <div className="mt-4"><OfferBadge size="tv" /></div>
       <div className="mt-7 grid w-full max-w-6xl grid-cols-[1.4fr_1fr] items-center gap-8 text-left">
-        <VideoSlot url={DEMO_BRAND.video.tvIntroVideoUrl} sourceType={DEMO_BRAND.video.tvIntroVideoSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Intro video" />
+        <VideoSlot url={clientVideoUrl("intro")} aspect="16/9" label="Intro video" />
         <QrCard size={220} />
       </div>
       <div className="mt-8 w-full max-w-6xl text-left"><AiAnnouncementSlot scriptKey="eventIntro" size="tv" /></div>

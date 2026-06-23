@@ -6,6 +6,7 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { DEMO_BRAND } from "../demo/brand";
+import { clientFacingIdentity } from "../lib/clientFacingDemo";
 import { DemoShell } from "../components/shells";
 import { BrandAssetPreview, OfferBadge, PoweredByPpnMark } from "../components/brandZones";
 import { resolveJoinToken } from "../lib/ppnApi";
@@ -19,19 +20,22 @@ const STORY = [
 export default function Landing() {
   const { data } = useQuery({ queryKey: ["landing-demo"], queryFn: () => resolveJoinToken("DEMO") });
   const session = data && data.kind !== "invalid" ? data.session : undefined;
-  const venue = session?.venueName ?? DEMO_BRAND.pubName;
-  const event = session?.eventTitle ?? DEMO_BRAND.eventName; // "Quiz Night" — pub/brewery owns the event, never "PubPlay …"
+  // Client-facing: a prepared brief's identity takes precedence so `/` never shows another brewery on a client demo.
+  const ci = clientFacingIdentity();
+  const venue = ci.hasBrief ? ci.venueName : (session?.venueName ?? DEMO_BRAND.pubName);
+  const event = ci.hasBrief ? ci.eventName : (session?.eventTitle ?? DEMO_BRAND.eventName);
+  const heroImage = ci.mismatch ? undefined : DEMO_BRAND.images.heroUrl; // drop preset hero on mismatch → gradient
 
   return (
-    <DemoShell>
+    <DemoShell clientFacing>
       <section className="mx-auto max-w-5xl px-5 py-8">
         {/* Brewery campaign hero — brewery + pub + event + offer + campaign image */}
-        <BrandAssetPreview aspect="16/9" image={DEMO_BRAND.images.heroUrl} className="max-h-[52vh] w-full">
+        <BrandAssetPreview aspect="16/9" image={heroImage} className="max-h-[52vh] w-full">
           <div className="max-w-2xl">
-            <p className="text-sm uppercase tracking-[0.3em] text-[var(--ppn-text)]">{DEMO_BRAND.sponsorName} presents</p>
+            <p className="text-sm uppercase tracking-[0.3em] text-[var(--ppn-text)]">{ci.sponsorName} presents</p>
             <h1 className="mt-2 text-4xl font-black leading-tight text-white drop-shadow sm:text-6xl">{event}</h1>
             <p className="mt-2 text-lg text-[var(--ppn-text)]">
-              at <span className="font-semibold">{venue}</span> · {DEMO_BRAND.tagline}
+              at <span className="font-semibold">{venue}</span> · {ci.tagline}
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <OfferBadge size="host" />
@@ -54,7 +58,7 @@ export default function Landing() {
         </div>
 
         <p className="mt-8 text-sm text-[var(--ppn-muted)]">
-          A sponsored on-trade engagement campaign for {DEMO_BRAND.sponsorName} — branded, measurable, and run by the venue.
+          A sponsored on-trade engagement campaign for {ci.sponsorName} — branded, measurable, and run by the venue.
         </p>
         <p className="mt-6 text-center"><PoweredByPpnMark /></p>
       </section>

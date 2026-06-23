@@ -4,7 +4,7 @@
  * Colours come from CSS tokens (var(--ppn-*)) set by applyTheme, so a white/red brewery re-skins everything.
  */
 import { useState, type ReactNode } from "react";
-import { DEMO_BRAND, brandInitials } from "../demo/brand";
+import { DEMO_BRAND, brandInitials, type DemoBrand } from "../demo/brand";
 import { clientFacingIdentity } from "../lib/clientFacingDemo";
 
 type Size = "phone" | "host" | "tv";
@@ -114,16 +114,36 @@ export function SponsorMessageSlot({ size = "phone" }: { size?: Size }) {
   );
 }
 
-/** Where AI-host voice state appears (planning slot — no generation this slice). */
+// Client-safe spoken-line slot. No internal "AI host" wording; the line follows the client-facing identity so a
+// mismatched brief never hears the preset's pub/brewery names in the script.
+const SPOKEN_LABEL: Partial<Record<keyof DemoBrand["ai"], string>> = {
+  eventIntro: "Tonight's intro", roundIntro: "Round intro", sponsoredIntro: "Sponsor round",
+  answerReveal: "Answer", winner: "Winner", intermission: "Interval",
+};
+function spokenLine(scriptKey: keyof DemoBrand["ai"], id: ReturnType<typeof clientFacingIdentity>): string {
+  if (!id.mismatch) return DEMO_BRAND.ai[scriptKey]; // aligned preset script is already on-brand
+  switch (scriptKey) { // brief-safe neutral lines (no preset pub/brewery names)
+    case "eventIntro": return `Good evening and welcome to ${id.venueName} for tonight's ${id.eventName}, brought to you by ${id.sponsorName}. Scan the QR on your table, name your team, and answer on your phone.`;
+    case "roundIntro": return "Next round coming up — phones ready, teams.";
+    case "sponsoredIntro": return `This round is brought to you by ${id.sponsorName}.`;
+    case "answerReveal": return "And the correct answer is…";
+    case "intermission": return "Quick breather — back in a moment.";
+    case "winner": return "Tonight's champions — brilliantly played, and thanks for joining us.";
+    default: return "Here's your question…";
+  }
+}
+
+/** Spoken host-line slot (planning slot — no audio generation). Client-safe label + brief-safe copy. */
 export function AiAnnouncementSlot({ scriptKey = "eventIntro", size = "phone" }: { scriptKey?: keyof typeof DEMO_BRAND.ai; size?: Size }) {
   const tv = size === "tv";
+  const id = clientFacingIdentity();
   return (
     <div className={`rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] ${tv ? "p-5" : "p-3"}`}>
       <p className={`flex items-center gap-2 font-medium ${tv ? "text-xl" : "text-xs"}`}>
-        <span className="inline-grid h-5 w-5 place-items-center rounded-full text-[10px]" style={onBrand}>AI</span>
-        AI host
+        <span className="inline-grid h-5 w-5 place-items-center rounded-full text-[10px]" style={onBrand} aria-hidden>🔊</span>
+        {SPOKEN_LABEL[scriptKey] ?? "Spoken"}
       </p>
-      <p className={`mt-1 text-[var(--ppn-muted)] ${tv ? "text-lg" : "text-xs"}`}>“{DEMO_BRAND.ai[scriptKey]}”</p>
+      <p className={`mt-1 text-[var(--ppn-muted)] ${tv ? "text-lg" : "text-xs"}`}>“{spokenLine(scriptKey, id)}”</p>
     </div>
   );
 }

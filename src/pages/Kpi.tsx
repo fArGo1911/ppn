@@ -202,7 +202,7 @@ export default function Kpi() {
           {rounds.map((r) => (
             <div key={r.name} className="rounded-xl border bg-[var(--ppn-surface)] p-3" style={{ borderColor: r.sponsor ? DEMO_BRAND.primary : "var(--ppn-border)" }}>
               <div className="flex items-center justify-between text-sm">
-                <span className="font-semibold">{r.name}{r.sponsor && <span className="ml-2"><Tag text="brand exposure moment" /></span>}</span>
+                <span className="font-semibold">{r.sponsor ? "Sponsored round" : r.name}{r.sponsor && <span className="ml-2"><Tag text="brand exposure moment" /></span>}</span>
                 <span className="font-bold">{pct(r.answerRate)}</span>
               </div>
               <p className="mt-1 text-xs text-[var(--ppn-muted)]">{n(r.teamsAnswered)} of {n(r.teamsShown)} teams answered{r.sponsor ? ` — ${n(r.teamsAnswered)} teams actively engaged with the ${ci.sponsorName} round` : ""}.</p>

@@ -29,13 +29,16 @@ function inviteLink(joinCode?: string | null) {
 function JoinSuccess({ session, team, onContinue, onChooseAgain }: { session: ResolvedSession; team: StoredTeam; onContinue: () => void; onChooseAgain: () => void }) {
   const cb = useRef(onContinue); cb.current = onContinue;
   useEffect(() => { const t = setTimeout(() => cb.current(), 4500); return () => clearTimeout(t); }, []);
+  const id = clientFacingIdentity();
+  const dVenue = id.hasBrief ? id.venueName : session.venueName;
+  const dEvent = id.hasBrief ? id.eventName : session.eventTitle;
   return (
     <PlayerShell venue={session.venueName} event={session.eventTitle}>
       <div className="pt-4 text-center">
         <p className="text-6xl">🎉</p>
         <p className="mt-2 text-xs font-semibold uppercase tracking-widest text-[var(--ppn-brand)]">You're in</p>
         <h2 className="mt-1 text-3xl font-extrabold">{team.teamName}</h2>
-        <p className="mt-1 text-[var(--ppn-muted)]">{session.venueName} · {session.eventTitle}</p>
+        <p className="mt-1 text-[var(--ppn-muted)]">{dVenue} · {dEvent}</p>
         <div className="mt-4 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4 text-left">
           <SponsorMessageSlot />
           <div className="mt-2"><OfferBadge /></div>
@@ -112,6 +115,7 @@ export default function PlayJoin() {
 
   // ── Demo-only in-play preview states (presenter inspection; ?preview=…). Not the live game loop. ──
   if (preview) {
+    const pid = clientFacingIdentity();
     const venue = session?.venueName ?? DEMO_BRAND.pubName;
     const event = session?.eventTitle ?? DEMO_BRAND.eventName;
     const Opt = ({ k, t, state }: { k: string; t: string; state?: "right" | "chosen" }) => (
@@ -123,7 +127,7 @@ export default function PlayJoin() {
     return (
       <PlayerShell venue={venue} event={event} focus={preview === "question"}>
         {preview === "question" && (<><p className="text-xs font-semibold uppercase tracking-widest text-[var(--ppn-brand)]">Round 1 · General knowledge</p><h2 className="mt-1 text-xl font-bold">Which planet is known as the Red Planet?</h2><p className="mt-1 text-xs text-[var(--ppn-muted)]">⏱ 20s · tap your team's answer</p><div className="mt-4 space-y-2">{["Mars", "Venus", "Jupiter", "Mercury"].map((o, i) => <Opt key={o} k={"ABCD"[i]} t={o} />)}</div></>)}
-        {preview === "sponsored" && (<><div className="rounded-xl p-3" style={{ background: "color-mix(in srgb, var(--ppn-brand) 14%, transparent)" }}><p className="text-xs font-semibold text-[var(--ppn-brand)]">Sponsored round · {DEMO_BRAND.sponsorName}</p><p className="text-xs text-[var(--ppn-muted)]">{DEMO_BRAND.offer}</p></div><h2 className="mt-3 text-xl font-bold">Which city is {DEMO_BRAND.sponsorName} brewed in?</h2><div className="mt-4 space-y-2">{["Manchester", "London", "Leeds", "Bristol"].map((o, i) => <Opt key={o} k={"ABCD"[i]} t={o} state={i === 0 ? "chosen" : undefined} />)}</div></>)}
+        {preview === "sponsored" && (<><div className="rounded-xl p-3" style={{ background: "color-mix(in srgb, var(--ppn-brand) 14%, transparent)" }}><p className="text-xs font-semibold text-[var(--ppn-brand)]">Sponsored round · {pid.sponsorName}</p><p className="text-xs text-[var(--ppn-muted)]">{pid.offer}</p></div><h2 className="mt-3 text-xl font-bold">Which city is {pid.sponsorName} brewed in?</h2><div className="mt-4 space-y-2">{["Manchester", "London", "Leeds", "Bristol"].map((o, i) => <Opt key={o} k={"ABCD"[i]} t={o} state={i === 0 ? "chosen" : undefined} />)}</div></>)}
         {preview === "submitted" && (<div className="pt-10 text-center"><p className="text-6xl" style={{ color: "var(--ppn-brand)" }}>✓</p><h2 className="mt-2 text-2xl font-bold">Answer locked in</h2><p className="mt-1 text-[var(--ppn-muted)]">Waiting for the other teams…</p></div>)}
         {preview === "reveal" && (<div className="pt-8 text-center"><p className="text-xs font-semibold uppercase tracking-widest text-[var(--ppn-brand)]">Answer reveal</p><p className="mt-2 text-5xl">🎉</p><h2 className="mt-1 text-2xl font-bold">Correct! +1 pt</h2><p className="mt-1 text-[var(--ppn-muted)]">The answer was <span className="font-semibold text-[var(--ppn-text)]">Mars</span>.</p></div>)}
         {preview === "scoreboard" && (<><h2 className="text-xl font-bold">Standings</h2><div className="mt-3 space-y-2">{[...(teamsQ.data ?? [])].sort((a, b) => b.score - a.score).slice(0, 5).map((t, i) => (<div key={t.id} className="flex items-center justify-between rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-2.5"><span><span className="mr-2 font-black text-[var(--ppn-brand)]">{i + 1}</span>{t.name}</span><span className="font-bold">{t.score} pts</span></div>))}{(teamsQ.data ?? []).length === 0 && <p className="text-sm text-[var(--ppn-muted)]">No teams yet.</p>}</div></>)}

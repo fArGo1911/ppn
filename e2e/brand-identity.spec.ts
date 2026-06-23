@@ -74,6 +74,45 @@ test("with no brief, client pages still show the active preset", async ({ page }
   await expect(header(page)).toContainText("Northgate");
 });
 
+// ── B2. TV is client-safe with a brief: banner is the client, no wrong-brand, no sample video ──
+test("TV banner follows the brief and shows no Northgate / sample video", async ({ page }) => {
+  await seedBrief(page);
+  await page.goto("/tv/DEMO");
+  const banner = page.locator("header").first();
+  await expect(banner).toContainText("Harbourline Brewery");
+  await expect(banner).not.toContainText("Northgate");
+  await expect(page.getByText(/Northgate/)).toHaveCount(0);
+  // No internal "AI host" label and no sample-video (Big Buck Bunny) embed in the client path.
+  await expect(page.getByText(/AI host/i)).toHaveCount(0);
+  await expect(page.locator('iframe[src*="youtube"]')).toHaveCount(0);
+});
+
+// ── C2. Sample video is suppressed on the client TV path even with no brief (preset Northgate) ──
+test("TV does not embed the sample video even without a brief", async ({ page }) => {
+  await page.goto("/tv/DEMO");
+  await expect(page.locator('iframe[src*="youtube"]')).toHaveCount(0);
+});
+
+// ── B3. Player is client-safe with a brief: banner is the client, no wrong-brand, no AI host ──
+test("Player banner follows the brief and shows no Northgate / AI host", async ({ page }) => {
+  await seedBrief(page);
+  await page.goto("/play/DEMO");
+  const banner = page.locator("header").first();
+  await expect(banner).toContainText("Harbourline Brewery");
+  await expect(banner).not.toContainText("Northgate");
+  await expect(page.getByText(/Northgate/)).toHaveCount(0);
+  await expect(page.getByText(/AI host/i)).toHaveCount(0);
+});
+
+// ── E. Landing decision: Option A — `/` is client-facing identity aware ──
+test("Landing / follows the brief identity (Option A)", async ({ page }) => {
+  await seedBrief(page);
+  await page.goto("/");
+  await expect(header(page)).toContainText("Harbourline Brewery");
+  await expect(header(page)).not.toContainText("Northgate");
+  await expect(page.getByText(/Northgate/)).toHaveCount(0);
+});
+
 // ── D. Gating invariants unchanged ──
 test("gating invariants hold after the brand-identity change", async ({ page }) => {
   await page.goto("/presentation");
