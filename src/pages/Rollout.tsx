@@ -7,7 +7,7 @@
 import { DemoShell } from "../components/shells";
 import { DEMO_BRAND } from "../demo/brand";
 import { activeMarket } from "../demo/markets";
-import { deriveStage } from "../demo/kpiModel";
+import { deriveStage, getEffectiveKpiSeed, getEffectiveStageVenues } from "../demo/kpiModel";
 import { SETUP_MODES } from "../demo/setup";
 
 const STAGE: Record<string, { title: string; purpose: string[]; gate: string; evidence: string }> = {
@@ -33,9 +33,14 @@ const STAGE: Record<string, { title: string; purpose: string[]; gate: string; ev
 
 export default function Rollout() {
   const m = activeMarket();
-  const s = m.kpiSeed;
+  const s = getEffectiveKpiSeed(m.kpiSeed); // market default + any operator scenario override (/config)
   const n = (x: number) => x.toLocaleString();
   const brand = "var(--ppn-brand)";
+  const stageVenues = getEffectiveStageVenues({
+    pilot: m.rollout.find((r) => r.id === "pilot")?.venues ?? 5,
+    regional: m.rollout.find((r) => r.id === "regional")?.venues ?? 25,
+    campaign: m.rollout.find((r) => r.id === "campaign")?.venues ?? 100,
+  });
 
   const Section = ({ title }: { title: string }) => (
     <h2 className="mt-9 text-sm font-semibold uppercase tracking-wider text-[var(--ppn-muted)]">{title}</h2>
@@ -72,14 +77,16 @@ export default function Rollout() {
         <div className="mt-3 space-y-3">
           {m.rollout.map((t, i) => {
             const cfg = STAGE[t.id];
-            const d = deriveStage(s, t.venues);
+            const venues = stageVenues[t.id as "pilot" | "regional" | "campaign"];
+            const d = deriveStage(s, venues);
+            const teamsPerEvent = (d.teams / Math.max(1, d.events)).toFixed(1);
             return (
               <div key={t.id} className="rounded-xl border-2 bg-[var(--ppn-surface)] p-4" style={{ borderColor: i === 0 ? brand : "var(--ppn-border)" }}>
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="text-lg font-bold">{i + 1}. {cfg.title}</p>
-                  <p className="text-2xl font-extrabold" style={{ color: brand }}>{t.venues} <span className="text-sm font-medium text-[var(--ppn-muted)]">venues</span></p>
+                  <p className="text-2xl font-extrabold" style={{ color: brand }}>{venues} <span className="text-sm font-medium text-[var(--ppn-muted)]">venues</span></p>
                 </div>
-                <p className="mt-0.5 text-xs text-[var(--ppn-muted)]">{t.note}</p>
+                <p className="mt-0.5 text-xs text-[var(--ppn-muted)]">{t.note} · ~{s.avgPlayersPerEvent} players/event · ~{teamsPerEvent} teams/event (stage totals below are across all its venues & events)</p>
 
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <div>
@@ -90,10 +97,10 @@ export default function Rollout() {
                     <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-muted)]">Estimated scale</p>
                     <ul className="mt-1 space-y-0.5 text-sm">
                       <li className="flex justify-between"><span>Branded events</span><span className="font-semibold">{n(d.events)}</span></li>
-                      <li className="flex justify-between"><span>Expected players</span><span className="font-semibold">{n(d.players)}</span></li>
-                      <li className="flex justify-between"><span>Teams</span><span className="font-semibold">{n(d.teams)}</span></li>
+                      <li className="flex justify-between"><span>Player visits (stage total)</span><span className="font-semibold">{n(d.players)}</span></li>
+                      <li className="flex justify-between"><span>Teams (stage total)</span><span className="font-semibold">{n(d.teams)}</span></li>
                       <li className="flex justify-between"><span>Sponsored-round teams</span><span className="font-semibold">{n(d.sponsoredTeams)}</span></li>
-                      <li className="flex justify-between text-[var(--ppn-muted)]"><span>Est. campaign reach</span><span>~{n(d.reach)}</span></li>
+                      <li className="flex justify-between text-[var(--ppn-muted)]"><span>Est. reach (incl. onlookers)</span><span>~{n(d.reach)}</span></li>
                     </ul>
                   </div>
                 </div>

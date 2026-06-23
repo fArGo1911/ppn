@@ -12,6 +12,10 @@ import { activeMarket } from "../demo/markets";
 import { SETUP_MODES } from "../demo/setup";
 import { useAudienceMode } from "../lib/audience";
 import { applyTheme, getThemeOverride, setThemeOverride, clearThemeOverride, themeWarnings, type ColourOverride } from "../demo/theme";
+import {
+  deriveKpi, applyScenarioToSeed, getScenario, setScenario, clearScenario, scenarioWarnings,
+  SCENARIO_TEMPLATES, type Scenario, type VenueProfile,
+} from "../demo/kpiModel";
 import { resolveJoinToken, getSessionState, setSessionSetup, resetDemo, clearTeams, seedDemoTeams, listTeams } from "../lib/ppnApi";
 
 const THEME_FIELDS: { key: keyof ThemeColours; label: string }[] = [
@@ -20,6 +24,28 @@ const THEME_FIELDS: { key: keyof ThemeColours; label: string }[] = [
   { key: "text", label: "Main text" }, { key: "muted", label: "Muted text" }, { key: "onBrand", label: "Button text" },
   { key: "success", label: "Success" }, { key: "warning", label: "Warning" },
 ];
+const SCENARIO_FIELDS: { key: keyof Scenario; label: string; step: number }[] = [
+  { key: "venuesActivated", label: "Campaign venues", step: 1 }, { key: "avgEventsPerVenue", label: "Events / venue", step: 0.1 },
+  { key: "avgPlayersPerEvent", label: "Players / event", step: 1 }, { key: "avgPlayersPerTeam", label: "Players / team", step: 0.1 },
+  { key: "completionRate", label: "Completion (0–1)", step: 0.01 }, { key: "sponsoredAnswerRate", label: "Sponsored answer (0–1)", step: 0.01 },
+  { key: "campaignReachMultiplier", label: "Reach multiplier", step: 0.1 }, { key: "valuePerVisit", label: "Value / visit", step: 1 },
+  { key: "pilotVenues", label: "Pilot venues", step: 1 }, { key: "regionalVenues", label: "Regional venues", step: 1 }, { key: "campaignVenues", label: "Wider venues", step: 1 },
+];
+const PROFILE_OPTS: VenueProfile[] = ["small", "neighbourhood", "sports", "large", "popup", "mixed"];
+const SEED_SIZES = [{ n: 3, label: "Small (3)" }, { n: 6, label: "Medium (6)" }, { n: 12, label: "Busy (12)" }];
+
+function buildSpecs(mk: { teamNames: string[]; playerNames: string[] }, count: number) {
+  const tn = mk.teamNames, pn = mk.playerNames, out: { name: string; players: string[] }[] = [];
+  for (let i = 0; i < count; i++) {
+    const base = tn[i % tn.length];
+    const name = i < tn.length ? base : `${base} ${Math.floor(i / tn.length) + 1}`;
+    const per = 2 + (i % 3); // 2–4 players
+    const players: string[] = [];
+    for (let j = 0; j < per; j++) players.push(pn[(i * 3 + j) % pn.length]);
+    out.push({ name, players });
+  }
+  return out;
+}
 
 export default function Config() {
   const active = getActiveBrand();
@@ -40,11 +66,26 @@ export default function Config() {
   const run = (fn: () => Promise<unknown>) => act.mutate(fn);
   const busy = act.isPending;
 
-  const specs = [
-    { name: market.teamNames[0], players: market.playerNames.slice(0, 3) },
-    { name: market.teamNames[1], players: market.playerNames.slice(3, 6) },
-    { name: market.teamNames[2], players: market.playerNames.slice(6, 8) },
-  ];
+  // ── Demo team seeding size (small/medium/busy — uses existing seedDemoTeams helper) ──
+  const [seedSize, setSeedSize] = useState(3);
+  const specs = buildSpecs(market, seedSize);
+
+  // ── Internal scenario assumptions (operator-only; localStorage; /kpi + /rollout derive from these) ──
+  const [scenario, setScenarioState] = useState<Scenario>(getScenario());
+  const stageDefaults: Record<string, number> = {
+    pilotVenues: market.rollout.find((r) => r.id === "pilot")?.venues ?? 5,
+    regionalVenues: market.rollout.find((r) => r.id === "regional")?.venues ?? 25,
+    campaignVenues: market.rollout.find((r) => r.id === "campaign")?.venues ?? 100,
+  };
+  const fieldDefault = (key: keyof Scenario): number => key in stageDefaults ? stageDefaults[key] : Number((market.kpiSeed as unknown as Record<string, unknown>)[key] ?? 0);
+  const updateScenario = (key: keyof Scenario, value: number) => { const next = { ...scenario, [key]: value }; setScenarioState(next); setScenario(next); };
+  const applyTemplate = (sc: Scenario) => { setScenarioState(sc); setScenario(sc); };
+  const resetScenario = () => { clearScenario(); setScenarioState({}); };
+  const effSeed = applyScenarioToSeed(market.kpiSeed, scenario);
+  const effD = deriveKpi(effSeed);
+  const profile: VenueProfile = scenario.venueProfile ?? "mixed";
+  const scWarns = scenarioWarnings(effSeed, profile);
+  const hasScenarioOver = Object.keys(scenario).length > 0;
 
   // ── Internal theme studio (operator-only colour override; localStorage; applies live) ──
   const [over, setOver] = useState<ColourOverride>(getThemeOverride());
@@ -147,6 +188,62 @@ export default function Config() {
             </div>
           </Card>
 
+          <Card title="Demo scenario assumptions (operator only)">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-[var(--ppn-muted)]">Prepare a believable scenario — /kpi and /rollout derive from these. Internal only.</p>
+              {hasScenarioOver
+                ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>Custom scenario active</span>
+                : <span className="text-[10px] text-[var(--ppn-muted)]">market defaults</span>}
+            </div>
+
+            <p className="mt-3 text-xs font-semibold text-[var(--ppn-muted)]">Templates</p>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {SCENARIO_TEMPLATES.map((t) => (
+                <button key={t.id} onClick={() => applyTemplate(t.scenario)} title={t.assumes}
+                  className="rounded-full border px-3 py-1.5 text-xs font-medium"
+                  style={{ borderColor: scenario.templateId === t.id ? "var(--ppn-brand)" : "var(--ppn-border)", color: scenario.templateId === t.id ? "var(--ppn-brand)" : "var(--ppn-muted)" }}>
+                  {t.name} <span className="opacity-70">· {t.tone}</span>
+                </button>
+              ))}
+            </div>
+            {scenario.templateId && <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">{SCENARIO_TEMPLATES.find((t) => t.id === scenario.templateId)?.assumes}</p>}
+
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-[var(--ppn-muted)]">Venue profile:</span>
+              {PROFILE_OPTS.map((p) => (
+                <button key={p} onClick={() => { const next = { ...scenario, venueProfile: p }; setScenarioState(next); setScenario(next); }}
+                  className="rounded-full border px-2.5 py-1 text-xs font-medium"
+                  style={{ borderColor: profile === p ? "var(--ppn-brand)" : "var(--ppn-border)", color: profile === p ? "var(--ppn-brand)" : "var(--ppn-muted)" }}>{p}</button>
+              ))}
+            </div>
+
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              {SCENARIO_FIELDS.map((f) => (
+                <label key={f.key} className="text-xs text-[var(--ppn-muted)]">
+                  {f.label}
+                  <input type="number" step={f.step} value={(scenario[f.key] ?? fieldDefault(f.key)) as number} onChange={(e) => updateScenario(f.key, Number(e.target.value))}
+                    className="mt-1 w-full rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2 py-1 text-sm text-[var(--ppn-text)]" />
+                </label>
+              ))}
+            </div>
+
+            <div className="mt-3 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-3 text-xs">
+              <p className="font-semibold text-[var(--ppn-text)]">Across the campaign (derived, estimated):</p>
+              <p className="mt-1 text-[var(--ppn-muted)]">{effD.eventsRun.toLocaleString()} events · {effD.playersJoined.toLocaleString()} player visits · {effD.teamsCreated.toLocaleString()} teams · ~{effSeed.avgPlayersPerEvent}/event · {effD.avgTeamsPerEvent} teams/event · est. reach ~{effD.campaignReachEstimate.toLocaleString()}</p>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button onClick={resetScenario} disabled={!hasScenarioOver} className="rounded-lg border border-[var(--ppn-border)] px-3 py-2 text-sm font-semibold disabled:opacity-40">↺ Reset to market defaults</button>
+            </div>
+
+            {scWarns.length > 0 ? (
+              <div className="mt-3 rounded-lg border p-3" style={{ borderColor: "color-mix(in srgb, var(--ppn-warning) 45%, transparent)", background: "color-mix(in srgb, var(--ppn-warning) 12%, transparent)" }}>
+                <p className="text-xs font-semibold" style={{ color: "var(--ppn-warning)" }}>⚠ Realism warnings (operator-only)</p>
+                <ul className="mt-1 list-disc pl-5 text-xs text-[var(--ppn-muted)]">{scWarns.map((w) => <li key={w}>{w}</li>)}</ul>
+              </div>
+            ) : <p className="mt-2 text-xs" style={{ color: "var(--ppn-success)" }}>✓ Scenario looks realistic.</p>}
+          </Card>
+
           <Card title="Setup mode (output)">
             {!st ? <p className="text-sm text-[var(--ppn-muted)]">Loading session…</p> : (
               <div className="grid gap-2 sm:grid-cols-3">
@@ -166,14 +263,21 @@ export default function Config() {
           </Card>
 
           <Card title="Demo session">
+            <div className="mb-2 flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-[var(--ppn-muted)]">Demo size:</span>
+              {SEED_SIZES.map((sz) => (
+                <button key={sz.n} onClick={() => setSeedSize(sz.n)} className="rounded-full border px-3 py-1 text-xs font-medium"
+                  style={{ borderColor: seedSize === sz.n ? "var(--ppn-brand)" : "var(--ppn-border)", color: seedSize === sz.n ? "var(--ppn-brand)" : "var(--ppn-muted)" }}>{sz.label}</button>
+              ))}
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <button disabled={busy || !sid} onClick={() => run(() => resetDemo(sid!))} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--ppn-on-brand)] disabled:opacity-50" style={{ background: "var(--ppn-brand)" }}>↺ Reset demo (clean lobby)</button>
-              <button disabled={busy || !sid} onClick={() => run(() => seedDemoTeams(sid!, specs))} className="rounded-xl border border-[var(--ppn-border)] px-4 py-2.5 text-sm font-semibold disabled:opacity-50">＋ Seed demo teams</button>
+              <button disabled={busy || !sid} onClick={() => run(async () => { await clearTeams(sid!); await seedDemoTeams(sid!, specs); })} className="rounded-xl border border-[var(--ppn-border)] px-4 py-2.5 text-sm font-semibold disabled:opacity-50">＋ Seed {seedSize} demo teams</button>
               <button disabled={busy || !sid} onClick={() => run(() => clearTeams(sid!))} className="rounded-xl border border-[var(--ppn-border)] px-4 py-2.5 text-sm font-semibold disabled:opacity-50">✕ Clear teams</button>
             </div>
             <p className="mt-2 text-xs text-[var(--ppn-muted)]">
               {teamsQ.data ? `${teamsQ.data.length} team${teamsQ.data.length === 1 ? "" : "s"} in session · ` : ""}
-              Seed uses {market.label} names ({specs.map((s) => s.name).join(", ")}).
+              Seeds {seedSize} {market.label} teams (local demo only). Live session normally shows a few sample teams; KPI/rollout numbers are campaign-level totals across many events, not this session.
             </p>
           </Card>
 

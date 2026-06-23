@@ -6,11 +6,11 @@
 import { DemoShell } from "../components/shells";
 import { DEMO_BRAND } from "../demo/brand";
 import { activeMarket } from "../demo/markets";
-import { deriveKpi, perVenue, perRound, pct } from "../demo/kpiModel";
+import { deriveKpi, perVenue, perRound, pct, getEffectiveKpiSeed } from "../demo/kpiModel";
 
 export default function Kpi() {
   const m = activeMarket();
-  const s = m.kpiSeed;
+  const s = getEffectiveKpiSeed(m.kpiSeed); // market default + any operator scenario override (/config)
   const d = deriveKpi(s);
   const venues = perVenue(s);
   const rounds = perRound(s, d.teamsCreated);
@@ -65,6 +65,7 @@ export default function Kpi() {
 
         {/* B. Executive snapshot */}
         <Section title="Campaign performance snapshot" />
+        <p className="mt-1 text-xs text-[var(--ppn-muted)]">All figures are campaign totals across {s.venuesActivated} venues and {n(d.eventsRun)} events (~{s.avgPlayersPerEvent} players/event, ~{d.avgTeamsPerEvent} teams/event) — not one pub night.</p>
         <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3">
           {exec.map((c) => (
             <div key={c.label} className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
@@ -132,8 +133,8 @@ export default function Kpi() {
           {[
             { v: s.venuesActivated, label: "Venues activated", basis: "campaign footprint (assumption)" },
             { v: d.eventsRun, label: "Events run", basis: `${s.venuesActivated} × ${s.avgEventsPerVenue} events/venue` },
-            { v: d.playersJoined, label: "Players joined", basis: `${n(d.eventsRun)} × ${s.avgPlayersPerEvent} players/event` },
-            { v: d.teamsCreated, label: "Teams created", basis: `${n(d.playersJoined)} ÷ ${s.avgPlayersPerTeam} players/team` },
+            { v: d.playersJoined, label: "Player visits (campaign)", basis: `${n(d.eventsRun)} × ${s.avgPlayersPerEvent} players/event` },
+            { v: d.teamsCreated, label: "Teams (campaign)", basis: `${n(d.playersJoined)} ÷ ${s.avgPlayersPerTeam} players/team` },
           ].map((f, i, arr) => (
             <div key={f.label} className="relative rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
               <p className="text-2xl font-extrabold" style={{ color: DEMO_BRAND.primary }}>{n(f.v)}</p>
