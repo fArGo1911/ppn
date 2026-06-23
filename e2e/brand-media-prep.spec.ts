@@ -38,7 +38,7 @@ test("/config exposes a Brand & media setup section + current brand/media state"
   await unlockOperator(page);
   await page.goto("/config");
   await expect(page.getByRole("heading", { name: /Brand & media setup/i }).first()).toBeVisible();
-  await expect(page.locator('a[href="#brand-media"]')).toBeVisible();
+  await expect(page.locator('a[href$="#brand-media"]').first()).toBeVisible();
   await expect(page.getByText("Current demo", { exact: true })).toBeVisible();
   await expect(page.getByText("Where assets appear", { exact: true })).toBeVisible();
   await expect(page.getByText(/Used on TV\/audience screen/i).first()).toBeVisible();
@@ -47,7 +47,7 @@ test("/config exposes a Brand & media setup section + current brand/media state"
 
 test("/config renames the scenario section to campaign assumptions / demo numbers", async ({ page }) => {
   await unlockOperator(page);
-  await page.goto("/config");
+  await page.goto("/config#demo-numbers");
   await expect(page.getByRole("heading", { name: /Campaign assumptions \/ demo numbers/i }).first()).toBeVisible();
   await expect(page.getByText(/scenario override/i)).toHaveCount(0);
 });

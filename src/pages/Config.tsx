@@ -4,7 +4,7 @@
  * are labelled stubs. NOT an admin/CMS/portal — just enough to prepare a demo run.
  */
 import { useState, useEffect, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DemoShell } from "../components/shells";
 import { PRESETS, getActiveBrand, brandInitials, type ThemeColours } from "../demo/brand";
@@ -58,6 +58,15 @@ const PACK_COPY_FIELDS: { key: string; label: string }[] = [
   { key: "event_name", label: "Event name" }, { key: "offer", label: "Offer" }, { key: "tagline", label: "Tagline" }, { key: "responsible_note", label: "Responsible note" },
 ];
 
+// Hash-controlled in-page section tabs: only the active section's work area renders, so /config#brand-media,
+// /config#demo-numbers and /config#session each show a clearly DIFFERENT working section (not just a scroll).
+const SECTIONS = [
+  { id: "brand-media", label: "Brand & media", icon: "🎨" },
+  { id: "demo-numbers", label: "Campaign assumptions / demo numbers", icon: "📊" },
+  { id: "session", label: "Session & run", icon: "▶" },
+] as const;
+type SectionId = (typeof SECTIONS)[number]["id"];
+
 function buildSpecs(mk: { teamNames: string[]; playerNames: string[] }, count: number) {
   const tn = mk.teamNames, pn = mk.playerNames, out: { name: string; players: string[] }[] = [];
   for (let i = 0; i < count; i++) {
@@ -76,6 +85,8 @@ export default function Config() {
   const market = activeMarket();
   const qc = useQueryClient();
   const [audience, setAudience] = useAudienceMode();
+  const { hash } = useLocation();
+  const activeSection: SectionId = (SECTIONS.some((s) => s.id === hash.slice(1)) ? hash.slice(1) : "brand-media") as SectionId;
 
   const sessQ = useQuery({ queryKey: ["config-session"], queryFn: () => resolveJoinToken("DEMO") });
   const sid = sessQ.data && sessQ.data.kind !== "invalid" ? sessQ.data.session.sessionId : undefined;
@@ -171,13 +182,22 @@ export default function Config() {
         <h1 className="mt-2 text-3xl font-extrabold">Detailed config · brand &amp; media setup</h1>
         <p className="mt-2 text-[var(--ppn-muted)]">Prepare a run before a brewery sees it. Hidden from the buyer journey.</p>
 
-        {/* Jump nav — the page has three jobs; this makes brand/media prep easy to find. */}
+        {/* Section tabs — the hash selects the active working section (one /config page, not three routes). */}
         <nav aria-label="Config sections" className="mt-4 flex flex-wrap gap-2 text-xs">
-          <a href="#brand-media" className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1.5 font-semibold hover:text-[var(--ppn-brand)]">🎨 Brand &amp; media setup</a>
-          <a href="#demo-numbers" className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1.5 font-semibold hover:text-[var(--ppn-brand)]">📊 Campaign assumptions / demo numbers</a>
-          <a href="#session" className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1.5 font-semibold hover:text-[var(--ppn-brand)]">▶ Session &amp; run</a>
+          {SECTIONS.map((s) => {
+            const on = activeSection === s.id;
+            return (
+              <Link key={s.id} to={`/config#${s.id}`} aria-current={on ? "page" : undefined}
+                className="rounded-full border px-3 py-1.5 font-semibold"
+                style={on
+                  ? { borderColor: "var(--ppn-brand)", background: "color-mix(in srgb, var(--ppn-brand) 16%, transparent)", color: "var(--ppn-brand)" }
+                  : { borderColor: "var(--ppn-border)", background: "var(--ppn-surface)", color: "var(--ppn-muted)" }}>
+                {s.icon} {s.label}
+              </Link>
+            );
+          })}
         </nav>
-        <p className="mt-2 text-xs text-[var(--ppn-muted)]">Brand &amp; media is where you set the brewery logo, colours, offer/sponsor assets and screen visuals. The <Link to="/setup" className="text-[var(--ppn-brand)]">asset reference / slot guide</Link> is reference only — it shows which asset appears on which screen.</p>
+        <p className="mt-2 text-xs text-[var(--ppn-muted)]">Pick a section above. The <Link to="/setup#asset-slots" className="text-[var(--ppn-brand)]">asset reference / slot guide</Link> is reference only — it shows which asset appears on which screen.</p>
 
         <div className="mt-6 space-y-4">
           <Card title="Run the demo">
@@ -203,6 +223,7 @@ export default function Config() {
               : <p className="mt-2 text-xs text-[var(--ppn-muted)]">Showing preset defaults — no custom client branding applied. Switching brewery below will ask before carrying any overrides over.</p>}
           </Card>
 
+          {activeSection === "brand-media" && (<>
           <div id="brand-media" className="scroll-mt-20 pt-2">
             <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--ppn-brand)" }}>Brand &amp; media setup</h2>
             <p className="mt-1 text-xs text-[var(--ppn-muted)]">Everything the client sees: brewery / client identity, logo &amp; brand colours, offer / sponsor copy, and the TV/audience + player-facing visuals. Set it here — paste paths (Quick manual paths) or upload files (Upload asset pack).</p>
@@ -429,6 +450,9 @@ export default function Config() {
             </div>
           </Card>
 
+          </>)}
+
+          {activeSection === "demo-numbers" && (<>
           <div id="demo-numbers" className="scroll-mt-20 pt-2">
             <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--ppn-brand)" }}>Campaign assumptions / demo numbers</h2>
             <p className="mt-1 text-xs text-[var(--ppn-muted)]">The venue-mix numbers that feed the KPI and rollout pages. Operator-only — never shown to the buyer.</p>
@@ -518,6 +542,9 @@ export default function Config() {
             ) : <p className="mt-2 text-xs" style={{ color: "var(--ppn-success)" }}>✓ Demo numbers look realistic.</p>}
           </Card>
 
+          </>)}
+
+          {activeSection === "session" && (<>
           <div id="session" className="scroll-mt-20 pt-2">
             <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--ppn-brand)" }}>Session &amp; run</h2>
             <p className="mt-1 text-xs text-[var(--ppn-muted)]">Output mode, the live demo session (reset / demo teams) and presentation mode.</p>
@@ -576,6 +603,7 @@ export default function Config() {
             </div>
             <p className="mt-3 text-xs"><Link to="/setup#asset-slots" className="text-[var(--ppn-brand)]">Asset reference / slot guide →</Link> <span className="text-[var(--ppn-muted)]">(operator reference — not shown to the buyer)</span></p>
           </Card>
+          </>)}
         </div>
       </div>
     </DemoShell>

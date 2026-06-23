@@ -6,7 +6,6 @@
  * under #advanced-reference. No uploads, no generated graphics, no AI asset creation here.
  */
 import { DemoShell } from "../components/shells";
-import { BrandAssetPreview } from "../components/brandZones";
 import { Carousel } from "../components/Carousel";
 import { VideoSlot } from "../components/VideoSlot";
 import { DEMO_BRAND } from "../demo/brand";
@@ -23,10 +22,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-const SLOT_IMAGE: Record<string, keyof typeof DEMO_BRAND.images> = {
-  logo: "logoUrl", tvHero: "heroUrl", campaignHero: "heroUrl", tvSponsorSlide: "sponsorSlideUrl",
-  tvLowerThird: "lowerThirdUrl", phoneCard: "phoneCardUrl", venue: "venueUrl",
-};
+/** Plain, honest spec placeholder — a bordered slot labelled with size/aspect. NOT a decorative/generated picture:
+ * the operator supplies real brewery assets in /config#brand-media; here we only show the slot spec. */
+function SpecSlot({ aspect, label }: { aspect: string; label: string }) {
+  return (
+    <div className="grid place-items-center rounded-2xl border border-dashed border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-2 text-center" style={{ aspectRatio: aspect }}>
+      <span className="text-[10px] font-medium text-[var(--ppn-muted)]">Asset slot · {label}</span>
+    </div>
+  );
+}
 
 // Per-slot status — how each asset currently behaves in the POC. Truthful: not everything is live in gameplay.
 const SLOT_STATUS: Record<string, "live in demo" | "preview-only" | "optional" | "not built yet"> = {
@@ -57,10 +61,6 @@ const AUDIO_FILES = [
 
 export default function BrandAssets() {
   const img = DEMO_BRAND.images;
-  const slotImage = (key: string): string | undefined => {
-    const f = SLOT_IMAGE[key];
-    return f ? img[f] : undefined;
-  };
   const visualCount = Object.values(img).filter(Boolean).length;
   const isVideoType = (key: string) => key === "questionMedia";
   return (
@@ -125,7 +125,7 @@ export default function BrandAssets() {
               const status = SLOT_STATUS[s.key] ?? "optional";
               return (
                 <div key={s.key} className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3">
-                  <BrandAssetPreview aspect={s.aspect} image={slotImage(s.key)} label={s.aspect} />
+                  <SpecSlot aspect={s.aspect} label={`${s.aspect} · ${s.recommended}`} />
                   <div className="mt-2 flex items-start justify-between gap-2">
                     <p className="text-sm font-semibold">{s.label}</p>
                     <span className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase" style={statusTone(status)}>{status}</span>
@@ -208,7 +208,7 @@ export default function BrandAssets() {
             <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {IMAGE_SLOTS.map((s) => (
                 <div key={s.key}>
-                  <BrandAssetPreview aspect={s.aspect} image={slotImage(s.key)} label={`${s.aspect} · ${s.recommended}`} />
+                  <SpecSlot aspect={s.aspect} label={`${s.aspect} · ${s.recommended}`} />
                   <p className="mt-1.5 font-medium">{s.label}</p>
                   <p className="text-xs text-[var(--ppn-muted)]">Appears on: {s.appearsOn.join(" · ")}</p>
                   {s.notes && <p className="text-xs text-[var(--ppn-muted)]">{s.notes}</p>}

@@ -187,15 +187,10 @@ const NORTHGATE: DemoBrand = {
   poweredBy: "powered by PubPlay Network",
   heroOverlayMode: "dark",
   heroImageAltText: "Northgate Brewing Co. quiz night campaign image at The Anchor",
-  // Committed fictional demo asset pack (SVG, in-repo). Override priority still holds: DB/local override → these.
-  images: {
-    logoUrl: "/demo/assets/northgate/logo.svg",
-    heroUrl: "/demo/assets/northgate/hero.svg",
-    sponsorSlideUrl: "/demo/assets/northgate/sponsor-slide.svg",
-    phoneCardUrl: "/demo/assets/northgate/phone-card.svg",
-    lowerThirdUrl: "/demo/assets/northgate/lower-third.svg",
-    venueUrl: "/demo/assets/northgate/venue.svg",
-  },
+  // No bundled picture assets — like every other preset, the brewery's real logo/hero/etc. are supplied via the
+  // asset pack (/config#brand-media). Until then surfaces fall back to brand initials + a neutral brand-tinted
+  // panel. (We don't ship decorative/AI-style placeholder illustrations as if they were real brewery assets.)
+  images: {},
   video: { ...DEMO_VIDEO },
   aiIntroEnabled: true,
   audio: demoAudio("/demo/audio/northgate",
