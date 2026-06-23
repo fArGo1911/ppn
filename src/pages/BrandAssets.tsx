@@ -55,6 +55,21 @@ export default function BrandAssets() {
           <p className="mt-1 text-[var(--ppn-muted)]">Place files under <span className="font-mono">public/demo/assets/&lt;preset&gt;/</span> (e.g. <span className="font-mono">/demo/assets/northgate/logo.png</span>) and paste the paths in <span className="font-mono">/config → Brewery asset pack</span>. Blank fields keep the preset default. The slot specs below show exact sizes and where each appears.</p>
         </div>
 
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3 text-sm">
+            <p className="font-semibold">POC manual path mode</p>
+            <p className="mt-1 text-xs text-[var(--ppn-muted)]">Paste URLs / local paths in <span className="font-mono">/config → Brewery asset pack</span> (localStorage). No storage — quickest for a controlled demo.</p>
+          </div>
+          <div className="rounded-xl border-2 bg-[var(--ppn-surface)] p-3 text-sm" style={{ borderColor: "color-mix(in srgb, var(--ppn-brand) 30%, var(--ppn-border))" }}>
+            <p className="font-semibold">Beta storage-backed mode</p>
+            <p className="mt-1 text-xs text-[var(--ppn-muted)]">Upload files in <span className="font-mono">/config → Stored asset packs</span> → Supabase Storage (<span className="font-mono">ppn-brand-assets</span>) + asset registry (draft/active). Operator beta foundation.</p>
+          </div>
+          <div className="rounded-xl border border-dashed border-[var(--ppn-border)] p-3 text-sm">
+            <p className="font-semibold">Not built yet</p>
+            <p className="mt-1 text-xs text-[var(--ppn-muted)]">Approvals, image editing/cropping, brewery self-service, file transformation/CDN, customer portal.</p>
+          </div>
+        </div>
+
         <Section title="Image assets">
           <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {IMAGE_SLOTS.map((s) => (

@@ -3,7 +3,7 @@
  * brewery preset, market, setup mode, reset demo, seed/clear teams, audience-mode toggle. Richer profile pickers
  * are labelled stubs. NOT an admin/CMS/portal — just enough to prepare a demo run.
  */
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DemoShell } from "../components/shells";
@@ -14,6 +14,7 @@ import { useAudienceMode } from "../lib/audience";
 import { BrandAssetPreview } from "../components/brandZones";
 import { applyTheme, getThemeOverride, setThemeOverride, clearThemeOverride, themeWarnings, type ColourOverride } from "../demo/theme";
 import { getAssetPackOverride, setAssetPackOverride, clearAssetPackOverride, hasAssetPackOverride, type AssetPack } from "../demo/assetPack";
+import { listAssetPacks, listAssets, createAssetPack, updateAssetPack, uploadAssetFile, setAssetActive, getAssetUrl, buildBrandOverrideFromAssetPack, type AssetType } from "../lib/ppnAssets";
 import {
   deriveKpi, applyScenarioToSeed, getScenario, setScenario, clearScenario, scenarioWarnings,
   SCENARIO_TEMPLATES, deriveVenueMix, venueMixWarnings, venueCategory, setupModeLabel,
@@ -45,6 +46,16 @@ const ASSET_MEDIA: { key: keyof AssetPack; label: string }[] = [
   { key: "tvIntroVideoUrl", label: "Intro video" }, { key: "sponsorBumperVideoUrl", label: "Sponsor bumper video" }, { key: "closingVideoUrl", label: "Closing video" },
 ];
 const SEED_SIZES = [{ n: 3, label: "Small (3)" }, { n: 6, label: "Medium (6)" }, { n: 12, label: "Busy (12)" }];
+const UPLOAD_TYPES: { type: AssetType; label: string; video?: boolean }[] = [
+  { type: "logo", label: "Logo" }, { type: "hero", label: "Hero" }, { type: "sponsor_slide", label: "Sponsor slide" },
+  { type: "phone_card", label: "Phone card" }, { type: "lower_third", label: "Lower third" }, { type: "venue_image", label: "Venue image" },
+  { type: "intro_video", label: "Intro video", video: true }, { type: "sponsor_bumper_video", label: "Sponsor bumper", video: true }, { type: "closing_video", label: "Closing video", video: true },
+];
+const IMAGE_ASSET_TYPES = new Set<AssetType>(["logo", "hero", "sponsor_slide", "phone_card", "lower_third", "venue_image"]);
+const PACK_COPY_FIELDS: { key: string; label: string }[] = [
+  { key: "sponsor_name", label: "Sponsor name" }, { key: "campaign_name", label: "Campaign name" }, { key: "pub_name", label: "Pub name" },
+  { key: "event_name", label: "Event name" }, { key: "offer", label: "Offer" }, { key: "tagline", label: "Tagline" }, { key: "responsible_note", label: "Responsible note" },
+];
 
 function buildSpecs(mk: { teamNames: string[]; playerNames: string[] }, count: number) {
   const tn = mk.teamNames, pn = mk.playerNames, out: { name: string; players: string[] }[] = [];
@@ -122,6 +133,27 @@ export default function Config() {
   const previewHero = pack.heroUrl?.trim() || active.images.heroUrl;
   const previewOffer = pack.offer?.trim() || active.offer;
   const previewSponsor = pack.sponsorName?.trim() || active.sponsorName;
+
+  // ── DB-backed asset packs (operator beta: Supabase Storage + registry; degrades to manual/preset) ──
+  const packsQ = useQuery({ queryKey: ["asset-packs"], queryFn: listAssetPacks, retry: false });
+  const [selPackId, setSelPackId] = useState<string | undefined>(undefined);
+  const activePackId = selPackId ?? packsQ.data?.[0]?.id;
+  const activePack = packsQ.data?.find((p) => p.id === activePackId) ?? null;
+  const assetsQ = useQuery({ queryKey: ["assets", activePackId], queryFn: () => listAssets(activePackId!), enabled: !!activePackId, retry: false });
+  const [newLabel, setNewLabel] = useState("");
+  const [assetErr, setAssetErr] = useState<string | null>(null);
+  const [packCopy, setPackCopy] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (activePack) setPackCopy(Object.fromEntries(PACK_COPY_FIELDS.map((f) => [f.key, (activePack as unknown as Record<string, string | null>)[f.key] ?? ""])));
+  }, [activePackId, activePack?.updated_at]);
+  const assetMut = useMutation({
+    mutationFn: (fn: () => Promise<unknown>) => fn(),
+    onSuccess: () => { setAssetErr(null); qc.invalidateQueries({ queryKey: ["asset-packs"] }); qc.invalidateQueries({ queryKey: ["assets", activePackId] }); },
+    onError: (e) => setAssetErr((e as Error).message),
+  });
+  const runA = (fn: () => Promise<unknown>) => assetMut.mutate(fn);
+  const assetBusy = assetMut.isPending;
+  const applyDbPack = () => { if (activePack) { setAssetPackOverride(buildBrandOverrideFromAssetPack(activePack, assetsQ.data ?? [])); window.location.reload(); } };
 
   const choose = (id: string) => { setActiveBrand(id); window.location.reload(); };
   const Card = ({ title, children }: { title: string; children: ReactNode }) => (
@@ -202,6 +234,71 @@ export default function Config() {
               <button onClick={resetPack} disabled={!packActive} className="rounded-lg border border-[var(--ppn-border)] px-3 py-2 text-sm font-semibold disabled:opacity-40">↺ Reset to preset defaults</button>
             </div>
             <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Apply reloads so every surface re-merges the pack. Blank fields keep the preset value — an override can never blank a page.</p>
+          </Card>
+
+          <Card title="Stored asset packs (operator beta)">
+            <p className="text-[11px] text-[var(--ppn-muted)]">Beta foundation: files are uploaded to Supabase Storage and registered in the asset registry. Still not a full CMS or brewery self-service portal.</p>
+            {packsQ.isError ? (
+              <p className="mt-2 rounded-lg border border-dashed border-[var(--ppn-border)] p-3 text-xs text-amber-400">Asset registry not reachable (Supabase offline?) — the manual asset pack above and preset defaults still work.</p>
+            ) : (
+              <>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="New pack label" className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2 py-1.5 text-sm" />
+                  <button disabled={assetBusy || !newLabel.trim()} onClick={() => { runA(() => createAssetPack({ label: newLabel.trim(), status: "active" })); setNewLabel(""); }} className="rounded-lg px-3 py-1.5 text-sm font-semibold text-[var(--ppn-on-brand)] disabled:opacity-40" style={{ background: "var(--ppn-brand)" }}>＋ Create pack</button>
+                  {(packsQ.data ?? []).length > 0 && (
+                    <select value={activePackId ?? ""} onChange={(e) => setSelPackId(e.target.value)} className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2 py-1.5 text-sm">
+                      {(packsQ.data ?? []).map((p) => <option key={p.id} value={p.id}>{p.label} · {p.status}</option>)}
+                    </select>
+                  )}
+                </div>
+
+                {activePack ? (
+                  <>
+                    <p className="mt-3 text-xs font-semibold text-[var(--ppn-muted)]">Pack copy</p>
+                    <div className="mt-1 grid gap-2 sm:grid-cols-3">
+                      {PACK_COPY_FIELDS.map((f) => (
+                        <label key={f.key} className="text-xs text-[var(--ppn-muted)]">{f.label}
+                          <input value={packCopy[f.key] ?? ""} onChange={(e) => setPackCopy((c) => ({ ...c, [f.key]: e.target.value }))} className="mt-1 w-full rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2 py-1 text-sm text-[var(--ppn-text)]" />
+                        </label>
+                      ))}
+                    </div>
+                    <button disabled={assetBusy} onClick={() => runA(() => updateAssetPack(activePack.id, packCopy))} className="mt-2 rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-xs font-semibold disabled:opacity-40">Save copy</button>
+
+                    <p className="mt-4 text-xs font-semibold text-[var(--ppn-muted)]">Upload files (→ Supabase Storage + registry)</p>
+                    <div className="mt-1 grid gap-2 sm:grid-cols-3">
+                      {UPLOAD_TYPES.map((u) => (
+                        <label key={u.type} className="flex flex-col gap-1 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-2 text-xs text-[var(--ppn-muted)]">
+                          {u.label}
+                          <input type="file" accept={u.video ? "video/*" : "image/*"} disabled={assetBusy}
+                            onChange={(e) => { const f = e.target.files?.[0]; if (f) runA(() => uploadAssetFile(activePack.id, u.type, f)); e.currentTarget.value = ""; }}
+                            className="text-[10px] file:mr-2 file:rounded file:border-0 file:bg-[var(--ppn-surface)] file:px-2 file:py-1" />
+                        </label>
+                      ))}
+                    </div>
+
+                    <p className="mt-4 text-xs font-semibold text-[var(--ppn-muted)]">Stored assets ({(assetsQ.data ?? []).length})</p>
+                    <div className="mt-1 space-y-1.5">
+                      {(assetsQ.data ?? []).length === 0 && <p className="text-xs text-[var(--ppn-muted)]">No files yet.</p>}
+                      {(assetsQ.data ?? []).map((a) => (
+                        <div key={a.id} className="flex items-center gap-2 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-2 text-xs">
+                          {IMAGE_ASSET_TYPES.has(a.asset_type) && <img src={getAssetUrl(a)} alt={a.asset_type} className="h-8 w-8 rounded object-contain" style={{ background: "var(--ppn-surface)" }} />}
+                          <div className="min-w-0 flex-1">
+                            <span className="font-semibold text-[var(--ppn-text)]">{a.asset_type}</span> <span className="text-[var(--ppn-muted)]">· {a.status} · {a.original_filename ?? a.storage_path}</span>
+                          </div>
+                          {a.status !== "active" && <button disabled={assetBusy} onClick={() => runA(() => setAssetActive(a.id))} className="rounded border border-[var(--ppn-border)] px-2 py-0.5 text-[10px] disabled:opacity-40">Set active</button>}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button onClick={applyDbPack} className="rounded-lg px-3 py-2 text-sm font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>Apply this pack to the demo</button>
+                    </div>
+                    <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">Apply writes the pack's copy + active files into the local demo override (reloads). Read priority: DB pack → manual override → preset.</p>
+                  </>
+                ) : <p className="mt-2 text-xs text-[var(--ppn-muted)]">Create a pack to start uploading brewery assets.</p>}
+                {assetErr && <p className="mt-2 text-xs text-red-400">{assetErr}</p>}
+              </>
+            )}
           </Card>
 
           <Card title="Internal theme studio (operator only)">
