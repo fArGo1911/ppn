@@ -9,7 +9,7 @@ async function unlockOperator(page: Page) {
   await page.addInitScript(() => localStorage.setItem("ppn_operator_unlocked", "1"));
 }
 
-// ── Part B/C: 5-question playlist + run order; question vs answer-review phase distinct ──
+// ── Part B/C/E: 5-question playlist + run order; question phase vs a SEPARATE combined answer-review ──
 test("/config#brand-media shows a 5-question demo playlist with a question phase and a separate answer-review phase", async ({ page }) => {
   await unlockOperator(page);
   await page.goto("/config#brand-media");
@@ -17,8 +17,8 @@ test("/config#brand-media shows a 5-question demo playlist with a question phase
   const runTable = page.locator("table").first();
   // Question phase: Q1..Q5 readout steps.
   for (const q of ["Q1 readout", "Q5 readout"]) await expect(runTable.getByText(q, { exact: true })).toBeVisible();
-  // Answer-review phase: A1..A5 reveal steps (separate from the question phase).
-  for (const a of ["A1 reveal", "A5 reveal"]) await expect(runTable.getByText(a, { exact: true })).toBeVisible();
+  // Answer-review phase: a SINGLE combined reveal step (not one-per-question).
+  await expect(runTable.getByText("Answer review (Q1–Q5)", { exact: true })).toBeVisible();
   await expect(runTable.getByText("Winner", { exact: true })).toBeVisible();
   // Both phases are named and distinct.
   await expect(runTable.getByText("Question phase", { exact: true }).first()).toBeVisible();
@@ -33,17 +33,56 @@ test("/config#brand-media main playlist view shows only the 5 selected questions
   await page.goto("/config#brand-media");
   // Each selected-question card states the review-phase answer; there should be exactly five.
   await expect(page.getByText(/Answer \(review phase\):/i)).toHaveCount(5);
-  // The run-order table is bounded (intro + how-to + 5 Q + pause + 5 A + winner + outro = 15 rows).
-  await expect(page.locator("table").first().locator("tbody tr")).toHaveCount(15);
+  // The run-order table is bounded (intro + how-to + 5 Q + pause + combined review + winner + outro = 11 rows).
+  await expect(page.locator("table").first().locator("tbody tr")).toHaveCount(11);
 });
 
-// ── Part A: selected questions carry question + answer + separate readout/review audio metadata ──
-test("/config#brand-media selected questions show question, answer and separate readout/review audio", async ({ page }) => {
+// ── Part A/D: selected questions carry question + answer + NON-COLLIDING namespaced readout audio key ──
+test("/config#brand-media selected questions show question, answer and a namespaced (non-colliding) readout key", async ({ page }) => {
   await unlockOperator(page);
   await page.goto("/config#brand-media");
-  await expect(page.getByText(/How many continents are there\?/i).first()).toBeVisible(); // Q1 prompt (seeded bank)
-  await expect(page.getByText(/readout: question-01\.mp3/i)).toBeVisible();
-  await expect(page.getByText(/review: reveal-01\.mp3/i)).toBeVisible();
+  await expect(page.getByText(/How many continents are there\?/i).first()).toBeVisible(); // Q1 prompt (authoritative bank)
+  // Playlist-namespaced key — NOT the live game's question-01.mp3.
+  await expect(page.getByText(/readout: playlist-demo-q01-readout\.mp3/i)).toBeVisible();
+  await expect(page.getByText(/No filename collision/i)).toBeVisible();
+  await expect(page.locator("body")).not.toContainText("readout: question-01.mp3");
+});
+
+// ── Part A/B: bank authority + compiler summary + category counts ──
+test("/config#brand-media exposes the authoritative bank, compiler summary and category counts", async ({ page }) => {
+  await unlockOperator(page);
+  await page.goto("/config#brand-media");
+  await expect(page.getByText(/Source: authoritative bank \(\d+ Q\)/i)).toBeVisible();
+  await expect(page.getByText(/Compiler mix:/i)).toBeVisible();
+  await expect(page.getByText(/Selection: deterministic \(stable\)/i)).toBeVisible();
+  // Category counts available in the collapsed bank browser.
+  await expect(page.getByText(/Browse the question bank \(\d+ questions · \d+ categories\)/i)).toBeVisible();
+});
+
+// ── Part E: combined answer-review model — answers in Q1–Q5 order, one combined script/file ──
+test("/config#brand-media has a combined answer-review model in playlist order", async ({ page }) => {
+  await unlockOperator(page);
+  await page.goto("/config#brand-media");
+  await expect(page.getByText("Answer-review model", { exact: true })).toBeVisible();
+  await expect(page.getByText(/playlist-demo-answer-review\.mp3/i).first()).toBeVisible();
+  // The generated review script block lists the answers in playlist order (Seven, Eleven, Queen…).
+  const reviewBlock = page.locator("div").filter({ hasText: "Combined answer-review script" }).last();
+  await expect(reviewBlock).toContainText("Seven");
+  await expect(reviewBlock).toContainText("Eleven");
+  await expect(reviewBlock).toContainText("Queen");
+});
+
+// ── Part F: ElevenLabs production list for the 5-question demo ──
+test("/config#brand-media has an ElevenLabs production list with Q1–Q5 readouts + combined review + team-number winner", async ({ page }) => {
+  await unlockOperator(page);
+  await page.goto("/config#brand-media");
+  await expect(page.getByText("ElevenLabs production list (demo)", { exact: true })).toBeVisible();
+  const prod = page.locator("table").filter({ hasText: "ready to record" }).first();
+  for (const cue of ["q01-readout", "q05-readout", "answer-review", "winner"]) {
+    await expect(prod.getByText(cue, { exact: true })).toBeVisible();
+  }
+  await expect(prod.getByText("winner.mp3", { exact: true })).toBeVisible();
+  await expect(prod.getByText(/ready to record/i).first()).toBeVisible();
 });
 
 // ── Part D: host run mode — manual/semi/auto with honest live status ──

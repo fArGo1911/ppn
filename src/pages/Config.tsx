@@ -32,6 +32,10 @@ import {
   DEMO_PLAYLIST, buildRunOrder, HOST_RUN_MODES, SCRIPT_STYLES, DEMO_EVENT_CONTEXT, eventOpenerReference,
   type RunStatus, type HostRunModeId,
 } from "../demo/quizPlaylist";
+import {
+  bankCategoryCounts, QUESTION_BANK, MIX_PROFILES, DEMO_COMPILE_OPTIONS, buildAnswerReviewScript,
+  buildProductionList, ANSWER_REVIEW_TONE, ANSWER_REVIEW_EXAMPLES, type ProductionStatus,
+} from "../demo/questionBank";
 
 const THEME_FIELDS: { key: keyof ThemeColours; label: string }[] = [
   { key: "primary", label: "Primary / brand" }, { key: "primaryDark", label: "Brand dark" }, { key: "accent", label: "Accent" },
@@ -253,6 +257,13 @@ export default function Config() {
   const [scriptStyle, setScriptStyle] = useState(SCRIPT_STYLES[0].id);
   const runTone = (s: RunStatus): React.CSSProperties => slotTone(s === "live" ? "uploaded" : "preview");
   const runStatusLabel: Record<RunStatus, string> = { live: "live (host)", "stored-only": "stored-only · file-drop", "not-wired": "not wired" };
+  // Bank authority + answer-review + ElevenLabs production list for the compiled demo playlist.
+  const catCounts = bankCategoryCounts();
+  const reviewScript = buildAnswerReviewScript();
+  const productionCues = buildProductionList();
+  const demoMixLabel = MIX_PROFILES.find((p) => p.id === DEMO_COMPILE_OPTIONS.mix)?.label ?? "Mixed";
+  const [bankBrowseCat, setBankBrowseCat] = useState<ContentCategoryId>("general");
+  const prodTone = (s: ProductionStatus): React.CSSProperties => slotTone(s === "ready to record" ? "uploaded" : s === "placeholder" ? "missing" : "preview");
 
   const previewLogoUrl = slotState(logoSlot).url;
   const previewHeroUrl = slotState(heroSlot).url;
@@ -521,7 +532,17 @@ export default function Config() {
           {/* Tonight's demo playlist & run order — 5 selected questions, then answer-review, then winner/outro.
               Planning/script model only (does NOT drive the live game loop). Keeps the main view small + honest. */}
           <Card title="Tonight's demo playlist &amp; run order">
-            <p className="text-xs text-[var(--ppn-muted)]">A small POC evening: <span className="font-semibold text-[var(--ppn-text)]">5 selected questions</span> from the question bank, read in the question phase, then revealed later in the answer-review phase, then the winner &amp; outro. This is a <span className="font-semibold text-[var(--ppn-text)]">script/run-order plan</span> — it doesn't change the live game loop. The full bank stays collapsed below.</p>
+            <p className="text-xs text-[var(--ppn-muted)]">A small POC evening: <span className="font-semibold text-[var(--ppn-text)]">5 selected questions</span> compiled from the authoritative question bank, read in the question phase, then revealed later in a single combined answer-review, then the winner &amp; outro. This is a <span className="font-semibold text-[var(--ppn-text)]">script/run-order plan</span> — it doesn't change the live game loop. The full bank stays collapsed below.</p>
+            {/* Playlist compiler / source summary */}
+            <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
+              <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Source: <span className="font-semibold text-[var(--ppn-text)]">authoritative bank ({QUESTION_BANK.length} Q)</span></span>
+              <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Compiler mix: <span className="font-semibold text-[var(--ppn-text)]">{demoMixLabel}</span></span>
+              <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Count: <span className="font-semibold text-[var(--ppn-text)]">{DEMO_COMPILE_OPTIONS.count}</span></span>
+              <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Sponsor: <span className="font-semibold text-[var(--ppn-text)]">{DEMO_COMPILE_OPTIONS.includeSponsor ? "included" : "excluded"}</span></span>
+              <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Selection: <span className="font-semibold text-[var(--ppn-text)]">deterministic (stable)</span></span>
+            </div>
+            {/* Namespace-collision warning — resolved: playlist cues are namespaced, distinct from live-game files */}
+            <p className="mt-2 rounded-lg border px-2.5 py-1.5 text-[10px]" style={{ borderColor: "color-mix(in srgb, var(--ppn-success) 40%, var(--ppn-border))", color: "var(--ppn-muted)" }}>✓ No filename collision: playlist cues use the namespaced <span className="font-mono">playlist-demo-…</span> keys, separate from the live game's fixed <span className="font-mono">question-NN.mp3</span> files.</p>
             <div className="mt-2 overflow-x-auto">
               <table className="w-full min-w-[680px] border-collapse text-left text-[11px]">
                 <thead>
@@ -548,7 +569,7 @@ export default function Config() {
                 </tbody>
               </table>
             </div>
-            <p className="mt-2 text-[10px] text-[var(--ppn-muted)]">The host reads <span className="font-semibold text-[var(--ppn-text)]">all five questions first</span>; answers are revealed later in the answer-review phase — never straight after each question. Global cues (intro / winner) are host-triggered today; per-question readout/review files are <span className="font-semibold text-[var(--ppn-text)]">stored-only · file-drop</span> (in-app per-question upload is parked — needs a keyed asset set).</p>
+            <p className="mt-2 text-[10px] text-[var(--ppn-muted)]">The host reads <span className="font-semibold text-[var(--ppn-text)]">all five questions first</span>; answers are revealed later in a single combined answer-review — never straight after each question. Global cues (intro / winner) are host-triggered today; playlist readout + answer-review files are <span className="font-semibold text-[var(--ppn-text)]">stored-only · file-drop</span> (in-app per-question upload is parked — needs a keyed asset set).</p>
 
             <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-[var(--ppn-muted)]">The 5 selected questions</p>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -556,22 +577,82 @@ export default function Config() {
                 <div key={q.id} className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-3">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold">Q{q.order} · {q.categoryLabel}{q.sponsor && <span className="ml-1 rounded bg-[var(--ppn-surface)] px-1.5 py-0.5 text-[9px] text-[var(--ppn-muted)]">sponsor</span>}</p>
-                    {q.difficulty && <span className="text-[9px] uppercase text-[var(--ppn-muted)]">{q.difficulty}</span>}
+                    <span className="font-mono text-[9px] text-[var(--ppn-muted)]">{q.id}</span>
                   </div>
                   <p className="mt-1 text-[11px] text-[var(--ppn-text)]">{q.prompt}</p>
                   <p className="text-[11px] text-[var(--ppn-muted)]">Answer (review phase): <span className="font-semibold text-[var(--ppn-text)]">{q.answer}</span></p>
                   <div className="mt-1.5 flex flex-wrap gap-1.5 text-[9px]">
                     <span className="rounded-full px-2 py-0.5 font-semibold uppercase" style={runTone("stored-only")}>readout: {q.readoutFile}</span>
-                    <span className="rounded-full px-2 py-0.5 font-semibold uppercase" style={runTone("stored-only")}>review: {q.reviewFile}</span>
                     {q.mediaSlot && <span className="rounded-full border border-[var(--ppn-border)] px-2 py-0.5 text-[var(--ppn-muted)]">media: {q.mediaSlot}</span>}
                   </div>
                 </div>
               ))}
             </div>
+            <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">Answers are revealed together in the combined answer-review (<span className="font-mono">{reviewScript.file}</span>), not per question — see the answer-review model below.</p>
             <details className="mt-3">
-              <summary className="cursor-pointer text-[11px] text-[var(--ppn-muted)]">Full question bank ({QUESTION_POOL.length} seeded) — selection source</summary>
-              <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">The wider bank is a seeded reference pool ({CONTENT_CATEGORIES.length} categories). The main view shows only tonight's 5 — use the per-category audio library table below to browse the full bank.</p>
+              <summary className="cursor-pointer text-[11px] text-[var(--ppn-muted)]">Browse the question bank ({QUESTION_BANK.length} questions · {catCounts.length} categories) — selection source</summary>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {catCounts.map((c) => (
+                  <button key={c.id} onClick={() => setBankBrowseCat(c.id)} className="rounded-full border px-2.5 py-1 text-[10px] font-semibold" style={{ borderColor: bankBrowseCat === c.id ? "var(--ppn-brand)" : "var(--ppn-border)", color: bankBrowseCat === c.id ? "var(--ppn-brand)" : "var(--ppn-muted)" }}>{c.label} · {c.count}</button>
+                ))}
+              </div>
+              <ul className="mt-2 max-h-40 space-y-0.5 overflow-y-auto text-[10px] text-[var(--ppn-muted)]">
+                {QUESTION_BANK.filter((q) => q.category === bankBrowseCat).map((q) => (
+                  <li key={q.id} className="flex gap-2"><span className="font-mono">{q.id}</span><span className="truncate text-[var(--ppn-text)]">{q.prompt}</span></li>
+                ))}
+              </ul>
             </details>
+          </Card>
+
+          {/* Answer-review model — ONE combined reveal (Option 1, preferred POC) in playlist order */}
+          <Card title="Answer-review model">
+            <p className="text-xs text-[var(--ppn-muted)]">Answers are revealed <span className="font-semibold text-[var(--ppn-text)]">together, in playlist order</span>, in a single combined answer-review — <span className="font-semibold text-[var(--ppn-text)]">not after each question</span>. One natural-sounding MP3 (<span className="font-mono">{reviewScript.file}</span>) is easier to record and sounds less robotic; per-question reveal keys stay available for later.</p>
+            <div className="mt-2 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-3">
+              <p className="text-[11px] font-semibold text-[var(--ppn-text)]">Combined answer-review script (generated from the playlist — text only, no audio)</p>
+              <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">{reviewScript.intro}</p>
+              <ol className="mt-1 list-decimal space-y-0.5 pl-5 text-[11px] text-[var(--ppn-muted)]">
+                {reviewScript.lines.map((l) => (
+                  <li key={l.order}><span className="text-[var(--ppn-text)]">{l.line}</span> <span className="text-[9px]">({l.categoryLabel})</span></li>
+                ))}
+              </ol>
+            </div>
+            <p className="mt-2 text-[11px] font-semibold text-[var(--ppn-text)]">Answer-review tone</p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-5 text-[10px] text-[var(--ppn-muted)]">
+              {ANSWER_REVIEW_TONE.map((t) => <li key={t}>{t}</li>)}
+            </ul>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {ANSWER_REVIEW_EXAMPLES.map((e) => <span key={e} className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2 py-0.5 text-[10px] text-[var(--ppn-muted)]">“{e}”</span>)}
+            </div>
+          </Card>
+
+          {/* ElevenLabs production list — exactly the cues to record for the selected 5-question demo */}
+          <Card title="ElevenLabs production list (demo)">
+            <p className="text-xs text-[var(--ppn-muted)]">The cues to record for tonight's 5-question demo. Operator records these MP3s externally (<span className="font-semibold text-[var(--ppn-text)]">recorded by the operator, not generated in-app</span>) and drops them in. Filenames are authoritative — namespaced so nothing collides.</p>
+            <div className="mt-2 overflow-x-auto">
+              <table className="w-full min-w-[680px] border-collapse text-left text-[11px]">
+                <thead>
+                  <tr className="border-b border-[var(--ppn-border)] text-[10px] uppercase tracking-wide text-[var(--ppn-muted)]">
+                    <th className="py-1.5 pr-2 font-semibold">Cue</th>
+                    <th className="py-1.5 pr-2 font-semibold">Filename</th>
+                    <th className="py-1.5 pr-2 font-semibold">Phase</th>
+                    <th className="py-1.5 pr-2 font-semibold">Script / purpose</th>
+                    <th className="py-1.5 pr-2 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productionCues.map((c) => (
+                    <tr key={c.cueId} className="border-b border-[var(--ppn-border)] align-top">
+                      <td className="py-1.5 pr-2 font-semibold">{c.cueId}</td>
+                      <td className="py-1.5 pr-2 font-mono text-[10px] text-[var(--ppn-muted)]">{c.filename}</td>
+                      <td className="py-1.5 pr-2 text-[var(--ppn-muted)]">{c.phase}</td>
+                      <td className="py-1.5 pr-2"><span className="block max-w-[280px] truncate text-[var(--ppn-text)]" title={c.script}>{c.purpose}</span><span className="block max-w-[280px] truncate text-[10px] text-[var(--ppn-muted)]" title={c.script}>{c.script}</span></td>
+                      <td className="py-1.5 pr-2"><span className="rounded-full px-2 py-0.5 text-[8px] font-semibold uppercase" style={prodTone(c.status)}>{c.status}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-2 text-[10px] text-[var(--ppn-muted)]">Winner uses <span className="font-semibold text-[var(--ppn-text)]">Team {"{number}"}</span> (not a team name). Cues marked <span className="font-semibold text-[var(--ppn-text)]">needs copy</span> / <span className="font-semibold text-[var(--ppn-text)]">placeholder</span> need script text written before recording.</p>
           </Card>
 
           {/* Host run mode — manual / semi-automatic / automatic (concept + honest live status) */}

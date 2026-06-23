@@ -1,59 +1,16 @@
 /**
- * POC quiz-evening RUN-ORDER / playlist model (source-only; NOT a CMS, NOT Supabase, NO generation).
- * Defines a small 5-question demo playlist drawn from the seeded question bank, the ordered run of the night
- * (intro → 5 question readouts → pause → 5 answer reveals → winner → outro), the host run-mode concept,
- * script-style variants and an imaginary tournament/event context for script reference placeholders.
+ * POC quiz-evening RUN-ORDER model (source-only; NOT a CMS, NOT Supabase, NO generation).
+ * Builds the ordered run of the night (intro → 5 question readouts → pause → combined answer-review → winner →
+ * outro) from the authoritative bank's compiled playlist, plus the host run-mode concept, script-style variants
+ * and an imaginary tournament/event context for script reference placeholders.
  *
- * This is a PLANNING/script-structure model. It does NOT drive the live game loop (which still runs its own
- * per-question reveal phases) and writes nothing to the DB. Per-question audio is file-drop reference only.
+ * The bank authority + deterministic playlist compiler + audio-key convention live in `./questionBank`.
+ * This is a PLANNING/script-structure model. It does NOT drive the live game loop and writes nothing to the DB.
  */
-import { QUESTION_POOL } from "./questionPool";
-import { categoryLabel, type ContentCategoryId } from "../lib/contentMix";
+import { DEMO_PLAYLIST, answerReviewKey, DEMO_ID, type BankQuestion } from "./questionBank";
 
-export interface BankQuestion {
-  order: number;
-  id: string;
-  category: ContentCategoryId;
-  categoryLabel: string;
-  prompt: string;
-  answer: string;
-  /** Optional answer explanation / commentary (placeholder; operator fills the real colour). */
-  commentary?: string;
-  difficulty?: "easy" | "medium" | "hard";
-  sponsor: boolean;
-  /** Expected per-question audio filenames (deployed under the preset audio dir; file-drop, not in-app upload). */
-  readoutFile: string;
-  reviewFile: string;
-  /** Optional media slot reference (picture/video questions). */
-  mediaSlot?: string;
-}
-
-/** Pull a seeded pool question by id (throws at module load if a fixture id is wrong — fails loud, not silent). */
-function pick(id: string): { category: ContentCategoryId; prompt: string; answer: string; difficulty?: "easy" | "medium" | "hard" } {
-  const q = QUESTION_POOL.find((p) => p.id === id);
-  if (!q) throw new Error(`quizPlaylist: seeded question "${id}" not found`);
-  return { category: q.category as ContentCategoryId, prompt: q.prompt, answer: q.answer, difficulty: q.difficulty };
-}
-
-// ── Tonight's demo playlist: 5 selected questions (varied pub-quiz mix), drawn from the seeded bank ──
-const SELECTED_IDS = ["gen-01", "spt-02", "mus-03", "pic-01", "spo-01"];
-export const DEMO_PLAYLIST: BankQuestion[] = SELECTED_IDS.map((id, i) => {
-  const q = pick(id);
-  const n = String(i + 1).padStart(2, "0");
-  return {
-    order: i + 1,
-    id,
-    category: q.category,
-    categoryLabel: categoryLabel(q.category),
-    prompt: q.prompt,
-    answer: q.answer,
-    difficulty: q.difficulty,
-    sponsor: q.category === "sponsor",
-    readoutFile: `question-${n}.mp3`,
-    reviewFile: `reveal-${n}.mp3`,
-    mediaSlot: q.category === "picture" ? "question image" : q.category === "video" ? "question clip" : undefined,
-  };
-});
+export { DEMO_PLAYLIST };
+export type { BankQuestion };
 
 export type RunPhase = "intro" | "howto" | "question" | "pause" | "review" | "winner" | "outro";
 export type RunStatus = "live" | "stored-only" | "not-wired";
@@ -89,8 +46,8 @@ export function buildRunOrder(playlist: BankQuestion[] = DEMO_PLAYLIST): RunStep
   // Question phase — read ALL questions first; no answers yet.
   for (const q of playlist) add({ phase: "question", label: `Q${q.order} readout`, category: q.categoryLabel, cue: "Read the question", file: q.readoutFile, status: "stored-only", detail: q.prompt });
   add({ phase: "pause", label: "Pause / answer hand-in", cue: "Collect answers — no reveals yet", status: "not-wired" });
-  // Answer-review phase — reveal answers question by question, LATER.
-  for (const q of playlist) add({ phase: "review", label: `A${q.order} reveal`, category: q.categoryLabel, cue: "Reveal the answer", file: q.reviewFile, status: "stored-only", detail: `${q.prompt} → ${q.answer}` });
+  // Answer-review phase — ONE combined reveal of all answers, in playlist order, LATER (never after each question).
+  add({ phase: "review", label: "Answer review (Q1–Q5)", cue: "Reveal all answers in order — combined", file: answerReviewKey(DEMO_ID), status: "stored-only", detail: playlist.map((q) => `Q${q.order}: ${q.answer}`).join(" · ") });
   add({ phase: "winner", label: "Winner", cue: "Announce winning Team {number}", file: "winner.mp3", status: "live" });
   add({ phase: "outro", label: "Outro / next event", cue: "Thanks + next quiz date", status: "not-wired" });
   return steps;
