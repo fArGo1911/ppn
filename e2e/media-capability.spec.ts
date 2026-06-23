@@ -36,12 +36,12 @@ test("/config#brand-media classifies hero/venue as image+video and image-only sl
   expect(heroAccept).toBeGreaterThanOrEqual(2); // hero + venue
 });
 
-// ── Script & audio cue assets — uploadable MP3 per cue; core cues live (host), others stored-only ──
-test("/config#brand-media has a Script & audio cue section with core cues + live/stored status", async ({ page }) => {
+// ── Script & audio cue library — uploadable MP3 per cue; core cues live (host), others stored-only ──
+test("/config#brand-media has a Script & audio cue library with core cues + live/stored status", async ({ page }) => {
   await unlockOperator(page);
   await page.goto("/config#brand-media");
-  await expect(page.getByText(/Script & audio cue assets/i)).toBeVisible();
-  for (const cue of ["Intro / welcome", "Question readout / question cue", "Winner announcement"]) {
+  await expect(page.getByText(/Script & audio cue library/i)).toBeVisible();
+  for (const cue of ["Intro / welcome", "Question readout (generic)", "Winner announcement"]) {
     await expect(page.getByText(cue, { exact: true })).toBeVisible();
   }
   // Per-cue MP3 upload control + accepted types + a live/stored classification.

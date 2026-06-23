@@ -10,6 +10,7 @@ import { DemoShell } from "../components/shells";
 import { DEMO_BRAND } from "../demo/brand";
 import { anyOverrideActive, overrideStatus, clearClientOverrides } from "../lib/demoStatus";
 import { IMAGE_SLOTS, AI_SLOTS, ZONE_MAP } from "../demo/brandAssets";
+import { CUE_FAMILIES, AUDIO_CUES } from "../demo/audioCues";
 
 const CONFIG_HREF = "/config#brand-media";
 
@@ -49,7 +50,7 @@ function statusTone(s: string): React.CSSProperties {
 // Asset groups for the minimum-pack overview (required / recommended / optional).
 const PACK_REQUIRED = ["Brewery / client logo", "TV hero / campaign background", "Sponsor / offer card", "Campaign / offer text", "Brand colours"];
 const PACK_RECOMMENDED = ["Player phone banner", "Venue / background image", "Lower-third / offer strip", "Rollout / network graphic (if used)", "Tagline + responsible note"];
-const PACK_OPTIONAL = ["Intro / sponsor-bumper / closing video clips", "Per-question picture/video media (not built yet)", "Audio / MP3 voice (file-based, not generated)"];
+const PACK_OPTIONAL = ["Intro / sponsor-bumper / closing video clips", "Per-question picture/video media (not built yet)", "Script & audio cues (operator MP3s, file-based — uploaded in brand & media setup; not generated)"];
 
 // Where assets appear, grouped by UX surface (curated from the slot data — for the operator-readable overview).
 const SURFACE_MAP: { surface: string; assets: string[] }[] = [
@@ -153,7 +154,7 @@ export default function BrandAssets() {
                 </li>
               ))}
             </ul>
-            <p className="mt-1.5 text-[10px] text-[var(--ppn-muted)]">Upload video in <a href={CONFIG_HREF} className="text-[var(--ppn-brand)]">brand &amp; media setup</a>. MP3/audio is separate (file-based playback, not wired through the asset manager).</p>
+            <p className="mt-1.5 text-[10px] text-[var(--ppn-muted)]">Upload video <span className="font-semibold text-[var(--ppn-text)]">and script/audio cue MP3s</span> in <a href={CONFIG_HREF} className="text-[var(--ppn-brand)]">brand &amp; media setup</a> — see the audio cue reference below.</p>
           </div>
         </section>
 
@@ -207,6 +208,28 @@ export default function BrandAssets() {
                 </div>
               ))}
               <p className="text-xs text-[var(--ppn-muted)]">{DEMO_BRAND.responsibleNote}</p>
+            </div>
+          </Details>
+
+          <Details title="Audio cue families (reference)">
+            <p className="text-xs text-[var(--ppn-muted)]">Pub-quiz cue structure — operator-supplied MP3s (file type: MP3 / WAV / M4A / OGG). Reference only; upload &amp; preview in <a href={CONFIG_HREF} className="text-[var(--ppn-brand)]">brand &amp; media setup</a>. The host reads all questions first; answers are revealed later in the answer-review phase.</p>
+            <div className="mt-2 space-y-2">
+              {CUE_FAMILIES.filter((fam) => AUDIO_CUES.some((c) => c.family === fam.id)).map((fam) => (
+                <div key={fam.id} className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-3">
+                  <p className="text-sm font-medium text-[var(--ppn-text)]">{fam.label}</p>
+                  <p className="text-[11px] text-[var(--ppn-muted)]">{fam.blurb}</p>
+                  <ul className="mt-1 space-y-0.5">
+                    {AUDIO_CUES.filter((c) => c.family === fam.id).map((c) => (
+                      <li key={c.key} className="flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--ppn-muted)]">
+                        <span className="text-[var(--ppn-text)]">{c.label}</span>
+                        <span className="rounded-full border border-[var(--ppn-border)] px-1.5 py-0.5 text-[9px] uppercase">{c.status === "live" ? "live (host)" : c.status === "stored-only" ? "stored-only" : "not wired"}</span>
+                        <span>· {c.where}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+              <p className="text-[11px] text-[var(--ppn-muted)]">Winner cues announce the table/team number, not the entered team name. No upload controls live on this reference page.</p>
             </div>
           </Details>
 

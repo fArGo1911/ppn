@@ -44,3 +44,55 @@ test("/config#brand-media audio cues show script, where-used, fallback wording a
   await expect(page.getByText(/Where: Host · intro/i)).toBeVisible();
   await expect(page.getByText(/host\/TV use the uploaded cue first, falling back to the fixed/i)).toBeVisible();
 });
+
+// ── Part A/C: scalable cue taxonomy grouped into families ──
+test("/config#brand-media groups audio cues into a scalable family taxonomy", async ({ page }) => {
+  await unlockOperator(page);
+  await page.goto("/config#brand-media");
+  for (const fam of ["Global event cues", "Round / category cues", "Question readout cues", "Answer-review cues", "Sponsor / special-question cues"]) {
+    await expect(page.getByText(fam, { exact: true })).toBeVisible();
+  }
+  // Core global cues are present.
+  for (const cue of ["Intro / welcome", "How to play / competition explanation", "Winner announcement"]) {
+    await expect(page.getByText(cue, { exact: true })).toBeVisible();
+  }
+  await expect(page.getByText(/Outro \/ closing/i)).toBeVisible();
+});
+
+// ── Part B: UK flow — question phase vs answer-review phase, reveal is later not after each question ──
+test("/config#brand-media states the UK question/answer-review flow (reveal later, not per question)", async ({ page }) => {
+  await unlockOperator(page);
+  await page.goto("/config#brand-media");
+  await expect(page.getByText(/Question readout phase/i)).toBeVisible();
+  await expect(page.getByText(/Answer review phase/i)).toBeVisible();
+  await expect(page.getByText(/not after each question/i).first()).toBeVisible();
+});
+
+// ── Part C: question-level library is a table, not a flat wall of cards ──
+test("/config#brand-media question audio library is a table with category selector", async ({ page }) => {
+  await unlockOperator(page);
+  await page.goto("/config#brand-media");
+  await expect(page.getByText("Question audio library", { exact: true })).toBeVisible();
+  // It is a real table with the documented columns.
+  const table = page.locator("table").first();
+  await expect(table.getByText("Readout audio", { exact: true })).toBeVisible();
+  await expect(table.getByText("Answer-review audio", { exact: true })).toBeVisible();
+  await expect(table.locator("tbody tr").first()).toBeVisible();
+  // Category selector drives the table.
+  const catSelect = page.getByRole("combobox").first();
+  await expect(catSelect).toBeVisible();
+  await expect(catSelect.locator("option", { hasText: "General knowledge" })).toHaveCount(1);
+});
+
+// ── Part E/F: script style guidance + winner uses team number, no generation wording ──
+test("/config#brand-media script guidance varies phrasing and announces winners by team number", async ({ page }) => {
+  await unlockOperator(page);
+  await page.goto("/config#brand-media");
+  await expect(page.getByText(/Vary repeated phrases/i)).toBeVisible();
+  await expect(page.getByText(/The table by the bar might need this one again/i)).toBeVisible();
+  // Winner uses Team number, not the entered team name.
+  await expect(page.getByText(/Team \{number\}/i).first()).toBeVisible();
+  await expect(page.getByText(/not the entered team name/i).first()).toBeVisible();
+  // No AI/voice generation anywhere in the audio manager.
+  await expect(page.getByText(/no AI voice, no generation/i)).toBeVisible();
+});

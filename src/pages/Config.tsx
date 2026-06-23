@@ -22,6 +22,12 @@ import {
   type Scenario, type VenueProfile,
 } from "../demo/kpiModel";
 import { resolveJoinToken, getSessionState, setSessionSetup, resetDemo, clearTeams, seedDemoTeams, listTeams } from "../lib/ppnApi";
+import {
+  CUE_FAMILIES, AUDIO_CUES, SCRIPT_STYLE_RULES, REPEAT_PHRASE_EXAMPLES, WINNER_SCRIPT_REF, TEAM_NUMBER_FOLLOWUP,
+  QUESTION_FILE_CONVENTION, type AudioCueDef,
+} from "../demo/audioCues";
+import { QUESTION_POOL } from "../demo/questionPool";
+import { CONTENT_CATEGORIES, categoryLabel, type ContentCategoryId } from "../lib/contentMix";
 
 const THEME_FIELDS: { key: keyof ThemeColours; label: string }[] = [
   { key: "primary", label: "Primary / brand" }, { key: "primaryDark", label: "Brand dark" }, { key: "accent", label: "Accent" },
@@ -63,17 +69,6 @@ const MEDIA_SLOTS: MediaSlot[] = [
   { group: "Optional", field: "tvIntroVideoUrl", type: "intro_video", label: "Intro video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 · WebM", accept: "video/*", appears: "TV intro", kind: "video", media: "video", fit: "cover", live: "live" },
   { group: "Optional", field: "sponsorBumperVideoUrl", type: "sponsor_bumper_video", label: "Sponsor bumper video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 · WebM", accept: "video/*", appears: "TV sponsor bumper", kind: "video", media: "video", fit: "cover", live: "live" },
   { group: "Optional", field: "closingVideoUrl", type: "closing_video", label: "Closing video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 · WebM", accept: "video/*", appears: "TV closing", kind: "video", media: "video", fit: "cover", live: "live" },
-];
-// Script + audio cue slots. Each maps to an AssetPack audio field + AssetType (upload) + a brand.audio field that
-// host/TV actually trigger (live) — or no live trigger yet (stored-only). Operator supplies MP3s; NO generation.
-interface AudioCueDef { group: "Core" | "Optional"; key: string; label: string; scriptKey: "eventIntro" | "roundIntro" | "sponsoredIntro" | "questionReadout" | "answerReveal" | "winner"; field: keyof AssetPack; type: AssetType; audioField: string; where: string; live: boolean }
-const AUDIO_CUES: AudioCueDef[] = [
-  { group: "Core", key: "intro", label: "Intro / welcome", scriptKey: "eventIntro", field: "eventIntroAudioUrl", type: "event_intro_audio", audioField: "aiEventIntroAudioUrl", where: "Host · intro (Replay / Preview intro)", live: true },
-  { group: "Core", key: "readout", label: "Question readout / question cue", scriptKey: "questionReadout", field: "questionReadoutAudioUrl", type: "question_readout_audio", audioField: "aiQuestionReadoutAudioUrl", where: "Host · question (per-question files take priority)", live: false },
-  { group: "Core", key: "winner", label: "Winner announcement", scriptKey: "winner", field: "winnerAudioUrl", type: "winner_audio", audioField: "aiWinnerAnnouncementAudioUrl", where: "Host · end (Play winner)", live: true },
-  { group: "Core", key: "sponsor", label: "Sponsored-round / sponsor message", scriptKey: "sponsoredIntro", field: "sponsorMessageAudioUrl", type: "sponsor_audio_message", audioField: "sponsorAudioMessageUrl", where: "Host · sponsored question", live: true },
-  { group: "Optional", key: "round", label: "Round intro", scriptKey: "roundIntro", field: "roundIntroAudioUrl", type: "round_intro_audio", audioField: "aiRoundIntroAudioUrl", where: "reference (no host trigger yet)", live: false },
-  { group: "Optional", key: "reveal", label: "Answer reveal", scriptKey: "answerReveal", field: "answerRevealAudioUrl", type: "answer_reveal_audio", audioField: "aiAnswerRevealAudioUrl", where: "Host · reveal (per-question files take priority)", live: false },
 ];
 const mediaCapabilityLabel = (m: SlotMedia): string =>
   m === "video" ? "video (MP4/WebM) · host presses play · muted, no autoplay"
@@ -214,27 +209,40 @@ export default function Config() {
   const logoSlot = MEDIA_SLOTS.find((s) => s.field === "logoUrl")!;
   const heroSlot = MEDIA_SLOTS.find((s) => s.field === "heroUrl")!;
   const introVidSlot = MEDIA_SLOTS.find((s) => s.field === "tvIntroVideoUrl")!;
-  // ── Audio cue state (uploaded → preset fixed file → missing) + upload (operator-supplied MP3, no generation) ──
+  // ── Audio cue state (uploaded → preset fixed file → missing) + upload (operator-supplied MP3, no generation).
+  // Cues without a `field`/`type` are reference-only (no in-app upload); a brand.audio fallback may still exist. ──
+  const cueFallback = (c: AudioCueDef): string | undefined =>
+    c.audioField ? (active.audio as unknown as Record<string, string | undefined>)[c.audioField] : undefined;
   const cueUrl = (c: AudioCueDef): string | undefined =>
-    (pack[c.field] as string | undefined)?.trim() || (dbAssetByType(c.type) ? getAssetUrl(dbAssetByType(c.type)!) : (active.audio as unknown as Record<string, string | undefined>)[c.audioField]);
-  const cueStatus = (c: AudioCueDef): "uploaded" | "preset" | "missing" => {
-    if ((pack[c.field] as string | undefined)?.trim() || dbAssetByType(c.type)) return "uploaded";
-    return (active.audio as unknown as Record<string, string | undefined>)[c.audioField] ? "preset" : "missing";
+    (c.field ? (pack[c.field] as string | undefined)?.trim() : undefined)
+    || (c.type && dbAssetByType(c.type) ? getAssetUrl(dbAssetByType(c.type)!) : cueFallback(c));
+  const cueState = (c: AudioCueDef): "uploaded" | "preset" | "missing" => {
+    if (c.field && ((pack[c.field] as string | undefined)?.trim() || (c.type && dbAssetByType(c.type)))) return "uploaded";
+    return cueFallback(c) ? "preset" : "missing";
   };
   const cueApplied = (c: AudioCueDef): boolean => {
+    if (!c.field) return false;
     const app = (appliedOverride[c.field] as string | undefined)?.trim();
-    const cur = (pack[c.field] as string | undefined)?.trim() || (dbAssetByType(c.type) ? getAssetUrl(dbAssetByType(c.type)!) : undefined);
+    const cur = (pack[c.field] as string | undefined)?.trim() || (c.type && dbAssetByType(c.type) ? getAssetUrl(dbAssetByType(c.type)!) : undefined);
     return !!cur && !!app && cur === app;
   };
   const uploadCue = async (c: AudioCueDef, file: File) => {
+    if (!c.field || !c.type) return; // reference-only cue: not uploadable in-app
     let packId = activePack?.id;
     if (!packId) { const created = await createAssetPack({ label: `${active.sponsorName} custom assets`, status: "active" }); packId = created.id; setSelPackId(packId); }
     const row = await uploadAssetFile(packId, c.type, file);
     updatePack(c.field, getAssetUrl(row));
   };
-  const clearCue = (c: AudioCueDef) => { updatePack(c.field, ""); const db = dbAssetByType(c.type); if (db) runA(() => updateAssetStatus(db.id, "archived")); };
-  const liveCuesReady = AUDIO_CUES.filter((c) => c.live && cueStatus(c) === "uploaded").length;
-  const liveCuesTotal = AUDIO_CUES.filter((c) => c.live).length;
+  const clearCue = (c: AudioCueDef) => { if (!c.field) return; updatePack(c.field, ""); const db = c.type && dbAssetByType(c.type); if (db) runA(() => updateAssetStatus(db.id, "archived")); };
+  const cueStatusLabel: Record<AudioCueDef["status"], string> = { live: "live (host)", "stored-only": "stored-only", "not-wired": "not wired" };
+  const liveCuesReady = AUDIO_CUES.filter((c) => c.status === "live" && cueState(c) === "uploaded").length;
+  const liveCuesTotal = AUDIO_CUES.filter((c) => c.status === "live").length;
+  // Question-audio library (per category/question) — real seeded pool data, scales to N categories × N questions.
+  const [libCat, setLibCat] = useState<ContentCategoryId>("general");
+  const [libSearch, setLibSearch] = useState("");
+  const libRows = QUESTION_POOL
+    .filter((q) => q.category === libCat)
+    .filter((q) => !libSearch.trim() || q.prompt.toLowerCase().includes(libSearch.trim().toLowerCase()));
 
   const previewLogoUrl = slotState(logoSlot).url;
   const previewHeroUrl = slotState(heroSlot).url;
@@ -500,50 +508,123 @@ export default function Config() {
             ))}
           </Card>
 
-          {/* Script & audio cue assets — operator uploads MP3s per cue; live cues are host-triggered, others stored-only */}
-          <Card title="Script &amp; audio cue assets">
+          {/* Script & audio cue library — scalable pub-quiz cue taxonomy (operator-supplied MP3s; NO generation).
+              Grouped by cue family; uploadable cues upload/preview/clear here, reference cues are structure only. */}
+          <Card title="Script &amp; audio cue library">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs text-[var(--ppn-muted)]">Upload an MP3 per cue (operator-supplied — <span className="font-semibold text-[var(--ppn-text)]">no AI voice, no generation</span>). Live cues are played from the host console; stored-only cues upload + preview here but aren't triggered yet. Scripts are reference copy.</p>
+              <p className="text-xs text-[var(--ppn-muted)]">A scalable pub-quiz cue library — operator supplies the script text and uploads the MP3s (<span className="font-semibold text-[var(--ppn-text)]">no AI voice, no generation, no TTS</span>). Uploadable cues upload + preview here; reference cues are structure + script only.</p>
               <span className="rounded-full px-2.5 py-1 text-xs font-semibold" style={slotTone(liveCuesReady >= liveCuesTotal ? "uploaded" : "missing")}>{liveCuesReady}/{liveCuesTotal} live cues ready</span>
             </div>
-            {(["Core", "Optional"] as const).map((g) => (
-              <div key={g} className="mt-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-muted)]">{g} cues</p>
+            {/* UK-style flow: read ALL questions first; reveal answers later in the answer-review phase. */}
+            <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+              <p className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1.5 text-[11px] text-[var(--ppn-muted)]"><span className="font-semibold text-[var(--ppn-text)]">Question readout phase:</span> the host reads every question in the round. Teams answer. No answers are revealed yet.</p>
+              <p className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1.5 text-[11px] text-[var(--ppn-muted)]"><span className="font-semibold text-[var(--ppn-text)]">Answer review phase:</span> later, the host reveals answers question by question. <span className="font-semibold" style={{ color: "var(--ppn-text)" }}>Answer-reveal cues are used here — not after each question.</span></p>
+            </div>
+
+            {CUE_FAMILIES.filter((fam) => AUDIO_CUES.some((c) => c.family === fam.id)).map((fam) => (
+              <div key={fam.id} className="mt-4">
+                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--ppn-brand)" }}>{fam.label}</p>
+                <p className="text-[10px] text-[var(--ppn-muted)]">{fam.blurb}</p>
                 <div className="mt-2 grid gap-2.5 sm:grid-cols-2">
-                  {AUDIO_CUES.filter((c) => c.group === g).map((c) => {
-                    const st = cueStatus(c); const url = cueUrl(c);
+                  {AUDIO_CUES.filter((c) => c.family === fam.id).map((c) => {
+                    const st = cueState(c); const url = cueUrl(c); const uploadable = !!c.field && !!c.type;
+                    const script = c.scriptKey ? active.ai[c.scriptKey] : c.scriptHint;
                     return (
                       <div key={c.key} className="flex flex-col rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="truncate text-sm font-semibold">{c.label}</p>
-                          <div className="flex shrink-0 items-center gap-1">
-                            <span className="rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase" style={slotTone(st)}>{st}</span>
-                            <span className="rounded-full px-2 py-0.5 text-[8px] font-semibold uppercase" style={slotTone(c.live ? "uploaded" : "preview")}>{c.live ? "live (host)" : "stored-only"}</span>
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-semibold">{c.label}</p>
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            {uploadable && <span className="rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase" style={slotTone(st)}>{st}</span>}
+                            <span className="rounded-full px-2 py-0.5 text-[8px] font-semibold uppercase" style={slotTone(c.status === "live" ? "uploaded" : "preview")}>{cueStatusLabel[c.status]}</span>
                           </div>
                         </div>
-                        <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">Where: {c.where}</p>
-                        {(st === "uploaded" || st === "manual path" as string) && <p className="text-[9px] font-semibold uppercase" style={{ color: cueApplied(c) ? "var(--ppn-success)" : "var(--ppn-warning)" }}>{cueApplied(c) ? "● applied" : "● uploaded · not applied"}</p>}
+                        <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">Tone: {c.tone}</p>
+                        <p className="text-[10px] text-[var(--ppn-muted)]">Where: {c.where}</p>
+                        {uploadable && (st === "uploaded") && <p className="text-[9px] font-semibold uppercase" style={{ color: cueApplied(c) ? "var(--ppn-success)" : "var(--ppn-warning)" }}>{cueApplied(c) ? "● applied" : "● uploaded · not applied"}</p>}
                         {url && <audio controls preload="none" src={url} className="mt-2 h-8 w-full" />}
-                        <details className="mt-1.5">
-                          <summary className="cursor-pointer text-[10px] text-[var(--ppn-muted)]">Script (reference copy)</summary>
-                          <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">“{active.ai[c.scriptKey]}”</p>
-                        </details>
-                        <div className="mt-2 flex items-center justify-between gap-2">
-                          <label className="cursor-pointer" title={packsQ.isError ? "Storage unavailable" : "Upload an MP3 for this cue"}>
-                            <span className="rounded-lg px-3 py-1.5 text-[11px] font-semibold text-[var(--ppn-on-brand)]" style={{ background: packsQ.isError ? "var(--ppn-border)" : "var(--ppn-brand)", opacity: packsQ.isError ? 0.6 : 1 }}>🔊 {st === "uploaded" ? "Replace MP3" : "Upload MP3"}</span>
-                            <input type="file" accept="audio/*" disabled={assetBusy || packsQ.isError}
-                              onChange={(e) => { const f = e.target.files?.[0]; if (f) runA(() => uploadCue(c, f)); e.currentTarget.value = ""; }}
-                              className="hidden" />
-                          </label>
-                          <button onClick={() => clearCue(c)} disabled={st !== "uploaded"} className="text-[10px] font-semibold text-[var(--ppn-muted)] hover:text-[var(--ppn-text)] disabled:opacity-40">Clear</button>
-                        </div>
+                        {c.key === "winner" && <p className="mt-1.5 rounded bg-[var(--ppn-surface)] px-2 py-1 text-[10px] text-[var(--ppn-muted)]">Record as “<span className="font-semibold text-[var(--ppn-text)]">{WINNER_SCRIPT_REF}</span>” — use the table number, not the entered team name.</p>}
+                        {script && (
+                          <details className="mt-1.5">
+                            <summary className="cursor-pointer text-[10px] text-[var(--ppn-muted)]">Script (reference copy)</summary>
+                            <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">“{script}”</p>
+                          </details>
+                        )}
+                        {uploadable ? (
+                          <div className="mt-2 flex items-center justify-between gap-2">
+                            <label className="cursor-pointer" title={packsQ.isError ? "Storage unavailable" : "Upload an MP3 for this cue"}>
+                              <span className="rounded-lg px-3 py-1.5 text-[11px] font-semibold text-[var(--ppn-on-brand)]" style={{ background: packsQ.isError ? "var(--ppn-border)" : "var(--ppn-brand)", opacity: packsQ.isError ? 0.6 : 1 }}>🔊 {st === "uploaded" ? "Replace MP3" : "Upload MP3"}</span>
+                              <input type="file" accept="audio/*" disabled={assetBusy || packsQ.isError}
+                                onChange={(e) => { const f = e.target.files?.[0]; if (f) runA(() => uploadCue(c, f)); e.currentTarget.value = ""; }}
+                                className="hidden" />
+                            </label>
+                            <button onClick={() => clearCue(c)} disabled={st !== "uploaded"} className="text-[10px] font-semibold text-[var(--ppn-muted)] hover:text-[var(--ppn-text)] disabled:opacity-40">Clear</button>
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-[10px] text-[var(--ppn-muted)]">Reference structure — no in-app upload yet.</p>
+                        )}
                       </div>
                     );
                   })}
                 </div>
               </div>
             ))}
-            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Accepted: MP3 (and any browser-playable audio: WAV/M4A/OGG). After uploading, <span className="font-semibold text-[var(--ppn-text)]">Apply</span> — host/TV use the uploaded cue first, falling back to the fixed <span className="font-mono">public/demo/audio/…</span> file. Pause/intermission, how-to-play and closing CTA scripts have no host cue trigger yet (not wired).</p>
+            <p className="mt-3 text-[11px] text-[var(--ppn-muted)]">Accepted: MP3 (and any browser-playable audio: WAV/M4A/OGG). After uploading, <span className="font-semibold text-[var(--ppn-text)]">Apply</span> — host/TV use the uploaded cue first, falling back to the fixed <span className="font-mono">public/demo/audio/…</span> file. Reference cues (how-to-play, pause, outro, category/review intros, sponsor-special) have no host trigger yet (not wired).</p>
+          </Card>
+
+          {/* Question audio library — per category/question table; scales to N categories × N questions (seeded pool data). */}
+          <Card title="Question audio library">
+            <p className="text-xs text-[var(--ppn-muted)]">Per-question readout &amp; answer-review audio, organised by category. Built from the seeded question pool — the structure scales to a full {CONTENT_CATEGORIES.length}-category × 10-question night. Per-question files follow a naming convention and are deployed to the preset audio folder (file-drop); in-app per-question upload is parked (needs a keyed asset set).</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <label className="text-[11px] text-[var(--ppn-muted)]">Category
+                <select value={libCat} onChange={(e) => setLibCat(e.target.value as ContentCategoryId)} className="ml-1 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2 py-1 text-xs text-[var(--ppn-text)]">
+                  {CONTENT_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                </select>
+              </label>
+              <input value={libSearch} onChange={(e) => setLibSearch(e.target.value)} placeholder="Search question…" className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2 py-1 text-xs text-[var(--ppn-text)]" />
+              <span className="text-[10px] text-[var(--ppn-muted)]">{libRows.length} question{libRows.length === 1 ? "" : "s"} in {categoryLabel(libCat)}</span>
+            </div>
+            <div className="mt-2 overflow-x-auto">
+              <table className="w-full min-w-[640px] border-collapse text-left text-[11px]">
+                <thead>
+                  <tr className="border-b border-[var(--ppn-border)] text-[10px] uppercase tracking-wide text-[var(--ppn-muted)]">
+                    <th className="py-1.5 pr-2 font-semibold">Category</th>
+                    <th className="py-1.5 pr-2 font-semibold">Q#</th>
+                    <th className="py-1.5 pr-2 font-semibold">Question</th>
+                    <th className="py-1.5 pr-2 font-semibold">Readout audio</th>
+                    <th className="py-1.5 pr-2 font-semibold">Repeat / read-again</th>
+                    <th className="py-1.5 pr-2 font-semibold">Answer-review audio</th>
+                    <th className="py-1.5 pr-2 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {libRows.map((q, i) => (
+                    <tr key={q.id} className="border-b border-[var(--ppn-border)] align-top">
+                      <td className="py-1.5 pr-2 text-[var(--ppn-muted)]">{categoryLabel(libCat)}</td>
+                      <td className="py-1.5 pr-2 font-semibold">{i + 1}</td>
+                      <td className="py-1.5 pr-2"><span className="block max-w-[220px] truncate" title={q.prompt}>{q.prompt}</span></td>
+                      <td className="py-1.5 pr-2 font-mono text-[10px] text-[var(--ppn-muted)]">{QUESTION_FILE_CONVENTION.readout}</td>
+                      <td className="py-1.5 pr-2 text-[10px] text-[var(--ppn-muted)]">vary phrasing</td>
+                      <td className="py-1.5 pr-2 font-mono text-[10px] text-[var(--ppn-muted)]">{QUESTION_FILE_CONVENTION.reveal}</td>
+                      <td className="py-1.5 pr-2"><span className="rounded-full px-2 py-0.5 text-[8px] font-semibold uppercase" style={slotTone("preview")}>stored-only · file-drop</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-2 text-[10px] text-[var(--ppn-muted)]">Readout files play during the <span className="font-semibold text-[var(--ppn-text)]">question phase</span>; review files play later in the <span className="font-semibold text-[var(--ppn-text)]">answer-review phase</span> (never straight after each question). Final file numbers are assigned by running order at quiz-build time.</p>
+          </Card>
+
+          {/* Script style & winner guidance — production-script rules (no generated final content) */}
+          <Card title="Script style &amp; winner guidance">
+            <p className="text-xs text-[var(--ppn-muted)]">Guidance for writing/recording cue audio. Examples are direction, not generated final scripts.</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-[11px] text-[var(--ppn-muted)]">
+              {SCRIPT_STYLE_RULES.map((r) => <li key={r}>{r}</li>)}
+            </ul>
+            <p className="mt-2 text-[11px] font-semibold text-[var(--ppn-text)]">Varied repeat / read-again phrasing (examples):</p>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {REPEAT_PHRASE_EXAMPLES.map((p) => <span key={p} className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2 py-0.5 text-[10px] text-[var(--ppn-muted)]">“{p}”</span>)}
+            </div>
+            <p className="mt-2 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1.5 text-[11px] text-[var(--ppn-muted)]"><span className="font-semibold text-[var(--ppn-text)]">Winner announcement uses Team number, not team name:</span> “{WINNER_SCRIPT_REF}”. {TEAM_NUMBER_FOLLOWUP}</p>
           </Card>
 
           {/* Brand identity & offer copy (a required "slot") */}
