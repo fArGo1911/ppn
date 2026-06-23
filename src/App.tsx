@@ -2,7 +2,8 @@
  * PPN (PubPlay Network) — POC app shell. Routes are relative to a configurable base path (VITE_PPN_BASE_PATH)
  * so the same app works at the subdomain root (ppn.todeloo.com) or under a /ppn subpath. Local-first, deploy-ready.
  */
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Landing from "./pages/Landing";
 import PlayJoin from "./pages/PlayJoin";
 import Host from "./pages/Host";
@@ -23,9 +24,33 @@ import { OperatorGate } from "./components/OperatorGate";
 
 const BASENAME = import.meta.env.VITE_PPN_BASE_PATH ?? "/";
 
+/**
+ * Reliable in-app scroll-to-hash. React Router does not scroll to #anchors itself, and on a direct SPA load the
+ * target id may not be mounted yet when the browser tries — so we retry across a few frames, then scrollIntoView.
+ * Covers deep links like /config#brand-media and /setup#asset-slots. Display-only; runs only when a hash exists.
+ */
+function ScrollToHash() {
+  const { hash, pathname } = useLocation();
+  useEffect(() => {
+    if (!hash) return;
+    const id = decodeURIComponent(hash.slice(1));
+    let raf = 0;
+    let tries = 0;
+    const tick = () => {
+      const el = document.getElementById(id);
+      if (el) { el.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+      if (tries++ < 30) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [hash, pathname]);
+  return null;
+}
+
 export default function App() {
   return (
     <BrowserRouter basename={BASENAME}>
+      <ScrollToHash />
       <PresenterTools />
       <Routes>
         <Route path="/" element={<Landing />} />

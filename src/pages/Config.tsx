@@ -203,27 +203,41 @@ export default function Config() {
               : <p className="mt-2 text-xs text-[var(--ppn-muted)]">Showing preset defaults — no custom client branding applied. Switching brewery below will ask before carrying any overrides over.</p>}
           </Card>
 
-          <div id="brand-media" className="scroll-mt-4 pt-2">
+          <div id="brand-media" className="scroll-mt-20 pt-2">
             <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--ppn-brand)" }}>Brand &amp; media setup</h2>
             <p className="mt-1 text-xs text-[var(--ppn-muted)]">Everything the client sees: brewery / client identity, logo &amp; brand colours, offer / sponsor copy, and the TV/audience + player-facing visuals. Set it here — paste paths (Quick manual paths) or upload files (Upload asset pack).</p>
           </div>
 
-          <Card title="Brewery preset · market">
-            <div className="space-y-2">
-              {PRESETS.map((p) => {
-                const on = p.id === active.id;
-                return (
-                  <button key={p.id} onClick={() => choose(p.id)} className="flex w-full items-center gap-3 rounded-xl border bg-[var(--ppn-bg)] p-3 text-left" style={{ borderColor: on ? p.colours.primary : "var(--ppn-border)" }}>
-                    <span className="grid h-9 w-9 place-items-center rounded-lg font-black" style={{ background: p.colours.primary, color: p.colours.onBrand }}>{brandInitials(p.sponsorName)}</span>
-                    <div className="flex-1">
-                      <p className="font-semibold">{p.sponsorName} <span className="ml-1 rounded bg-[var(--ppn-surface)] px-1.5 py-0.5 text-[10px] text-[var(--ppn-muted)]">{p.market}</span></p>
-                      <p className="text-xs text-[var(--ppn-muted)]">{p.tagline} · {p.pubName}</p>
-                    </div>
-                    {on && <span className="text-xs font-semibold" style={{ color: p.colours.primary }}>Active</span>}
-                  </button>
-                );
-              })}
+          <Card title="Active preset · change preset">
+            {/* Active preset summary first; the full 12-preset catalogue is collapsed so it doesn't dominate
+                ( /operator already lists available presets). Switching uses the existing guarded behaviour. */}
+            <div className="flex items-center gap-3 rounded-xl border bg-[var(--ppn-bg)] p-3" style={{ borderColor: active.primary }}>
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg font-black" style={{ background: active.colours.primary, color: active.colours.onBrand }}>{brandInitials(active.sponsorName)}</span>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">{active.sponsorName} <span className="ml-1 rounded bg-[var(--ppn-surface)] px-1.5 py-0.5 text-[10px] text-[var(--ppn-muted)]">{active.market}</span></p>
+                <p className="truncate text-xs text-[var(--ppn-muted)]">{active.tagline} · {active.pubName}</p>
+              </div>
+              <span className="shrink-0 text-xs font-semibold" style={{ color: active.primary }}>Active</span>
             </div>
+            <details className="mt-2 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-bg)]">
+              <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-[var(--ppn-muted)]">Change preset — show all {PRESETS.length} branded presets</summary>
+              <div className="space-y-2 p-3 pt-0">
+                {PRESETS.map((p) => {
+                  const on = p.id === active.id;
+                  return (
+                    <button key={p.id} onClick={() => choose(p.id)} className="flex w-full items-center gap-3 rounded-xl border bg-[var(--ppn-bg)] p-3 text-left" style={{ borderColor: on ? p.colours.primary : "var(--ppn-border)" }}>
+                      <span className="grid h-9 w-9 place-items-center rounded-lg font-black" style={{ background: p.colours.primary, color: p.colours.onBrand }}>{brandInitials(p.sponsorName)}</span>
+                      <div className="flex-1">
+                        <p className="font-semibold">{p.sponsorName} <span className="ml-1 rounded bg-[var(--ppn-surface)] px-1.5 py-0.5 text-[10px] text-[var(--ppn-muted)]">{p.market}</span></p>
+                        <p className="text-xs text-[var(--ppn-muted)]">{p.tagline} · {p.pubName}</p>
+                      </div>
+                      {on && <span className="text-xs font-semibold" style={{ color: p.colours.primary }}>Active</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </details>
+            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Switching applies immediately and asks before carrying client overrides across. The full catalogue also appears on <Link to="/operator" className="text-[var(--ppn-brand)]">the operator hub</Link>.</p>
           </Card>
 
           <Card title="Quick manual paths">
@@ -233,7 +247,7 @@ export default function Config() {
                 ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>Custom assets applied</span>
                 : <span className="text-[10px] text-[var(--ppn-muted)]">preset defaults</span>}
             </div>
-            <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">Drop files under <span className="font-mono">public/demo/assets/&lt;preset&gt;/</span> and paste the paths. See <Link to="/setup" className="text-[var(--ppn-brand)]">Brand assets</Link> for where each one appears.</p>
+            <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">This is where assets are configured. Drop files under <span className="font-mono">public/demo/assets/&lt;preset&gt;/</span> and paste the paths. The <Link to="/setup#asset-slots" className="text-[var(--ppn-brand)]">asset reference / slot guide</Link> is reference only — it shows sizes and where each one appears.</p>
 
             <p className="mt-3 text-xs font-semibold text-[var(--ppn-muted)]">Brewery / client identity + offer copy</p>
             <div className="mt-1 grid gap-2 sm:grid-cols-2">
@@ -356,17 +370,17 @@ export default function Config() {
                 </div>
               ))}
             </div>
-            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Uploaded assets are stored even if not shown live — only the surfaces marked "live" appear during a run.</p>
+            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Uploaded assets are stored even if not shown live — only the surfaces marked "live" appear during a run. Full spec: <Link to="/setup#where-assets-appear" className="text-[var(--ppn-brand)]">asset reference / slot guide</Link>.</p>
           </Card>
 
-          <Card title="Internal theme studio (operator only)">
+          <Card title="Operator theme preview">
             <div className="flex items-center justify-between">
               <p className="text-xs text-[var(--ppn-muted)]">Base preset: <span className="font-semibold text-[var(--ppn-text)]">{active.sponsorName}</span> <span className="ml-1 rounded bg-[var(--ppn-bg)] px-1.5 py-0.5 text-[10px]">{active.market}</span></p>
               {hasOver
                 ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>Custom colours active</span>
                 : <span className="text-[10px] text-[var(--ppn-muted)]">preset defaults</span>}
             </div>
-            <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">Predesign a brewery look before the pitch. Internal only — applies to all demo surfaces; never shown to the brewery.</p>
+            <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">Predesign a brewery look before the pitch (operator-only — never shown to the brewery). Colours apply app-wide via theme tokens, but each surface picks them up on its <span className="text-[var(--ppn-text)]">next page load</span> — an already-open TV/player must be reloaded to repaint. The sample below is representative of the player / host / TV / presenter surfaces; it is not a live mirror of those pages.</p>
 
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {THEME_FIELDS.map((f) => {
@@ -394,8 +408,8 @@ export default function Config() {
               </div>
             ) : <p className="mt-2 text-xs" style={{ color: "var(--ppn-success)" }}>✓ Contrast looks readable.</p>}
 
-            {/* Live preview */}
-            <p className="mt-4 text-xs font-semibold text-[var(--ppn-muted)]">Live preview</p>
+            {/* Representative preview (not a live mirror of TV/player/presentation) */}
+            <p className="mt-4 text-xs font-semibold text-[var(--ppn-muted)]">Representative preview · operator surfaces</p>
             <div className="mt-2 rounded-xl border border-[var(--ppn-border)] p-3" style={{ background: "var(--ppn-bg)" }}>
               <div className="rounded-lg p-3" style={{ background: "var(--ppn-surface)", border: "1px solid var(--ppn-border)" }}>
                 <p className="text-sm font-semibold" style={{ color: "var(--ppn-text)" }}>Sample card · {active.sponsorName}</p>
@@ -415,7 +429,7 @@ export default function Config() {
             </div>
           </Card>
 
-          <div id="demo-numbers" className="scroll-mt-4 pt-2">
+          <div id="demo-numbers" className="scroll-mt-20 pt-2">
             <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--ppn-brand)" }}>Campaign assumptions / demo numbers</h2>
             <p className="mt-1 text-xs text-[var(--ppn-muted)]">The venue-mix numbers that feed the KPI and rollout pages. Operator-only — never shown to the buyer.</p>
           </div>
@@ -488,7 +502,7 @@ export default function Config() {
                     <p className="mt-1 text-[var(--ppn-muted)]">{mixD.setupMix.map((su) => `${su.pctVenues}% ${su.label}`).join(" · ")}</p>
                   </div>
                 </div>
-                <p className="text-[11px] text-[var(--ppn-muted)]">Venue mix drives venues/events/players (weighted) — clear the scenario to edit those scalars directly.</p>
+                <p className="text-[11px] text-[var(--ppn-muted)]">Venue mix drives venues/events/players (weighted) — clear the demo numbers to edit those scalars directly.</p>
               </div>
             )}
 
@@ -501,10 +515,10 @@ export default function Config() {
                 <p className="text-xs font-semibold" style={{ color: "var(--ppn-warning)" }}>⚠ Realism warnings (operator-only)</p>
                 <ul className="mt-1 list-disc pl-5 text-xs text-[var(--ppn-muted)]">{sWarns.map((w) => <li key={w}>{w}</li>)}</ul>
               </div>
-            ) : <p className="mt-2 text-xs" style={{ color: "var(--ppn-success)" }}>✓ Scenario looks realistic.</p>}
+            ) : <p className="mt-2 text-xs" style={{ color: "var(--ppn-success)" }}>✓ Demo numbers look realistic.</p>}
           </Card>
 
-          <div id="session" className="scroll-mt-4 pt-2">
+          <div id="session" className="scroll-mt-20 pt-2">
             <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--ppn-brand)" }}>Session &amp; run</h2>
             <p className="mt-1 text-xs text-[var(--ppn-muted)]">Output mode, the live demo session (reset / demo teams) and presentation mode.</p>
           </div>
@@ -524,7 +538,7 @@ export default function Config() {
                 })}
               </div>
             )}
-            <p className="mt-2 text-xs text-[var(--ppn-muted)]">Hosting mode + AI intro are toggled live on the host panel.</p>
+            <p className="mt-2 text-xs text-[var(--ppn-muted)]">Hosting mode is toggled live on the host panel.</p>
           </Card>
 
           <Card title="Demo session">
@@ -560,7 +574,7 @@ export default function Config() {
                 <span key={s} className="rounded-full border border-dashed border-[var(--ppn-border)] px-3 py-1.5">{s} · operator stub</span>
               ))}
             </div>
-            <p className="mt-3 text-xs"><Link to="/setup" className="text-[var(--ppn-brand)]">Brand asset spec →</Link> <span className="text-[var(--ppn-muted)]">(operator reference — not shown to the buyer)</span></p>
+            <p className="mt-3 text-xs"><Link to="/setup#asset-slots" className="text-[var(--ppn-brand)]">Asset reference / slot guide →</Link> <span className="text-[var(--ppn-muted)]">(operator reference — not shown to the buyer)</span></p>
           </Card>
         </div>
       </div>

@@ -218,7 +218,7 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
         { categoryId: "popup", venues: 4, eventsPerVenue: 2, avgPlayersPerEvent: 180, avgPlayersPerTeam: 5, setupMode: "tv_audio" },
         { categoryId: "student", venues: 2, eventsPerVenue: 2, avgPlayersPerEvent: 110, avgPlayersPerTeam: 5, setupMode: "tv_audio" },
       ] } },
-  { id: "reach6500", name: "~6,500 reach scenario", tone: "Standard", assumes: "Mixed venues over ~3 events → ~6,500 estimated reach (target, not guaranteed).",
+  { id: "reach6500", name: "~6,500 reach", tone: "Standard", assumes: "Mixed venues over ~3 events → ~6,500 estimated reach (target, not guaranteed).",
     scenario: { venueProfile: "mixed", completionRate: 0.90, sponsoredAnswerRate: 0.86, campaignReachMultiplier: 1.5, valuePerVisit: 6, pilotVenues: 6, regionalVenues: 24, campaignVenues: 100, templateId: "reach6500",
       venueMix: [
         { categoryId: "neighbourhood", venues: 4, eventsPerVenue: 3, avgPlayersPerEvent: 45, avgPlayersPerTeam: 4.5, setupMode: "audio_only" },
