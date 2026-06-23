@@ -14,7 +14,7 @@ import { SETUP_MODES } from "../demo/setup";
 import { useAudienceMode } from "../lib/audience";
 import { applyTheme, getThemeOverride, setThemeOverride, clearThemeOverride, themeWarnings, type ColourOverride } from "../demo/theme";
 import { getAssetPackOverride, setAssetPackOverride, clearAssetPackOverride, hasAssetPackOverride, type AssetPack } from "../demo/assetPack";
-import { listAssetPacks, listAssets, createAssetPack, updateAssetPack, uploadAssetFile, setAssetActive, updateAssetStatus, getAssetUrl, buildBrandOverrideFromAssetPack, type AssetType } from "../lib/ppnAssets";
+import { listAssetPacks, listAssets, createAssetPack, updateAssetPack, uploadAssetFile, setAssetActive, updateAssetStatus, getAssetUrl, type AssetType } from "../lib/ppnAssets";
 import {
   deriveKpi, applyScenarioToSeed, getScenario, setScenario, clearScenario, scenarioWarnings,
   SCENARIO_TEMPLATES, deriveVenueMix, venueMixWarnings, venueCategory, setupModeLabel,
@@ -161,7 +161,6 @@ export default function Config() {
   const activePackId = selPackId ?? packsQ.data?.[0]?.id;
   const activePack = packsQ.data?.find((p) => p.id === activePackId) ?? null;
   const assetsQ = useQuery({ queryKey: ["assets", activePackId], queryFn: () => listAssets(activePackId!), enabled: !!activePackId, retry: false });
-  const [newLabel, setNewLabel] = useState("");
   const [assetErr, setAssetErr] = useState<string | null>(null);
   const [packCopy, setPackCopy] = useState<Record<string, string>>({});
   useEffect(() => {
@@ -174,20 +173,32 @@ export default function Config() {
   });
   const runA = (fn: () => Promise<unknown>) => assetMut.mutate(fn);
   const assetBusy = assetMut.isPending;
-  const applyDbPack = () => { if (activePack) { setAssetPackOverride(buildBrandOverrideFromAssetPack(activePack, assetsQ.data ?? [])); window.location.reload(); } };
+  // The currently-APPLIED override (what the live demo is using) — to show per-slot applied vs not-applied.
+  const appliedOverride = getAssetPackOverride();
+  // Upload one file to a slot. Auto-creates a "<brewery> custom assets" set the first time, so the operator never
+  // has to think about an asset set first; the uploaded file's URL is assigned to the slot's override field.
+  const uploadToSlot = async (s: MediaSlot, file: File) => {
+    let packId = activePack?.id;
+    if (!packId) { const created = await createAssetPack({ label: `${active.sponsorName} custom assets`, status: "active" }); packId = created.id; setSelPackId(packId); }
+    const row = await uploadAssetFile(packId, s.type, file);
+    updatePack(s.field, getAssetUrl(row));
+  };
 
-  // ── Per-slot state for the slot manager (uploaded → manual path → preset → missing) ──
+  // ── Per-slot state (uploaded → manual path → preset → missing) + applied-to-live flag ──
   const dbAssetByType = (t: AssetType) => (assetsQ.data ?? []).find((a) => a.asset_type === t && a.status === "active");
   const presetUrlFor = (s: MediaSlot): string | undefined =>
     s.kind === "image" ? (active.images as Record<string, string | undefined>)[s.field] : (active.video as Record<string, string | undefined>)[s.field];
-  const slotState = (s: MediaSlot): { status: "uploaded" | "manual path" | "preset" | "missing"; url?: string } => {
+  const slotState = (s: MediaSlot): { status: "uploaded" | "manual path" | "preset" | "missing"; url?: string; applied: boolean } => {
     const manual = (pack[s.field] as string | undefined)?.trim();
     const db = dbAssetByType(s.type);
-    if (db) return { status: "uploaded", url: getAssetUrl(db) };
-    if (manual) return { status: "manual path", url: manual };
+    const cur = manual || (db ? getAssetUrl(db) : undefined);
+    const appliedVal = (appliedOverride[s.field] as string | undefined)?.trim();
+    const applied = !!cur && !!appliedVal && cur === appliedVal;
+    if (db) return { status: "uploaded", url: getAssetUrl(db), applied };
+    if (manual) return { status: "manual path", url: manual, applied };
     const preset = presetUrlFor(s);
-    if (preset) return { status: "preset", url: preset };
-    return { status: "missing" };
+    if (preset) return { status: "preset", url: preset, applied: true };
+    return { status: "missing", applied: false };
   };
   const clearSlot = (s: MediaSlot) => { updatePack(s.field, ""); const db = dbAssetByType(s.type); if (db) runA(() => updateAssetStatus(db.id, "archived")); };
   const requiredReady = MEDIA_SLOTS.filter((s) => s.group === "Required" && slotState(s).status !== "missing").length + 2; // + identity copy + brand colours (always preset)
@@ -255,22 +266,13 @@ export default function Config() {
           {activeSection === "brand-media" && (<>
           <div id="brand-media" className="scroll-mt-20 pt-2">
             <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--ppn-brand)" }}>Media asset manager</h2>
-            <p className="mt-1 text-xs text-[var(--ppn-muted)]"><span className="font-semibold text-[var(--ppn-text)]">CMS-lite media asset manager for the POC.</span> Upload real files from your machine, assign each to a demo slot, then apply to the active demo and open a surface to see it in place. Manual URLs are an advanced fallback, not the main workflow. Spec / sizes: <Link to="/setup#asset-slots" className="text-[var(--ppn-brand)]">asset reference / slot guide</Link>.</p>
-            {/* What's actually dynamic vs fixed vs not-built in this controlled POC */}
-            <div className="mt-3 grid gap-2 sm:grid-cols-3">
-              <div className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3 text-[11px]">
-                <p className="text-xs font-semibold" style={{ color: "var(--ppn-success)" }}>Dynamic (you set these)</p>
-                <p className="mt-1 text-[var(--ppn-muted)]">Uploaded logo, TV hero, sponsor slide, phone card, lower-third, venue image, intro/bumper/closing video, identity / offer copy, brand colours, demo numbers.</p>
-              </div>
-              <div className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3 text-[11px]">
-                <p className="text-xs font-semibold text-[var(--ppn-text)]">Static (fixed in this POC)</p>
-                <p className="mt-1 text-[var(--ppn-muted)]">Layout templates, game flow, scoring/reveal, routes, slot definitions, required sizes/aspect ratios, placement rules.</p>
-              </div>
-              <div className="rounded-lg border border-dashed border-[var(--ppn-border)] p-3 text-[11px]">
-                <p className="text-xs font-semibold" style={{ color: "var(--ppn-warning)" }}>Not built yet</p>
-                <p className="mt-1 text-[var(--ppn-muted)]">Approval workflow, venue self-service, full production CMS, media library, MP3/audio via the pack (file-based only), picture/video question media, rollout image, auto-cropping.</p>
-              </div>
-            </div>
+            <p className="mt-1 text-xs text-[var(--ppn-muted)]"><span className="font-semibold text-[var(--ppn-text)]">CMS-lite media asset manager for the POC.</span> Upload one file per slot, then apply to the demo and open a surface to see it in place. Manual URLs are an advanced fallback. Spec / sizes: <Link to="/setup#asset-slots" className="text-[var(--ppn-brand)]">asset reference / slot guide</Link>.</p>
+            {/* Concise dynamic vs static vs not-built distinction */}
+            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">
+              <span className="font-semibold" style={{ color: "var(--ppn-success)" }}>Dynamic:</span> uploaded slot assets, identity/offer copy, colours, demo numbers ·
+              <span className="font-semibold text-[var(--ppn-text)]"> Static:</span> layout, game flow, scoring, routes, placement rules ·
+              <span className="font-semibold" style={{ color: "var(--ppn-warning)" }}> Not built:</span> MP3/audio in the asset set, approval workflow, venue self-service, full media library, auto-cropping/editing.
+            </p>
           </div>
 
           <Card title="Active preset · change preset">
@@ -305,41 +307,33 @@ export default function Config() {
             <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Switching applies immediately and asks before carrying client overrides across. The full catalogue also appears on <Link to="/operator" className="text-[var(--ppn-brand)]">the operator hub</Link>.</p>
           </Card>
 
-          {/* Asset readiness summary */}
+          {/* Current demo assets — plain summary; the underlying "asset set" is folded into a small disclosure */}
           <div className="rounded-xl border-2 bg-[var(--ppn-surface)] p-4" style={{ borderColor: "color-mix(in srgb, var(--ppn-brand) 30%, var(--ppn-border))" }}>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-semibold">Asset readiness</p>
-              <span className="rounded-full px-2.5 py-1 text-xs font-semibold" style={slotTone(requiredReady >= 5 ? "uploaded" : "missing")}>{requiredReady}/5 required assets ready</span>
+              <p className="text-sm font-semibold">Current demo assets</p>
+              <span className="rounded-full px-2.5 py-1 text-xs font-semibold" style={slotTone(requiredReady >= 5 ? "uploaded" : "missing")}>{requiredReady}/5 required ready</span>
             </div>
+            <p className="mt-1 text-xs text-[var(--ppn-muted)]">Upload one file per slot below — they're grouped into this demo's client asset set automatically. Then <span className="font-semibold text-[var(--ppn-text)]">Apply</span> and open a surface to see them in place.</p>
             <div className="mt-2 flex flex-wrap gap-2 text-xs">
               <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Active preset: <span className="font-semibold text-[var(--ppn-text)]">{active.sponsorName}</span></span>
               <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Client assets: <span className="font-semibold" style={{ color: packActive ? "var(--ppn-warning)" : "var(--ppn-muted)" }}>{packActive ? "custom applied" : "preset default"}</span></span>
-              <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Active pack: <span className="font-semibold text-[var(--ppn-text)]">{activePack?.label ?? "none"}</span></span>
-              <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Storage: <span className="font-semibold">{packsQ.isError ? "unavailable" : packsQ.isSuccess ? "available" : "checking…"}</span></span>
+              <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Asset set: <span className="font-semibold text-[var(--ppn-text)]">{activePack?.label ?? "auto-creates on first upload"}</span></span>
+              <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Storage: <span className="font-semibold">{packsQ.isError ? "unavailable — use manual fallback" : packsQ.isSuccess ? "available" : "checking…"}</span></span>
             </div>
-            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Required = logo, TV hero, sponsor slide, identity/offer copy and brand colours. Full spec: <Link to="/setup#asset-slots" className="text-[var(--ppn-brand)]">asset reference / slot guide</Link>.</p>
-          </div>
-
-          {/* Step 1 — asset pack (needed to upload files; manual paths work without one) */}
-          <Card title="Step 1 · asset pack (for uploads)">
-            <p className="text-xs text-[var(--ppn-muted)]">Create or select a pack to upload files into. Manual paths / URLs work without a pack. Storage upload: <span className="font-semibold">{packsQ.isError ? "unavailable — start the local PPN database" : packsQ.isSuccess ? "available" : "checking…"}</span>.</p>
-            {!packsQ.isError && (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="New pack label" className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2 py-1.5 text-sm" />
-                <button disabled={assetBusy || !newLabel.trim()} onClick={() => { runA(() => createAssetPack({ label: newLabel.trim(), status: "active" })); setNewLabel(""); }} className="rounded-lg px-3 py-1.5 text-sm font-semibold text-[var(--ppn-on-brand)] disabled:opacity-40" style={{ background: "var(--ppn-brand)" }}>＋ Create pack</button>
-                {(packsQ.data ?? []).length > 0 && (
-                  <select value={activePackId ?? ""} onChange={(e) => setSelPackId(e.target.value)} className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2 py-1.5 text-sm">
-                    {(packsQ.data ?? []).map((p) => <option key={p.id} value={p.id}>{p.label} · {p.status}</option>)}
-                  </select>
-                )}
-              </div>
+            {(packsQ.data ?? []).length > 1 && (
+              <details className="mt-2">
+                <summary className="cursor-pointer text-[11px] text-[var(--ppn-muted)]">Use a different client asset set</summary>
+                <select value={activePackId ?? ""} onChange={(e) => setSelPackId(e.target.value)} className="mt-1 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2 py-1.5 text-sm">
+                  {(packsQ.data ?? []).map((p) => <option key={p.id} value={p.id}>{p.label} · {p.status}</option>)}
+                </select>
+              </details>
             )}
             {assetErr && <p className="mt-2 text-xs text-red-400">{assetErr}</p>}
-          </Card>
+          </div>
 
-          {/* Step 2 — slot manager: each slot has its own preview + manual path + upload + clear */}
-          <Card title="Step 2 · upload &amp; assign per slot">
-            <p className="text-xs text-[var(--ppn-muted)]">Upload a real file into each slot — it's stored on the Step-1 pack and assigned to that slot. The <span className="font-semibold text-[var(--ppn-text)]">live</span> / <span className="font-semibold text-[var(--ppn-text)]">preview-only</span> badge says whether that slot renders on the live demo surfaces or only in preview. Manual URL/path is an advanced fallback. Per-slot spec: <Link to="/setup#asset-slots" className="text-[var(--ppn-brand)]">asset reference / slot guide</Link>.</p>
+          {/* Upload by slot — the primary workflow */}
+          <Card title="Upload by slot">
+            <p className="text-xs text-[var(--ppn-muted)]">Click <span className="font-semibold text-[var(--ppn-text)]">Upload file</span> on any slot and pick a file from your machine — no setup first. The <span className="font-semibold text-[var(--ppn-text)]">live</span> / <span className="font-semibold text-[var(--ppn-text)]">preview-only</span> badge says whether that slot renders on the live demo or only in preview. Manual URL/path is an advanced fallback. Spec: <Link to="/setup#asset-slots" className="text-[var(--ppn-brand)]">asset reference / slot guide</Link>.</p>
             {(["Required", "Recommended", "Optional"] as SlotGroup[]).map((g) => (
               <div key={g} className="mt-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-muted)]">{g}</p>
@@ -355,6 +349,9 @@ export default function Config() {
                             <span className="rounded-full px-2 py-0.5 text-[8px] font-semibold uppercase" style={slotTone(s.live === "live" ? "uploaded" : "preview")}>{s.live}</span>
                           </div>
                         </div>
+                        {(ss.status === "uploaded" || ss.status === "manual path") && (
+                          <p className="mt-1 text-[9px] font-semibold uppercase" style={{ color: ss.applied ? "var(--ppn-success)" : "var(--ppn-warning)" }}>{ss.applied ? "● applied" : "● uploaded · not applied"}</p>
+                        )}
                         <div className="mt-2 flex items-center gap-2">
                           {ss.url && s.kind === "image"
                             ? <img src={ss.url} alt={s.label} className="h-10 w-14 shrink-0 rounded border border-[var(--ppn-border)] object-contain" style={{ background: "var(--ppn-surface)" }} />
@@ -367,15 +364,15 @@ export default function Config() {
                         <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">Appears: {s.appears}</p>
                         {/* Primary action: upload a real file from the machine */}
                         <div className="mt-2 flex items-center justify-between gap-2">
-                          <label className="cursor-pointer" title={activePack ? "Upload a file to this slot" : "Create/select a pack in Step 1 first"}>
-                            <span className="rounded-lg px-3 py-1.5 text-[11px] font-semibold text-[var(--ppn-on-brand)]" style={{ background: activePack ? "var(--ppn-brand)" : "var(--ppn-border)", opacity: activePack ? 1 : 0.6 }}>⬆ {ss.status === "uploaded" ? "Replace file" : "Upload file"}</span>
-                            <input type="file" accept={s.accept} disabled={assetBusy || !activePack}
-                              onChange={(e) => { const f = e.target.files?.[0]; if (f && activePack) runA(() => uploadAssetFile(activePack.id, s.type, f).then((row) => updatePack(s.field, getAssetUrl(row)))); e.currentTarget.value = ""; }}
+                          <label className="cursor-pointer" title={packsQ.isError ? "Storage unavailable — use the manual fallback below" : "Upload a file to this slot"}>
+                            <span className="rounded-lg px-3 py-1.5 text-[11px] font-semibold text-[var(--ppn-on-brand)]" style={{ background: packsQ.isError ? "var(--ppn-border)" : "var(--ppn-brand)", opacity: packsQ.isError ? 0.6 : 1 }}>⬆ {ss.status === "uploaded" ? "Replace file" : "Upload file"}</span>
+                            <input type="file" accept={s.accept} disabled={assetBusy || packsQ.isError}
+                              onChange={(e) => { const f = e.target.files?.[0]; if (f) runA(() => uploadToSlot(s, f)); e.currentTarget.value = ""; }}
                               className="hidden" />
                           </label>
                           <button onClick={() => clearSlot(s)} disabled={ss.status === "preset" || ss.status === "missing"} className="text-[10px] font-semibold text-[var(--ppn-muted)] hover:text-[var(--ppn-text)] disabled:opacity-40">Clear</button>
                         </div>
-                        {!activePack && <p className="mt-1 text-[9px] text-[var(--ppn-muted)]">Create/select an asset pack (Step 1) to upload.</p>}
+                        {packsQ.isError && <p className="mt-1 text-[9px] text-[var(--ppn-muted)]">Storage unavailable — start the local PPN database, or use the manual fallback.</p>}
                         <details className="mt-1">
                           <summary className="cursor-pointer text-[9px] text-[var(--ppn-muted)]">Advanced fallback: manual path / URL</summary>
                           <input value={(pack[s.field] as string) ?? ""} placeholder="paste path / URL" onChange={(e) => updatePack(s.field, e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-2 py-1 font-mono text-[11px] text-[var(--ppn-text)]" />
@@ -401,22 +398,21 @@ export default function Config() {
             </div>
           </Card>
 
-          {/* Step 3 — apply / reset */}
-          <Card title="Step 3 · apply / reset">
+          {/* Apply changes — one primary action (uploads + copy + manual fallback are reconciled into the override) */}
+          <Card title="Apply changes">
             <div className="flex flex-wrap gap-2">
-              <button onClick={applyPack} className="rounded-lg px-3 py-2 text-sm font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>Apply to demo</button>
-              <button onClick={applyDbPack} disabled={!activePack} className="rounded-lg border border-[var(--ppn-border)] px-3 py-2 text-sm font-semibold disabled:opacity-40">Apply uploaded pack</button>
+              <button onClick={applyPack} className="rounded-lg px-3 py-2 text-sm font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>Apply uploaded assets to demo</button>
               <button onClick={resetPack} disabled={!packActive} className="rounded-lg border border-[var(--ppn-border)] px-3 py-2 text-sm font-semibold disabled:opacity-40">↺ Reset to preset defaults</button>
             </div>
-            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Apply reloads so every surface re-merges. Uploaded files auto-fill the matching slot path; “Apply uploaded pack” rebuilds the override from the selected pack's active files + copy. Blank fields keep the preset value — an override can never blank a page.</p>
+            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Apply reloads so every surface re-merges your uploaded slot files + identity/offer copy + any manual fallbacks. Reset returns to the preset defaults. Blank fields keep the preset value — an override can never blank a page.</p>
           </Card>
 
           {/* Advanced — raw asset-pack copy + stored files (the per-slot UI above is the primary path) */}
           {!packsQ.isError && activePack && (
             <details className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)]">
-              <summary className="cursor-pointer select-none px-4 py-2.5 text-sm font-semibold">Asset pack — copy &amp; stored files (advanced)</summary>
+              <summary className="cursor-pointer select-none px-4 py-2.5 text-sm font-semibold">Client asset set — stored copy &amp; files (advanced)</summary>
               <div className="px-4 pb-4">
-                <p className="text-xs font-semibold text-[var(--ppn-muted)]">Pack copy (stored on the pack; used by “Apply uploaded pack”)</p>
+                <p className="text-xs font-semibold text-[var(--ppn-muted)]">Copy stored on the asset set</p>
                 <div className="mt-1 grid gap-2 sm:grid-cols-3">
                   {PACK_COPY_FIELDS.map((f) => (
                     <label key={f.key} className="text-xs text-[var(--ppn-muted)]">{f.label}

@@ -11,18 +11,20 @@ async function unlockOperator(page: Page) {
   await page.addInitScript(() => localStorage.setItem("ppn_operator_unlocked", "1"));
 }
 
-test("/config#brand-media shows an asset readiness summary", async ({ page }) => {
+test("/config#brand-media shows a Current demo assets summary in plain language (no pack-first)", async ({ page }) => {
   await unlockOperator(page);
   await page.goto("/config#brand-media");
-  await expect(page.getByText("Asset readiness", { exact: true })).toBeVisible();
-  await expect(page.getByText(/\d\/5 required assets ready/)).toBeVisible();
-  await expect(page.getByText(/Active preset:/).first()).toBeVisible();
+  await expect(page.getByText("Current demo assets", { exact: true })).toBeVisible();
+  await expect(page.getByText(/\d\/5 required ready/)).toBeVisible();
+  await expect(page.getByText(/grouped into this demo's client asset set automatically/i)).toBeVisible();
+  // The pack is no longer a Step-1 mental model.
+  await expect(page.getByText(/Step 1 · asset pack/i)).toHaveCount(0);
 });
 
 test("/config#brand-media is a slot manager: required/recommended/optional groups + per-slot upload", async ({ page }) => {
   await unlockOperator(page);
   await page.goto("/config#brand-media");
-  await expect(page.getByText(/Step 2 · upload & assign per slot/)).toBeVisible();
+  await expect(page.getByText("Upload by slot", { exact: true })).toBeVisible();
   // Group headings.
   for (const g of ["Required", "Recommended", "Optional"]) {
     await expect(page.getByText(g, { exact: true }).first()).toBeVisible();
@@ -47,9 +49,9 @@ test("/config#brand-media is a CMS-lite media asset manager with dynamic/static/
   await unlockOperator(page);
   await page.goto("/config#brand-media");
   await expect(page.getByRole("heading", { name: /Media asset manager/i })).toBeVisible();
-  await expect(page.getByText(/Dynamic \(you set these\)/i)).toBeVisible();
-  await expect(page.getByText(/Static \(fixed in this POC\)/i)).toBeVisible();
-  await expect(page.getByText(/Not built yet/i).first()).toBeVisible();
+  await expect(page.getByText(/Dynamic:/).first()).toBeVisible();
+  await expect(page.getByText(/Static:/).first()).toBeVisible();
+  await expect(page.getByText(/Not built:/).first()).toBeVisible();
   // Per-slot liveness badge, a primary upload/replace action, and a demoted advanced-fallback manual field.
   await expect(page.getByText("live", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("preview-only", { exact: true }).first()).toBeVisible();
@@ -57,13 +59,15 @@ test("/config#brand-media is a CMS-lite media asset manager with dynamic/static/
   await expect(page.getByText(/Advanced fallback: manual path \/ URL/i).first()).toBeVisible();
 });
 
-test("/config#brand-media has Step 1 pack + Step 3 apply/reset", async ({ page }) => {
+test("/config#brand-media has one clear Apply (no Step-1 pack heading, no duplicate apply)", async ({ page }) => {
   await unlockOperator(page);
   await page.goto("/config#brand-media");
-  await expect(page.getByText(/Step 1 · asset pack/)).toBeVisible();
-  await expect(page.getByText(/Step 3 · apply \/ reset/)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Apply to demo" })).toBeVisible();
+  await expect(page.getByText("Apply changes", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Apply uploaded assets to demo" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Reset to preset defaults/i }).first()).toBeVisible();
+  // The confusing duplicate apply + step-1 pack mental model are gone.
+  await expect(page.getByRole("button", { name: "Apply uploaded pack" })).toHaveCount(0);
+  await expect(page.getByText(/Step 1 · asset pack/i)).toHaveCount(0);
 });
 
 test("/config#brand-media has a Preview active demo linking the real surfaces", async ({ page }) => {
