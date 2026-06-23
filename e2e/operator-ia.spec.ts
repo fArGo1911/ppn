@@ -70,6 +70,8 @@ test("all important POC routes are still reachable from /operator", async ({ pag
   await unlockOperator(page);
   await page.goto("/operator");
   for (const r of ALL_ROUTES) {
-    await expect(page.locator(`a[href="${r}"]`).first()).toBeVisible();
+    // /config is reached via deep links (#brand-media / #demo-numbers / #session), so match by prefix.
+    const sel = r === "/config" ? 'a[href^="/config"]' : `a[href="${r}"]`;
+    await expect(page.locator(sel).first()).toBeVisible();
   }
 });

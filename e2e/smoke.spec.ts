@@ -79,7 +79,7 @@ test("/operator shows current demo, the three demo lanes, appendix and surface l
   await unlockOperator(page);
   await page.goto("/operator");
   await expect(page.getByText(/demo control centre/i).first()).toBeVisible();
-  await expect(page.getByText("Current demo")).toBeVisible();
+  await expect(page.getByText("Active demo", { exact: true })).toBeVisible();
   // Reframed into three lanes + appendix.
   await expect(page.getByText("Start here", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Design demo" })).toBeVisible();

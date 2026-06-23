@@ -12,19 +12,18 @@ async function unlockOperator(page: Page) {
 }
 
 // ── /operator: lanes intact + brand/media prep surfaced ──
-test("/operator keeps the three lanes and surfaces an active-branding summary", async ({ page }) => {
+test("/operator keeps the three lanes and surfaces the active-demo branding state", async ({ page }) => {
   await unlockOperator(page);
   await page.goto("/operator");
   await expect(page.getByRole("heading", { name: "Design demo" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Preview client tour" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Run live demo" })).toBeVisible();
-  // Read-only summary answers "what brand is active / are custom assets on" from existing state.
-  await expect(page.getByText("Active demo branding", { exact: true })).toBeVisible();
-  await expect(page.getByText(/Active brand preset:/i)).toBeVisible();
+  // Active-demo card answers "what brand is active / are custom assets on" from existing state.
+  await expect(page.getByText("Active demo", { exact: true })).toBeVisible();
   await expect(page.getByText(/Custom assets/i).first()).toBeVisible();
-  // First-class brand/media setup action → /config.
+  // First-class brand/media setup action → deep-linked /config.
   await expect(page.getByRole("link", { name: /brand & media setup/i }).first()).toBeVisible();
-  await expect(page.locator('a[href="/config"]').first()).toBeVisible();
+  await expect(page.locator('a[href^="/config"]').first()).toBeVisible();
 });
 
 test("/operator labels /config and /setup distinctly", async ({ page }) => {

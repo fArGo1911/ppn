@@ -7,7 +7,7 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { DemoShell } from "../components/shells";
-import { DEMO_BRAND } from "../demo/brand";
+import { DEMO_BRAND, PRESETS, brandInitials } from "../demo/brand";
 import { activeMarket } from "../demo/markets";
 import { resolveJoinToken, getSessionState, listTeams } from "../lib/ppnApi";
 import { listAssetPacks } from "../lib/ppnAssets";
@@ -28,8 +28,8 @@ const LANES: Lane[] = [
     n: "1", title: "Design demo", blurb: "Prepare the client demo before anyone sees it.",
     actions: [
       { to: "/operator/setup-wizard", label: "Demo setup wizard", note: "Start here — the demo brief: client, outcome, scale and content mix.", role: "Operator-only", primary: true },
-      { to: "/config", label: "Detailed config / brand & media setup", note: "Where you prepare the brewery logo, colours, offer/sponsor assets and screen media. The actual prep page.", role: "Operator-only", primary: true },
-      { to: "/config", label: "Campaign assumptions / demo numbers", note: "The venue-mix numbers that feed the KPI, report and rollout pages.", role: "Operator-only" },
+      { to: "/config#brand-media", label: "Detailed config / brand & media setup", note: "Where you prepare the brewery logo, colours, offer/sponsor assets and screen media. The actual prep page.", role: "Operator-only", primary: true },
+      { to: "/config#demo-numbers", label: "Campaign assumptions / demo numbers", note: "The venue-mix numbers that feed the KPI, report and rollout pages.", role: "Operator-only" },
       { to: "/operator/setup-wizard", label: "Content mix", note: "Choose the quiz content profile — the proposed-quiz preview.", role: "Operator-only" },
     ],
   },
@@ -49,7 +49,7 @@ const LANES: Lane[] = [
       { href: "/host", label: "Host console", note: "Start the live demo from here (start intro / start game), reveal, next, recover.", role: "Operator-only", primary: true },
       { href: "/tv/DEMO", label: "TV display", note: "Full-screen on the TV / projector.", role: "TV / audience" },
       { href: "/play/DEMO", label: "Player phone", note: "A guest joins and plays.", role: "Guest / player" },
-      { to: "/config", label: "Reset demo session", note: "Clean the session and add demo teams in detailed config.", role: "Operator-only" },
+      { to: "/config#session", label: "Reset demo session", note: "Clean the session and add demo teams in detailed config.", role: "Operator-only" },
     ],
   },
 ];
@@ -63,7 +63,6 @@ const APPENDIX: { to: string; label: string; role: string }[] = [
 ];
 
 export default function Operator() {
-  const m = activeMarket();
   const ov = overrideStatus();
   const sessQ = useQuery({ queryKey: ["op-session"], queryFn: () => resolveJoinToken("DEMO"), retry: false });
   const sid = sessQ.data && sessQ.data.kind !== "invalid" ? sessQ.data.session.sessionId : undefined;
@@ -94,32 +93,89 @@ export default function Operator() {
         <h1 className="mt-2 text-3xl font-extrabold">Run a {DEMO_BRAND.sponsorName} demo</h1>
         <p className="mt-1 text-[var(--ppn-muted)]">Start here: design the demo, preview the client tour, then run the live demo. Gated operator hub — not shown to clients.</p>
 
-        {/* A. Current demo status */}
-        <div className="mt-5 rounded-xl border-2 bg-[var(--ppn-surface)] p-4" style={{ borderColor: "color-mix(in srgb, var(--ppn-brand) 30%, var(--ppn-border))" }}>
+        {/* A. Active demo — the main status card (the selected branded demo + key facts + deep links) */}
+        <div className="mt-5 rounded-xl border-2 bg-[var(--ppn-surface)] p-4" style={{ borderColor: "color-mix(in srgb, var(--ppn-brand) 35%, var(--ppn-border))" }}>
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold">Current demo</p>
+            <p className="text-sm font-semibold uppercase tracking-wide text-[var(--ppn-muted)]">Active demo</p>
             {sessQ.isLoading
               ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold text-[var(--ppn-muted)]" style={{ background: "var(--ppn-bg)" }}>checking…</span>
               : (sessQ.data && sessQ.data.kind !== "invalid")
                 ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-success) 18%, transparent)", color: "var(--ppn-success)" }}>Ready to run</span>
                 : <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>Needs attention</span>}
           </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Chip label="Brewery:" on onText={`${DEMO_BRAND.sponsorName} (${m.market})`} />
-            <Chip label="Custom assets" on={ov.asset} />
-            <Chip label="Theme override" on={ov.theme} />
-            <Chip label="Demo numbers override" on={ov.scenario} />
+          <div className="mt-2 flex items-center gap-3">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-lg font-black" style={{ background: DEMO_BRAND.colours.primary, color: DEMO_BRAND.colours.onBrand }}>{brandInitials(DEMO_BRAND.sponsorName)}</span>
+            <div className="min-w-0">
+              <p className="truncate text-xl font-extrabold">{DEMO_BRAND.sponsorName}</p>
+              <p className="truncate text-xs text-[var(--ppn-muted)]">{DEMO_BRAND.campaignName} · one of {PRESETS.length} branded demos</p>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Chip label="Market:" on={false} offText={DEMO_BRAND.market} />
+            <Chip label="Venue:" on={false} offText={DEMO_BRAND.pubName} />
             <Chip label="Session:" on={false} offText={stateQ.data ? stateQ.data.phase : (sessQ.isLoading ? "…" : "—")} />
             <Chip label="Teams:" on={false} offText={teamsQ.data ? String(teamsQ.data.length) : "—"} />
-            <Chip label="Storage assets:" on={healthQ.isError} onText="unavailable" offText={healthQ.isSuccess ? "available" : "checking…"} />
+            <Chip label="Custom assets" on={ov.asset} />
+            <Chip label="Demo numbers" on={ov.scenario} onText="override" offText="default" />
+            <Chip label="Storage:" on={healthQ.isError} onText="unavailable" offText={healthQ.isSuccess ? "available" : "checking…"} />
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link to="/config#brand-media" className={surfaceBtn} style={{ background: "var(--ppn-brand)" }}>Open brand &amp; media setup →</Link>
+            <Link to="/config#demo-numbers" className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-sm font-semibold">Demo numbers →</Link>
+            <Link to="/config#session" className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-sm font-semibold">Reset demo session →</Link>
+            <Link to="/setup" className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-sm font-semibold">Where each asset appears (reference) →</Link>
           </div>
           {anyOverrideActive() ? (
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span className="text-xs" style={{ color: "var(--ppn-warning)" }}>⚠ Custom client overrides are active — clear them before prepping a different brewery.</span>
               <button onClick={() => { clearClientOverrides(); window.location.reload(); }} className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-xs font-semibold">Clear client overrides</button>
             </div>
-          ) : <p className="mt-2 text-xs text-[var(--ppn-muted)]">No client overrides — showing preset defaults. Switching brewery in /config will ask before carrying any overrides over.</p>}
-          {healthQ.isError && <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Storage-backed asset uploads need the local PPN Supabase running (ports 553xx). Manual URL/path mode still works without it.</p>}
+          ) : <p className="mt-2 text-xs text-[var(--ppn-muted)]">No client overrides — showing preset defaults. Switching the active preset in detailed config asks before carrying overrides over.</p>}
+        </div>
+
+        {/* A1. Available demo presets — the POC ships many branded demos, not one hardcoded Northgate */}
+        <div className="mt-4 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold">Available demo presets</p>
+            <span className="text-[10px] text-[var(--ppn-muted)]">{PRESETS.length} branded demos</span>
+          </div>
+          <p className="mt-1 text-xs text-[var(--ppn-muted)]">One demo app, many client demos — each preset is a full branded experience (brand, colours, venue, market, scripts). Switch or customise the active preset in detailed config.</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {PRESETS.map((p) => {
+              const isActive = p.id === DEMO_BRAND.id;
+              const inner = (
+                <>
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[11px] font-black" style={{ background: p.colours.primary, color: p.colours.onBrand }}>{brandInitials(p.sponsorName)}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{p.sponsorName}</p>
+                    <p className="truncate text-[11px] text-[var(--ppn-muted)]">{p.market} · {p.pubName}</p>
+                  </div>
+                  {isActive
+                    ? <span className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-success) 18%, transparent)", color: "var(--ppn-success)" }}>Active</span>
+                    : <span className="shrink-0 text-[10px] text-[var(--ppn-muted)]">Configure →</span>}
+                </>
+              );
+              const cls = "flex items-center gap-2 rounded-lg border p-2.5";
+              const style = { borderColor: isActive ? p.colours.primary : "var(--ppn-border)", background: "var(--ppn-bg)" } as const;
+              return isActive
+                ? <div key={p.id} className={cls} style={style}>{inner}</div>
+                : <Link key={p.id} to="/config#brand-media" className={`${cls} hover:border-[var(--ppn-brand)]`} style={style}>{inner}</Link>;
+            })}
+          </div>
+          <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Switching the active preset (and customising it) happens in <Link to="/config#brand-media" className="text-[var(--ppn-brand)]">detailed config / brand &amp; media setup</Link> — it asks before carrying client overrides across.</p>
+        </div>
+
+        {/* A1b. Custom client demo — concept-only; shows multi-demo support without a self-service builder */}
+        <div className="mt-4 rounded-xl border border-dashed border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold">Custom client demo — new demo from a preset</p>
+            <span className="rounded-full border border-[var(--ppn-border)] px-2 py-0.5 text-[9px] font-semibold uppercase text-[var(--ppn-muted)]">Concept · configure in detailed config</span>
+          </div>
+          <p className="mt-1 text-xs text-[var(--ppn-muted)]">Start from any preset and tailor it for a specific brewery — client identity &amp; numbers in the setup wizard, then logo / colours / offer / screen media in detailed config. This POC has no self-service builder or create-demo database — you prepare a custom client demo with the existing tools.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link to="/operator/setup-wizard" className={surfaceBtn} style={{ background: "var(--ppn-brand)" }}>Start in setup wizard →</Link>
+            <Link to="/config#brand-media" className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-sm font-semibold">Brand &amp; media setup →</Link>
+          </div>
         </div>
 
         {/* A2. Internal setup wizard — set up a client demo before anyone sees it */}
@@ -196,22 +252,6 @@ export default function Operator() {
           ) : (
             <p className="mt-1 text-xs text-[var(--ppn-muted)]">No custom quiz plan prepared. Prepare one in the setup wizard's Quiz content mix → Review step. Runtime apply requires a DB-backed replacement step (Phase 10B).</p>
           )}
-        </div>
-
-        {/* A2d. Active demo branding — read-only summary (existing override state). Points to the real prep page
-            (/config) vs the reference-only slot guide (/setup) so the operator never has to infer either. */}
-        <div className="mt-4 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
-          <p className="text-sm font-semibold">Active demo branding</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Chip label="Active brand preset:" on onText={`${DEMO_BRAND.sponsorName} · ${m.market}`} />
-            <Chip label="Custom assets" on={ov.asset} />
-            <Chip label="Brand colours" on={ov.theme} onText="custom" offText="preset" />
-          </div>
-          <p className="mt-2 text-xs text-[var(--ppn-muted)]">Prepare the brewery logo, colours, offer/sponsor assets and screen media in <span className="font-semibold text-[var(--ppn-text)]">Detailed config / brand & media setup</span>. The asset reference is a slot guide only — it shows which asset appears on which screen, but you set and upload assets in detailed config.</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Link to="/config" className="rounded-lg px-3 py-1.5 text-sm font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>Open brand &amp; media setup →</Link>
-            <Link to="/setup" className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-sm font-semibold">Where each asset appears (reference) →</Link>
-          </div>
         </div>
 
         {/* B. The three demo lanes — the operator's real job, in order */}
