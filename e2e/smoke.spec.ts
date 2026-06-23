@@ -49,10 +49,10 @@ test("correct code unlocks /config and shows clean asset IA (no stale copy)", as
   await page.getByPlaceholder("operator code").fill(CODE);
   await page.getByRole("button", { name: "Unlock" }).click();
   await expect(page.getByText(/run the demo/i)).toBeVisible();
-  // Current-demo status + separated manual vs upload asset modes (Card titles render as <p>).
+  // Current-demo status + the slot-based asset manager (Card titles render as <p>).
   await expect(page.getByText("Current demo", { exact: true })).toBeVisible();
-  await expect(page.getByText("Quick manual paths", { exact: true })).toBeVisible();
-  await expect(page.getByText(/Upload asset pack/).first()).toBeVisible();
+  await expect(page.getByText("Asset readiness", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Step 2 · brand & media slots/)).toBeVisible();
   await expect(page.getByText("Where assets appear", { exact: true })).toBeVisible();
   // Stale contradictory copy must be gone.
   await expect(page.getByText(/no upload or storage yet/i)).toHaveCount(0);
