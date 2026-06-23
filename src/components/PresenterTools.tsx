@@ -17,7 +17,9 @@ const SECTIONS = [
   { to: "/tv/DEMO", label: "TV" },
   { to: "/setup", label: "Brand assets" },
   { to: "/kpi", label: "KPIs" },
+  { to: "/report", label: "Report" },
   { to: "/rollout", label: "Rollout" },
+  { to: "/run-sheet", label: "Run sheet" },
   { to: "/capabilities", label: "Beyond quiz" },
   { to: "/config", label: "Operator" },
 ];

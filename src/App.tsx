@@ -11,6 +11,8 @@ import BrandAssets from "./pages/BrandAssets";
 import Config from "./pages/Config";
 import Kpi from "./pages/Kpi";
 import Rollout from "./pages/Rollout";
+import Report from "./pages/Report";
+import RunSheet from "./pages/RunSheet";
 import Capabilities from "./pages/Capabilities";
 import Preview from "./pages/Preview";
 import { PresenterTools } from "./components/PresenterTools";
@@ -32,6 +34,8 @@ export default function App() {
         <Route path="/setup" element={<BrandAssets />} />
         <Route path="/kpi" element={<Kpi />} />
         <Route path="/rollout" element={<Rollout />} />
+        <Route path="/report" element={<Report />} />
+        <Route path="/run-sheet" element={<RunSheet />} />
         <Route path="/capabilities" element={<Capabilities />} />
         <Route path="*" element={<Preview title="Not found" blurb="That screen isn't part of the demo. Head back to the overview." />} />
       </Routes>

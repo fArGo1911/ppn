@@ -11,7 +11,9 @@ import { PRESETS, getActiveBrand, setActiveBrand, brandInitials, type ThemeColou
 import { activeMarket } from "../demo/markets";
 import { SETUP_MODES } from "../demo/setup";
 import { useAudienceMode } from "../lib/audience";
+import { BrandAssetPreview } from "../components/brandZones";
 import { applyTheme, getThemeOverride, setThemeOverride, clearThemeOverride, themeWarnings, type ColourOverride } from "../demo/theme";
+import { getAssetPackOverride, setAssetPackOverride, clearAssetPackOverride, hasAssetPackOverride, type AssetPack } from "../demo/assetPack";
 import {
   deriveKpi, applyScenarioToSeed, getScenario, setScenario, clearScenario, scenarioWarnings,
   SCENARIO_TEMPLATES, deriveVenueMix, venueMixWarnings, venueCategory, setupModeLabel,
@@ -33,6 +35,15 @@ const SCENARIO_FIELDS: { key: keyof Scenario; label: string; step: number }[] = 
   { key: "pilotVenues", label: "Pilot venues", step: 1 }, { key: "regionalVenues", label: "Regional venues", step: 1 }, { key: "campaignVenues", label: "Wider venues", step: 1 },
 ];
 const PROFILE_OPTS: VenueProfile[] = ["small", "neighbourhood", "sports", "large", "popup", "mixed"];
+const ASSET_COPY: { key: keyof AssetPack; label: string }[] = [
+  { key: "sponsorName", label: "Sponsor / brewery name" }, { key: "campaignName", label: "Campaign name" }, { key: "pubName", label: "Pub / venue name" },
+  { key: "eventName", label: "Event name" }, { key: "offer", label: "Offer" }, { key: "tagline", label: "Tagline" }, { key: "responsibleNote", label: "Responsible note" },
+];
+const ASSET_MEDIA: { key: keyof AssetPack; label: string }[] = [
+  { key: "logoUrl", label: "Logo URL/path" }, { key: "heroUrl", label: "Hero image" }, { key: "sponsorSlideUrl", label: "Sponsor slide" },
+  { key: "phoneCardUrl", label: "Phone card" }, { key: "lowerThirdUrl", label: "Lower third" }, { key: "venueUrl", label: "Venue image" },
+  { key: "tvIntroVideoUrl", label: "Intro video" }, { key: "sponsorBumperVideoUrl", label: "Sponsor bumper video" }, { key: "closingVideoUrl", label: "Closing video" },
+];
 const SEED_SIZES = [{ n: 3, label: "Small (3)" }, { n: 6, label: "Medium (6)" }, { n: 12, label: "Busy (12)" }];
 
 function buildSpecs(mk: { teamNames: string[]; playerNames: string[] }, count: number) {
@@ -101,6 +112,17 @@ export default function Config() {
   const warns = themeWarnings(effective);
   const hasOver = Object.keys(over).length > 0;
 
+  // ── Operator asset pack (URL/path only — no upload; apply reloads so DEMO_BRAND re-merges) ──
+  const [pack, setPack] = useState<AssetPack>(getAssetPackOverride());
+  const updatePack = (key: keyof AssetPack, value: string) => setPack((p) => ({ ...p, [key]: value }));
+  const applyPack = () => { setAssetPackOverride(pack); window.location.reload(); };
+  const resetPack = () => { clearAssetPackOverride(); window.location.reload(); };
+  const packActive = hasAssetPackOverride();
+  const previewLogo = pack.logoUrl?.trim() || active.images.logoUrl;
+  const previewHero = pack.heroUrl?.trim() || active.images.heroUrl;
+  const previewOffer = pack.offer?.trim() || active.offer;
+  const previewSponsor = pack.sponsorName?.trim() || active.sponsorName;
+
   const choose = (id: string) => { setActiveBrand(id); window.location.reload(); };
   const Card = ({ title, children }: { title: string; children: ReactNode }) => (
     <div className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
@@ -133,6 +155,53 @@ export default function Config() {
                 );
               })}
             </div>
+          </Card>
+
+          <Card title="Brewery asset pack (operator only)">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-[var(--ppn-muted)]">Active preset: <span className="font-semibold text-[var(--ppn-text)]">{active.sponsorName}</span></p>
+              {packActive
+                ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>Asset override active</span>
+                : <span className="text-[10px] text-[var(--ppn-muted)]">preset defaults</span>}
+            </div>
+            <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">POC asset pack: URL/path only — no upload or storage yet. Place files under <span className="font-mono">public/demo/assets/&lt;preset&gt;/</span> and paste the paths. See <Link to="/setup" className="text-[var(--ppn-brand)]">/setup</Link> for where each appears.</p>
+
+            <p className="mt-3 text-xs font-semibold text-[var(--ppn-muted)]">Copy</p>
+            <div className="mt-1 grid gap-2 sm:grid-cols-2">
+              {ASSET_COPY.map((f) => (
+                <label key={f.key} className="text-xs text-[var(--ppn-muted)]">{f.label}
+                  <input value={(pack[f.key] as string) ?? ""} placeholder={String((active as unknown as Record<string, unknown>)[f.key] ?? "")} onChange={(e) => updatePack(f.key, e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2 py-1 text-sm text-[var(--ppn-text)]" />
+                </label>
+              ))}
+            </div>
+            <p className="mt-3 text-xs font-semibold text-[var(--ppn-muted)]">Image / video paths</p>
+            <div className="mt-1 grid gap-2 sm:grid-cols-3">
+              {ASSET_MEDIA.map((f) => (
+                <label key={f.key} className="text-xs text-[var(--ppn-muted)]">{f.label}
+                  <input value={(pack[f.key] as string) ?? ""} placeholder="/demo/assets/…" onChange={(e) => updatePack(f.key, e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2 py-1 font-mono text-xs text-[var(--ppn-text)]" />
+                </label>
+              ))}
+            </div>
+
+            <p className="mt-4 text-xs font-semibold text-[var(--ppn-muted)]">Preview</p>
+            <div className="mt-2 flex items-center gap-3 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-3">
+              {previewLogo
+                ? <img src={previewLogo} alt="logo" className="h-12 w-12 rounded-lg object-contain" style={{ background: "var(--ppn-surface)" }} />
+                : <span className="grid h-12 w-12 place-items-center rounded-lg font-black" style={{ background: "var(--ppn-brand)", color: "var(--ppn-on-brand)" }}>{brandInitials(previewSponsor)}</span>}
+              <div className="flex-1">
+                <p className="text-sm font-semibold">{previewSponsor}</p>
+                <p className="text-xs text-[var(--ppn-muted)]">🎁 {previewOffer}</p>
+              </div>
+              <div className="w-28"><BrandAssetPreview aspect="16/9" image={previewHero} className="w-full" /></div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button onClick={applyPack} className="rounded-lg px-3 py-2 text-sm font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>Apply asset pack</button>
+              <button onClick={resetPack} disabled={!packActive} className="rounded-lg border border-[var(--ppn-border)] px-3 py-2 text-sm font-semibold disabled:opacity-40">↺ Reset to preset defaults</button>
+            </div>
+            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Apply reloads so every surface re-merges the pack. Blank fields keep the preset value — an override can never blank a page.</p>
           </Card>
 
           <Card title="Internal theme studio (operator only)">

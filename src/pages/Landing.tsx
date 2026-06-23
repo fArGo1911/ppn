@@ -26,7 +26,7 @@ export default function Landing() {
     <DemoShell>
       <section className="mx-auto max-w-5xl px-5 py-8">
         {/* Brewery campaign hero — brewery + pub + event + offer + campaign image */}
-        <BrandAssetPreview aspect="16/9" className="max-h-[52vh] w-full">
+        <BrandAssetPreview aspect="16/9" image={DEMO_BRAND.images.heroUrl} className="max-h-[52vh] w-full">
           <div className="max-w-2xl">
             <p className="text-sm uppercase tracking-[0.3em] text-[var(--ppn-text)]">{DEMO_BRAND.sponsorName} presents</p>
             <h1 className="mt-2 text-4xl font-black leading-tight text-white drop-shadow sm:text-6xl">{event}</h1>

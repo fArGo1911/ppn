@@ -64,9 +64,12 @@ export default function Kpi() {
     <DemoShell>
       <div className="mx-auto max-w-4xl px-5 py-10">
         {/* A. Header */}
-        <p className="text-sm uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>{m.flag} {m.label} · Seeded campaign projection</p>
+        <p className="text-sm uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>{m.flag} {m.label} · Brewery report (demo projection)</p>
         <h1 className="mt-2 text-3xl font-extrabold">{DEMO_BRAND.campaignName}</h1>
-        <p className="mt-1 text-[var(--ppn-muted)]">{DEMO_BRAND.broughtBy} · brewery campaign report — an illustrative projection of the proof a sponsor receives.</p>
+        <p className="mt-1 text-[var(--ppn-muted)]">{DEMO_BRAND.broughtBy}</p>
+        <div className="mt-3 rounded-xl border-2 p-3 text-sm" style={{ borderColor: "color-mix(in srgb, var(--ppn-warning) 40%, var(--ppn-border))", background: "color-mix(in srgb, var(--ppn-warning) 8%, transparent)" }}>
+          <span className="font-semibold">Demo projection</span> — this is what a brewery report will look like <span className="font-semibold">after a pilot</span>. The figures here are seeded campaign assumptions used for the pitch, not a measured campaign. In a live pilot the assumptions are replaced by actual event data.
+        </div>
 
         {/* B. Executive snapshot */}
         <Section title="Campaign performance snapshot" />
@@ -207,10 +210,10 @@ export default function Kpi() {
 
         {/* Commercial outcome evidence — four clearly-separated categories */}
         <Section title="Commercial outcome evidence" />
-        <p className="mt-1 text-xs text-[var(--ppn-muted)]">PPN measures engagement · the venue reports commercial outcomes · POS can support it later · estimates are labelled. These are never mixed.</p>
+        <p className="mt-1 text-xs text-[var(--ppn-muted)]">In a live pilot: PPN measures engagement · the venue reports commercial outcomes · POS can support it later · estimates are labelled. These are never mixed. (Below is a seeded demo projection.)</p>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           <div className="rounded-xl border-2 bg-[var(--ppn-surface)] p-4" style={{ borderColor: "color-mix(in srgb, var(--ppn-brand) 30%, var(--ppn-border))" }}>
-            <div className="flex items-center justify-between"><p className="text-sm font-semibold">Measured by PubPlay</p><Tag text="measured" /></div>
+            <div className="flex items-center justify-between"><p className="text-sm font-semibold">PPN-measurable in a live pilot</p><Tag text="live pilot" /></div>
             <ul className="mt-2 space-y-1 text-sm">
               <li className="flex justify-between"><span>Players joined</span><span className="font-semibold">{n(d.playersJoined)}</span></li>
               <li className="flex justify-between"><span>Teams created</span><span className="font-semibold">{n(d.teamsCreated)}</span></li>

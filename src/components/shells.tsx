@@ -32,7 +32,7 @@ export function PlayerShell({ venue, event, focus = false, children }: { venue?:
       <BrandBanner size="phone" />
       {!focus && (
         <div className="px-4">
-          <BrandAssetPreview aspect="16/9" overlay="dark" alt={DEMO_BRAND.heroImageAltText} className="max-h-44 w-full">
+          <BrandAssetPreview aspect="16/9" overlay="dark" image={DEMO_BRAND.images.heroUrl} alt={DEMO_BRAND.heroImageAltText} className="max-h-44 w-full">
             <div>
               <h1 className="text-2xl font-extrabold leading-tight text-white drop-shadow">{pub}</h1>
               <p className="text-sm font-semibold text-white/90 drop-shadow">{ev} · {DEMO_BRAND.sponsorName}</p>

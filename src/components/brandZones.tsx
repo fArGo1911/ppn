@@ -3,12 +3,22 @@
  * Primary: brewery/sponsor · pub/venue · event · campaign/offer · imagery. Secondary: PPN ("powered by" only).
  * Colours come from CSS tokens (var(--ppn-*)) set by applyTheme, so a white/red brewery re-skins everything.
  */
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { DEMO_BRAND, brandInitials } from "../demo/brand";
 
 type Size = "phone" | "host" | "tv";
 const LOGO = { phone: "h-9 w-9 text-sm", host: "h-9 w-9 text-sm", tv: "h-20 w-20 text-3xl" } as const;
 const onBrand = { background: "var(--ppn-brand)", color: "var(--ppn-on-brand)" };
+
+/** Brewery logo — renders the asset-pack logo image if set + loadable, else falls back to brand initials. */
+export function BrandLogo({ size = "phone" }: { size?: Size }) {
+  const [broken, setBroken] = useState(false);
+  const url = DEMO_BRAND.images.logoUrl;
+  if (url && !broken) {
+    return <img src={url} alt={DEMO_BRAND.sponsorName} onError={() => setBroken(true)} className={`${LOGO[size]} rounded-xl object-contain`} style={{ background: "var(--ppn-surface)" }} />;
+  }
+  return <div className={`grid place-items-center rounded-xl font-black ${LOGO[size]}`} style={onBrand} aria-hidden>{brandInitials(DEMO_BRAND.sponsorName)}</div>;
+}
 
 /** Premium campaign-image slot — brand-tinted gradient (implies real asset space) or a provided image. */
 export function BrandAssetPreview({
@@ -35,8 +45,9 @@ export function BrandAssetPreview({
       className={`relative overflow-hidden rounded-2xl ${className}`}
       style={{
         aspectRatio: aspect,
+        // Layer the image OVER the brand gradient so a missing/broken path degrades gracefully to the gradient.
         background: image
-          ? `center/cover url(${image})`
+          ? `center/cover url(${image}), radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--ppn-brand) 35%, transparent), transparent 60%), linear-gradient(135deg, var(--ppn-brand-dark), #0b1220)`
           : `radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--ppn-brand) 35%, transparent), transparent 60%), linear-gradient(135deg, var(--ppn-brand-dark), #0b1220)`,
       }}
     >
@@ -52,9 +63,7 @@ export function BrandBanner({ size = "phone" }: { size?: Size }) {
   const tv = size === "tv";
   return (
     <header className={`flex items-center gap-3 ${tv ? "px-10 py-6" : "px-4 py-3"}`}>
-      <div className={`grid place-items-center rounded-xl font-black ${LOGO[size]}`} style={onBrand} aria-hidden>
-        {brandInitials(DEMO_BRAND.sponsorName)}
-      </div>
+      <BrandLogo size={size} />
       <div className="min-w-0">
         <p className={`font-bold leading-tight ${tv ? "text-3xl" : "text-base"}`}>{DEMO_BRAND.sponsorName}</p>
         <p className={`truncate text-[var(--ppn-muted)] ${tv ? "text-lg" : "text-xs"}`}>{DEMO_BRAND.tagline}</p>

@@ -5,6 +5,7 @@
  *
  * POC-safe: seeded TypeScript config + premium placeholder gradients (no real copyrighted assets, no upload).
  */
+import { applyAssetPackToBrand } from "./assetPack";
 
 export interface ThemeColours {
   primary: string; // brand colour (buttons, highlights)
@@ -410,12 +411,15 @@ export const PRESETS: DemoBrand[] = [
 const STORAGE_KEY = "ppn_brand";
 
 export function getActiveBrand(): DemoBrand {
+  let base: DemoBrand = NORTHGATE;
   try {
     const id = typeof localStorage !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
-    return PRESETS.find((p) => p.id === id) ?? NORTHGATE;
+    base = PRESETS.find((p) => p.id === id) ?? NORTHGATE;
   } catch {
-    return NORTHGATE;
+    base = NORTHGATE;
   }
+  // Operator asset-pack override (copy + image/video paths) on top of the preset.
+  try { return applyAssetPackToBrand(base); } catch { return base; }
 }
 
 export function setActiveBrand(id: string) {

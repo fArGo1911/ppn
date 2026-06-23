@@ -25,13 +25,35 @@ export default function BrandAssets() {
   return (
     <DemoShell>
       <div className="mx-auto max-w-5xl px-5 py-8">
-        <p className="text-sm uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>Guided demo · brand assets</p>
-        <h1 className="mt-2 text-3xl font-extrabold">Prepare a brewery-specific demo</h1>
+        <p className="text-sm uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>Operator · asset prep</p>
+        <h1 className="mt-2 text-3xl font-extrabold">Prepare a brewery demo — asset checklist</h1>
         <p className="mt-2 max-w-2xl text-[var(--ppn-muted)]">
-          Drop in a brewery's logo, colours, copy and imagery and the demo becomes theirs. Below are the asset
-          slots, sizes, and exactly where each appears across TV, phone, host and presenter surfaces.
-          <span className="text-[var(--ppn-muted)]"> (POC: documented slots + placeholders — no upload system yet.)</span>
+          What to gather before a brewery demo, and where each asset appears. Paste paths in <span className="font-mono">/config → Brewery asset pack</span>.
+          <span className="text-[var(--ppn-muted)]"> POC: URL/path only — no upload or storage yet.</span>
         </p>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          <div className="rounded-xl border-2 bg-[var(--ppn-surface)] p-4" style={{ borderColor: "color-mix(in srgb, var(--ppn-brand) 30%, var(--ppn-border))" }}>
+            <p className="text-sm font-semibold">Minimum asset pack</p>
+            <ul className="mt-2 space-y-1 text-sm text-[var(--ppn-muted)]">{["Logo (or use initials)", "Brand colours (preset or /config theme)", "Sponsor name + offer copy", "One hero / campaign image"].map((t) => <li key={t}>☐ {t}</li>)}</ul>
+          </div>
+          <div className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
+            <p className="text-sm font-semibold">Recommended asset pack</p>
+            <ul className="mt-2 space-y-1 text-sm text-[var(--ppn-muted)]">{["Sponsor slide image (TV)", "Phone sponsor card", "Lower-third / offer strip", "Venue image", "Tagline + responsible note"].map((t) => <li key={t}>☐ {t}</li>)}</ul>
+          </div>
+          <div className="rounded-xl border border-dashed border-[var(--ppn-border)] p-4">
+            <p className="text-sm font-semibold">Optional rich media</p>
+            <ul className="mt-2 space-y-1 text-sm text-[var(--ppn-muted)]">{["Intro video", "Sponsor bumper video", "Closing video", "Per-question picture/video"].map((t) => <li key={t}>☐ {t}</li>)}</ul>
+          </div>
+          <div className="rounded-xl border border-dashed border-[var(--ppn-border)] p-4">
+            <p className="text-sm font-semibold">Not built yet (POC)</p>
+            <ul className="mt-2 space-y-1 text-sm text-[var(--ppn-muted)]">{["Upload / file storage", "Asset CMS / approval workflow", "Real video hosting", "AI voice MP3s (next slice)"].map((t) => <li key={t}>— {t}</li>)}</ul>
+          </div>
+        </div>
+        <div className="mt-3 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3 text-sm">
+          <p className="font-semibold">How to add assets in this POC</p>
+          <p className="mt-1 text-[var(--ppn-muted)]">Place files under <span className="font-mono">public/demo/assets/&lt;preset&gt;/</span> (e.g. <span className="font-mono">/demo/assets/northgate/logo.png</span>) and paste the paths in <span className="font-mono">/config → Brewery asset pack</span>. Blank fields keep the preset default. The slot specs below show exact sizes and where each appears.</p>
+        </div>
 
         <Section title="Image assets">
           <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
