@@ -28,6 +28,7 @@ import {
   contentMixSummary, buildPreviewQuiz, setContentMix, categoryNeeds,
   type ContentMix, type ContentCategoryId,
 } from "../lib/contentMix";
+import { getStagedDemoQuiz, setStagedDemoQuiz, clearStagedDemoQuiz, buildStagedPlan, type StagedDemoQuiz } from "../lib/stagedDemoQuiz";
 
 const OBJECTIVES: { id: string; label: string }[] = [
   { id: "weekday_footfall", label: "Increase weekday footfall" },
@@ -142,6 +143,20 @@ export default function SetupWizard() {
   const mixWarns = [...contentMixWarnings(mix), ...contentMixSetupWarnings(mix, brief.setupMode)];
   const sponsorName = clientFacingIdentity().sponsorName;
   const preview = buildPreviewQuiz(mix, quizLength, { sponsorName, includeTiebreak: brief.includeTiebreak, setupMode: brief.setupMode, seed: 0 });
+
+  // ── Staged quiz PLAN (Phase 10A: prepared-only; never written to the live demo / Supabase) ──
+  const [staged, setStaged] = useState<StagedDemoQuiz | null>(getStagedDemoQuiz());
+  const planValid = mixTotal === 100;
+  const stagePlan = () => {
+    if (!planValid) return;
+    if (mixWarns.length && !window.confirm(`This quiz plan has warnings:\n\n${mixWarns.join("\n")}\n\nSave the proposed plan anyway? (It is staged only — the live demo is not changed.)`)) return;
+    const plan = buildStagedPlan({
+      mix, quizLength, includeTiebreak: !!brief.includeTiebreak, setupMode: brief.setupMode,
+      contentMixPreset: brief.contentMixPreset, clientName: brief.clientName, sponsorName, now: new Date().toISOString(),
+    });
+    setStagedDemoQuiz(plan); setStaged(plan);
+  };
+  const clearPlan = () => { clearStagedDemoQuiz(); setStaged(null); };
 
   // Content mix is saved with the brief; mirror it to the standalone helper so summaries resolve consistently.
   const saveBrief = () => { setDemoBrief(brief); if (brief.contentMix) setContentMix(brief.contentMix); setHadExisting(true); setSaved("saved"); };
@@ -380,7 +395,7 @@ export default function SetupWizard() {
               {/* Proposed quiz preview from the seeded pool */}
               <div className="mt-4 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-[var(--ppn-text)]">Proposed quiz preview</p>
+                  <p className="text-xs font-semibold text-[var(--ppn-text)]">Proposed quiz preview <span className="ml-1 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase" style={{ background: "var(--ppn-bg)", color: "var(--ppn-muted)" }}>Preview only</span></p>
                   <span className="text-[10px] text-[var(--ppn-muted)]">{preview.questions.length} questions{preview.tiebreak ? " + tiebreak" : ""}</span>
                 </div>
                 {preview.warnings.length > 0 && <ul className="mt-1 list-disc pl-5 text-[11px]" style={{ color: "var(--ppn-warning)" }}>{preview.warnings.map((w) => <li key={w}>{w}</li>)}</ul>}
@@ -504,6 +519,27 @@ export default function SetupWizard() {
                   <ul className="mt-1 list-disc pl-5 text-xs text-[var(--ppn-muted)]">{warns.map((w) => <li key={w}>{w}</li>)}</ul>
                 </div>
               )}
+
+              {/* Quiz plan — Phase 10A: stage/prepare only; the live demo is NOT changed here */}
+              <div className="mt-4 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-3">
+                <p className="text-xs font-semibold text-[var(--ppn-text)]">Tailored quiz plan</p>
+                <p className="mt-0.5 text-[11px] text-[var(--ppn-muted)]">{presetById(brief.contentMixPreset)?.label ?? "Custom"} · {quizLength} questions{brief.includeTiebreak ? " + tiebreak" : ""} — {contentMixSummary(mix)}.</p>
+                {!planValid && <p className="mt-1 text-[11px]" style={{ color: "var(--ppn-warning)" }}>⚠ Content mix totals {mixTotal}% — set it to 100% in Quiz content mix before saving the plan.</p>}
+                {planValid && mixWarns.length > 0 && (
+                  <ul className="mt-1 list-disc pl-5 text-[11px]" style={{ color: "var(--ppn-warning)" }}>{mixWarns.map((w) => <li key={w}>{w}</li>)}</ul>
+                )}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button onClick={stagePlan} disabled={!planValid} className="rounded-lg px-3 py-1.5 text-sm font-semibold text-[var(--ppn-on-brand)] disabled:opacity-40" style={{ background: "var(--ppn-brand)" }}>
+                    {mixWarns.length > 0 ? "Save proposed quiz plan (with warnings)" : "Save proposed quiz plan"}
+                  </button>
+                  {staged && <button onClick={clearPlan} className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-sm font-semibold">Clear proposed quiz plan</button>}
+                </div>
+                {staged ? (
+                  <p className="mt-2 text-[11px]" style={{ color: "var(--ppn-success)" }}>✓ Custom quiz plan prepared ({staged.questions.length} questions). <span className="text-[var(--ppn-muted)]">Default live demo quiz still active — runtime apply requires a DB-backed replacement step (Phase 10B).</span></p>
+                ) : (
+                  <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">No custom quiz plan prepared. Default live demo quiz still active. Saving stages the plan only — it does not change the live questions or the database.</p>
+                )}
+              </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
                 <button onClick={saveBrief} className="rounded-lg border border-[var(--ppn-border)] px-3 py-2 text-sm font-semibold">Save demo brief</button>

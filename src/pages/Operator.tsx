@@ -15,6 +15,7 @@ import { getDemoBrief, clearDemoBrief, briefToScenario } from "../lib/demoBrief"
 import { clientFacingIdentity } from "../lib/clientFacingDemo";
 import { applyScenarioToSeed, deriveKpi, setupModeLabel } from "../demo/kpiModel";
 import { resolveContentMix, contentMixSummary, contentMixWarnings, contentMixSetupWarnings, presetById, matchPresetId } from "../lib/contentMix";
+import { getStagedDemoQuiz, clearStagedDemoQuiz } from "../lib/stagedDemoQuiz";
 
 type Step = { t: string; i: string; to?: string; href?: string; label: string };
 const JOURNEY: Step[] = [
@@ -53,6 +54,7 @@ export default function Operator() {
   const briefMix = brief ? resolveContentMix(brief) : null;
   const briefMixName = brief ? (presetById(brief.contentMixPreset)?.label ?? presetById(matchPresetId(briefMix!))?.label ?? "Custom") : "";
   const briefMixWarns = brief ? [...contentMixWarnings(briefMix!), ...contentMixSetupWarnings(briefMix!, brief.setupMode)] : [];
+  const stagedPlan = getStagedDemoQuiz();
 
   const Chip = ({ label, on, onText = "on", offText = "off" }: { label: string; on: boolean; onText?: string; offText?: string }) => (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1 text-xs">
@@ -147,6 +149,29 @@ export default function Operator() {
               <span className="text-xs" style={{ color: "var(--ppn-warning)" }}>⚠ No demo brief yet — define the client and scenario before the demo.</span>
               <Link to="/operator/setup-wizard" className={surfaceBtn} style={{ background: "var(--ppn-brand)" }}>Start setup wizard</Link>
             </div>
+          )}
+        </div>
+
+        {/* A2c. Live demo quiz status — staged plan is PREPARED only; runtime apply is Phase 10B */}
+        <div className="mt-4 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold">Live demo quiz</p>
+            {stagedPlan
+              ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-brand) 18%, transparent)", color: "var(--ppn-brand)" }}>Proposed quiz saved</span>
+              : <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold text-[var(--ppn-muted)]" style={{ background: "var(--ppn-bg)" }}>Default quiz</span>}
+          </div>
+          <p className="mt-1 text-xs" style={{ color: "var(--ppn-success)" }}>Default live demo quiz still active.</p>
+          {stagedPlan ? (
+            <>
+              <p className="mt-1 text-xs text-[var(--ppn-muted)]">Custom quiz plan prepared: <span className="font-semibold text-[var(--ppn-text)]">{presetById(stagedPlan.contentMixPreset)?.label ?? "Custom"} · {stagedPlan.quizLength} questions{stagedPlan.includeTiebreak ? " + tiebreak" : ""}</span> — ready for runtime apply.</p>
+              <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">Runtime apply requires a DB-backed replacement step (Phase 10B) — the tailored questions are not in the live demo yet.</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Link to="/operator/setup-wizard" className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-sm font-semibold">Edit in setup wizard</Link>
+                <button onClick={() => { clearStagedDemoQuiz(); window.location.reload(); }} className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-sm font-semibold">Clear proposed quiz plan</button>
+              </div>
+            </>
+          ) : (
+            <p className="mt-1 text-xs text-[var(--ppn-muted)]">No custom quiz plan prepared. Prepare one in the setup wizard's Quiz content mix → Review step. Runtime apply requires a DB-backed replacement step (Phase 10B).</p>
           )}
         </div>
 
