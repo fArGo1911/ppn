@@ -6,6 +6,7 @@
  * shown to the client and never drives the client-facing presentation flow.
  */
 import type { Scenario, VenueProfile, SetupModeId } from "../demo/kpiModel";
+import type { ContentMix } from "./contentMix";
 
 export interface DemoBrief {
   // ── Who / what (Step 1) ──
@@ -28,9 +29,14 @@ export interface DemoBrief {
   pilotVenues: number;
   regionalVenues: number;
   campaignVenues: number;
-  // ── Venue mix (Step 4) + setup mode (Step 5) ──
+  // ── Venue mix (Step 4) + setup mode (Step 6) ──
   venueProfile: VenueProfile;
   setupMode: SetupModeId;
+  // ── Quiz content mix (Step 5) — planned content profile; does NOT regenerate live questions ──
+  contentMix?: ContentMix;
+  contentMixPreset?: string;
+  quizLength?: number;
+  includeTiebreak?: boolean;
   // ── Operator notes ──
   internalNotes?: string;
 }

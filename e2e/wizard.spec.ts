@@ -54,14 +54,19 @@ test("wizard opens and walks all steps; assets/readiness is last", async ({ page
   // Step 4 — Venue mix
   await page.getByRole("button", { name: "Next →" }).click();
   await expect(page.getByRole("heading", { name: "Venue mix" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Sports bar/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Sports bar/i }).first()).toBeVisible();
 
-  // Step 5 — Setup mode
+  // Step 5 — Quiz content mix
+  await page.getByRole("button", { name: "Next →" }).click();
+  await expect(page.getByRole("heading", { name: "Quiz content mix" })).toBeVisible();
+  await expect(page.getByTestId("quiz-preview")).toBeVisible();
+
+  // Step 6 — Setup mode
   await page.getByRole("button", { name: "Next →" }).click();
   await expect(page.getByRole("heading", { name: "Setup mode" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Audio-only/i })).toBeVisible();
 
-  // Step 6 — Readiness & assets (LAST / separate, graphics come last)
+  // Step 7 — Readiness & assets (LAST / separate, graphics come last)
   await page.getByRole("button", { name: "Next →" }).click();
   await expect(page.getByRole("heading", { name: "Readiness & assets" })).toBeVisible();
   await expect(page.getByText(/Add graphics last — once/i)).toBeVisible();
@@ -99,7 +104,7 @@ test("applying saves the brief and /operator shows client/campaign/target reach"
   await page.getByLabel("Demo / campaign name").fill("Pinegate Quiz Pilot");
 
   // Jump to review and apply.
-  await page.getByRole("button", { name: "7 · Review & apply" }).click();
+  await page.getByRole("button", { name: "8 · Review & apply" }).click();
   await page.getByRole("button", { name: "Apply scenario to demo" }).click();
   await expect(page.getByText(/scenario applied/i)).toBeVisible();
 

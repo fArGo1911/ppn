@@ -14,6 +14,7 @@ import { overrideStatus, anyOverrideActive, clearClientOverrides } from "../lib/
 import { getDemoBrief, clearDemoBrief, briefToScenario } from "../lib/demoBrief";
 import { clientFacingIdentity } from "../lib/clientFacingDemo";
 import { applyScenarioToSeed, deriveKpi, setupModeLabel } from "../demo/kpiModel";
+import { resolveContentMix, contentMixSummary, contentMixWarnings, contentMixSetupWarnings, presetById, matchPresetId } from "../lib/contentMix";
 
 type Step = { t: string; i: string; to?: string; href?: string; label: string };
 const JOURNEY: Step[] = [
@@ -49,6 +50,9 @@ export default function Operator() {
   const brief = getDemoBrief();
   const briefKpi = brief ? deriveKpi(applyScenarioToSeed(activeMarket().kpiSeed, briefToScenario(brief))) : null;
   const cfi = clientFacingIdentity();
+  const briefMix = brief ? resolveContentMix(brief) : null;
+  const briefMixName = brief ? (presetById(brief.contentMixPreset)?.label ?? presetById(matchPresetId(briefMix!))?.label ?? "Custom") : "";
+  const briefMixWarns = brief ? [...contentMixWarnings(briefMix!), ...contentMixSetupWarnings(briefMix!, brief.setupMode)] : [];
 
   const Chip = ({ label, on, onText = "on", offText = "off" }: { label: string; on: boolean; onText?: string; offText?: string }) => (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1 text-xs">
@@ -112,6 +116,13 @@ export default function Operator() {
                 <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Target reach: <span className="font-semibold text-[var(--ppn-text)]">~{briefKpi.campaignReachEstimate.toLocaleString()}</span></span>
                 <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Setup: <span className="font-semibold text-[var(--ppn-text)]">{setupModeLabel(brief.setupMode)}</span></span>
               </div>
+
+              {briefMix && (
+                <div className="mt-2 text-xs text-[var(--ppn-muted)]">
+                  <span className="font-semibold text-[var(--ppn-text)]">Content mix: {briefMixName}</span> — {contentMixSummary(briefMix)} · {brief.quizLength ?? 20}-question quiz{brief.includeTiebreak ? " + tiebreak" : ""}.
+                  {briefMixWarns.length > 0 && <span style={{ color: "var(--ppn-warning)" }}> ⚠ {briefMixWarns.length} content warning{briefMixWarns.length === 1 ? "" : "s"} (open the wizard).</span>}
+                </div>
+              )}
 
               {cfi.mismatch && (
                 <div className="mt-3 rounded-lg border-2 p-3 text-xs" style={{ borderColor: "color-mix(in srgb, var(--ppn-warning) 50%, var(--ppn-border))", background: "color-mix(in srgb, var(--ppn-warning) 8%, transparent)" }}>

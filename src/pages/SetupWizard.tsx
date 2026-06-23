@@ -21,6 +21,13 @@ import {
 import {
   getDemoBrief, setDemoBrief, clearDemoBrief, briefToScenario, type DemoBrief,
 } from "../lib/demoBrief";
+import { clientFacingIdentity } from "../lib/clientFacingDemo";
+import {
+  CONTENT_CATEGORIES, CONTENT_MIX_PRESETS, defaultContentMix, presetById, totalContentMix,
+  normaliseContentMix, contentMixWarnings, contentMixSetupWarnings, estimateQuestionComposition,
+  contentMixSummary, buildPreviewQuiz, setContentMix, categoryNeeds,
+  type ContentMix, type ContentCategoryId,
+} from "../lib/contentMix";
 
 const OBJECTIVES: { id: string; label: string }[] = [
   { id: "weekday_footfall", label: "Increase weekday footfall" },
@@ -62,7 +69,8 @@ const SETUP_EXPLAIN: Record<SetupModeId, { needs: string; ppn: string; host: str
   },
 };
 
-const STEPS = ["Client basics", "Desired outcome", "Scale & reach", "Venue mix", "Setup mode", "Readiness & assets", "Review & apply"];
+const STEPS = ["Client basics", "Desired outcome", "Scale & reach", "Venue mix", "Quiz content mix", "Setup mode", "Readiness & assets", "Review & apply"];
+const QUIZ_LENGTHS = [10, 15, 20, 25];
 
 function defaultBrief(): DemoBrief {
   const b = getActiveBrand();
@@ -89,6 +97,10 @@ function defaultBrief(): DemoBrief {
     campaignVenues: stage("campaign", 100),
     venueProfile: "mixed",
     setupMode: "tv_audio",
+    contentMix: defaultContentMix(),
+    contentMixPreset: "general_pub",
+    quizLength: 20,
+    includeTiebreak: false,
     internalNotes: "",
   };
 }
@@ -121,8 +133,19 @@ export default function SetupWizard() {
   const visualCount = Object.values(brand.images).filter(Boolean).length;
   const storage = healthQ.isError ? "unavailable" : healthQ.isSuccess ? "available" : "checking…";
 
-  const saveBrief = () => { setDemoBrief(brief); setHadExisting(true); setSaved("saved"); };
-  const applyScenario = () => { setDemoBrief(brief); setScenario(briefToScenario(brief)); setHadExisting(true); setSaved("applied"); };
+  // ── Quiz content mix (planned content profile only — never regenerates the live questions) ──
+  const mix: ContentMix = brief.contentMix ?? defaultContentMix();
+  const quizLength = brief.quizLength ?? 20;
+  const setMix = (next: ContentMix, presetId?: string) => patch({ contentMix: next, contentMixPreset: presetId });
+  const setCat = (id: ContentCategoryId, v: number) => setMix({ ...mix, [id]: Math.max(0, Math.min(100, v)) }, undefined);
+  const mixTotal = totalContentMix(mix);
+  const mixWarns = [...contentMixWarnings(mix), ...contentMixSetupWarnings(mix, brief.setupMode)];
+  const sponsorName = clientFacingIdentity().sponsorName;
+  const preview = buildPreviewQuiz(mix, quizLength, { sponsorName, includeTiebreak: brief.includeTiebreak, setupMode: brief.setupMode, seed: 0 });
+
+  // Content mix is saved with the brief; mirror it to the standalone helper so summaries resolve consistently.
+  const saveBrief = () => { setDemoBrief(brief); if (brief.contentMix) setContentMix(brief.contentMix); setHadExisting(true); setSaved("saved"); };
+  const applyScenario = () => { setDemoBrief(brief); setScenario(briefToScenario(brief)); if (brief.contentMix) setContentMix(brief.contentMix); setHadExisting(true); setSaved("applied"); };
   const clearBrief = () => { clearDemoBrief(); setBriefState(defaultBrief()); setHadExisting(false); setBriefDismissed(true); setStep(0); setSaved(null); };
 
   const fmt = (n: number) => Math.round(n).toLocaleString();
@@ -291,8 +314,107 @@ export default function SetupWizard() {
             </div>
           )}
 
-          {/* STEP 5 — Setup mode */}
+          {/* STEP 5 — Quiz content mix (internal setup; planned profile + preview, not question generation) */}
           {step === 4 && (
+            <div>
+              <h2 className="text-lg font-bold">Quiz content mix</h2>
+              <p className="mt-1 text-sm text-[var(--ppn-muted)]">Tune the quiz category balance for this venue type, then preview the quiz it would produce. This is the <span className="text-[var(--ppn-text)]">planned/proposed content profile</span> — the seeded pool is a demo preview, and PPN/operator can override the final selection before the event. It does not rewrite the live questions.</p>
+
+              <p className="mt-3 text-xs font-semibold text-[var(--ppn-muted)]">Venue presets</p>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {CONTENT_MIX_PRESETS.map((p) => (
+                  <button key={p.id} onClick={() => setMix({ ...p.mix }, p.id)} title={p.description}
+                    className="rounded-full border px-3 py-1.5 text-xs font-medium"
+                    style={{ borderColor: brief.contentMixPreset === p.id ? "var(--ppn-brand)" : "var(--ppn-border)", color: brief.contentMixPreset === p.id ? "var(--ppn-brand)" : "var(--ppn-muted)" }}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-4 space-y-2">
+                {CONTENT_CATEGORIES.map((c) => {
+                  const needs = categoryNeeds(c.id, brief.setupMode);
+                  return (
+                    <div key={c.id} className="flex items-center gap-3">
+                      <span className="w-36 shrink-0 text-xs text-[var(--ppn-text)]">{c.label}
+                        {needs && (mix[c.id] || 0) > 0 && <span className="ml-1 rounded px-1 py-0.5 text-[9px] font-semibold uppercase" style={{ background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>{needs}</span>}
+                      </span>
+                      <input type="range" min={0} max={100} step={5} value={mix[c.id]} aria-label={c.label}
+                        onChange={(e) => setCat(c.id, Number(e.target.value))} className="flex-1 accent-[var(--ppn-brand)]" />
+                      <span data-testid={`mix-${c.id}`} className="w-10 shrink-0 text-right text-sm font-semibold">{mix[c.id]}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <span className="text-sm">Total: <span data-testid="mix-total" className="font-bold" style={{ color: mixTotal === 100 ? "var(--ppn-success)" : "var(--ppn-warning)" }}>{mixTotal}%</span></span>
+                {mixTotal !== 100 && (
+                  <button onClick={() => setMix(normaliseContentMix(mix), undefined)} className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-xs font-semibold">Normalise to 100%</button>
+                )}
+                <span className="text-xs text-[var(--ppn-muted)]">Quiz length:</span>
+                {QUIZ_LENGTHS.map((q) => (
+                  <button key={q} onClick={() => patch({ quizLength: q })} className="rounded-full border px-2.5 py-1 text-xs font-medium"
+                    style={{ borderColor: quizLength === q ? "var(--ppn-brand)" : "var(--ppn-border)", color: quizLength === q ? "var(--ppn-brand)" : "var(--ppn-muted)" }}>{q}</button>
+                ))}
+                <label className="flex items-center gap-1.5 text-xs text-[var(--ppn-muted)]">
+                  <input type="checkbox" checked={!!brief.includeTiebreak} onChange={(e) => patch({ includeTiebreak: e.target.checked })} aria-label="Include tiebreak" />
+                  Add tiebreak / bonus
+                </label>
+              </div>
+
+              <div className="mt-3 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-3 text-xs">
+                <p className="font-semibold text-[var(--ppn-text)]">Expected composition · {quizLength}-question quiz</p>
+                <p data-testid="mix-composition" className="mt-1 text-[var(--ppn-muted)]">
+                  {estimateQuestionComposition(mix, quizLength).filter((q) => q.count > 0).map((q) => `${q.count} ${q.label.toLowerCase()}`).join(" · ") || "—"}
+                </p>
+              </div>
+
+              {mixWarns.length > 0 ? (
+                <div className="mt-3 rounded-lg border p-3" style={{ borderColor: "color-mix(in srgb, var(--ppn-warning) 45%, transparent)", background: "color-mix(in srgb, var(--ppn-warning) 10%, transparent)" }}>
+                  <p className="text-xs font-semibold" style={{ color: "var(--ppn-warning)" }}>⚠ Content warnings (operator-only)</p>
+                  <ul className="mt-1 list-disc pl-5 text-xs text-[var(--ppn-muted)]">{mixWarns.map((w) => <li key={w}>{w}</li>)}</ul>
+                </div>
+              ) : <p className="mt-2 text-xs" style={{ color: "var(--ppn-success)" }}>✓ Content mix looks balanced and fits the {SETUP_MODE_INFO[brief.setupMode].label} setup.</p>}
+
+              {/* Proposed quiz preview from the seeded pool */}
+              <div className="mt-4 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-[var(--ppn-text)]">Proposed quiz preview</p>
+                  <span className="text-[10px] text-[var(--ppn-muted)]">{preview.questions.length} questions{preview.tiebreak ? " + tiebreak" : ""}</span>
+                </div>
+                {preview.warnings.length > 0 && <ul className="mt-1 list-disc pl-5 text-[11px]" style={{ color: "var(--ppn-warning)" }}>{preview.warnings.map((w) => <li key={w}>{w}</li>)}</ul>}
+                <div data-testid="quiz-preview" className="mt-2 max-h-72 space-y-1 overflow-y-auto">
+                  {preview.questions.map((q) => (
+                    <div key={q.seq} className="flex items-start gap-2 rounded border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-2 py-1.5 text-xs">
+                      <span className="w-5 shrink-0 font-bold" style={{ color: "var(--ppn-brand)" }}>{q.seq}</span>
+                      <div className="min-w-0 flex-1">
+                        <span className="rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase" style={{ background: "var(--ppn-bg)", color: "var(--ppn-muted)" }}>{q.categoryLabel}</span>
+                        {q.needs && <span className="ml-1 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase" style={{ background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>{q.needs}</span>}
+                        {q.fallback && <span className="ml-1 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase" style={{ background: "var(--ppn-bg)", color: "var(--ppn-muted)" }}>filled from general</span>}
+                        <p className="mt-0.5 text-[var(--ppn-text)]">{q.prompt}</p>
+                        <p className="text-[10px] text-[var(--ppn-muted)]">Answer: {q.answer}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {preview.tiebreak && (
+                    <div className="flex items-start gap-2 rounded border border-dashed border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-2 py-1.5 text-xs">
+                      <span className="w-5 shrink-0 font-bold" style={{ color: "var(--ppn-brand)" }}>TB</span>
+                      <div className="min-w-0 flex-1">
+                        <span className="rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase" style={{ background: "var(--ppn-bg)", color: "var(--ppn-muted)" }}>Optional tiebreak / bonus</span>
+                        <p className="mt-0.5 text-[var(--ppn-text)]">{preview.tiebreak.prompt}</p>
+                        <p className="text-[10px] text-[var(--ppn-muted)]">Answer: {preview.tiebreak.answer}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">This is a proposed quiz plan from a seeded demo pool. PPN/operator can override the final selection before the event — it does not change the live question database.</p>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 6 — Setup mode */}
+          {step === 5 && (
             <div>
               <h2 className="text-lg font-bold">Setup mode</h2>
               <p className="mt-1 text-sm text-[var(--ppn-muted)]">What setup is realistic for these venues? This is setup planning — not the live run.</p>
@@ -315,11 +437,17 @@ export default function SetupWizard() {
                   );
                 })}
               </div>
+              {contentMixSetupWarnings(mix, brief.setupMode).length > 0 && (
+                <div className="mt-3 rounded-lg border p-3" style={{ borderColor: "color-mix(in srgb, var(--ppn-warning) 45%, transparent)", background: "color-mix(in srgb, var(--ppn-warning) 10%, transparent)" }}>
+                  <p className="text-xs font-semibold" style={{ color: "var(--ppn-warning)" }}>⚠ This setup doesn't fit the current content mix</p>
+                  <ul className="mt-1 list-disc pl-5 text-xs text-[var(--ppn-muted)]">{contentMixSetupWarnings(mix, brief.setupMode).map((w) => <li key={w}>{w}</li>)}</ul>
+                </div>
+              )}
             </div>
           )}
 
-          {/* STEP 6 — Readiness & assets (LAST / separate) */}
-          {step === 5 && (
+          {/* STEP 7 — Readiness & assets (LAST / separate) */}
+          {step === 6 && (
             <div>
               <h2 className="text-lg font-bold">Readiness &amp; assets</h2>
               <p className="mt-1 text-sm text-[var(--ppn-muted)]">Add graphics last — once the client, outcome and scenario are clear. Nothing here is required to define the demo.</p>
@@ -342,8 +470,8 @@ export default function SetupWizard() {
             </div>
           )}
 
-          {/* STEP 7 — Review & apply */}
-          {step === 6 && (
+          {/* STEP 8 — Review & apply */}
+          {step === 7 && (
             <div>
               <h2 className="text-lg font-bold">Review &amp; apply internal setup</h2>
               <p className="mt-1 text-sm text-[var(--ppn-muted)]">Save the brief and apply the scale assumptions into the demo's KPI / report / rollout scenario.</p>
@@ -358,6 +486,8 @@ export default function SetupWizard() {
                   {brief.desiredOutcomeText && <p className="mt-1 text-xs text-[var(--ppn-muted)]">“{brief.desiredOutcomeText}”</p>}
                   <p className="mt-2 text-xs uppercase tracking-wide text-[var(--ppn-muted)]">Venue mix · setup</p>
                   <p className="text-xs text-[var(--ppn-text)]">{PROFILES.find((p) => p.id === brief.venueProfile)?.label} · {SETUP_MODE_INFO[brief.setupMode].label}</p>
+                  <p className="mt-2 text-xs uppercase tracking-wide text-[var(--ppn-muted)]">Quiz content mix</p>
+                  <p className="text-xs text-[var(--ppn-text)]">{presetById(brief.contentMixPreset)?.label ?? "Custom"} · {quizLength}q{brief.includeTiebreak ? " + tiebreak" : ""} — {contentMixSummary(mix)}</p>
                 </div>
                 <div className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-3">
                   <p className="text-xs uppercase tracking-wide text-[var(--ppn-muted)]">Target</p>

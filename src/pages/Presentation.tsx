@@ -12,6 +12,7 @@ import { getActiveBrand } from "../demo/brand";
 import { activeMarket } from "../demo/markets";
 import { getDemoBrief, briefToScenario } from "../lib/demoBrief";
 import { applyScenarioToSeed, deriveKpi, getEffectiveKpiSeed, setupModeLabel, SETUP_MODE_INFO } from "../demo/kpiModel";
+import { resolveContentMix, topCategories, presetById, matchPresetId } from "../lib/contentMix";
 
 const OBJECTIVE_LABELS: Record<string, string> = {
   weekday_footfall: "Increase weekday footfall",
@@ -36,6 +37,12 @@ export default function Presentation() {
   const d = deriveKpi(seed);
   const cur = market.kpiSeed.currency;
   const fmt = (n: number) => Math.round(n).toLocaleString();
+
+  // Client-safe content tailoring summary (no sliders/percentages exposed).
+  const mix = resolveContentMix(brief);
+  const mixName = presetById(brief?.contentMixPreset)?.label ?? presetById(matchPresetId(mix))?.label ?? "Venue-tuned";
+  const mixTop = topCategories(mix, 3).map((c) => c.label.replace(" / football", "").replace(" / venue", "").replace(" / culture", "").replace(" round", "").toLowerCase());
+  const hasPicture = (mix.picture || 0) > 0; const hasVideo = (mix.video || 0) > 0;
 
   const client = brief?.clientName?.trim() || brand.sponsorName;
   const campaign = brief?.campaignName?.trim() || brand.campaignName;
@@ -134,6 +141,11 @@ export default function Presentation() {
                 ))}
               </ul>
               <p className="mt-3 text-xs text-[var(--ppn-muted)]">Planned setup for this campaign: <span className="font-semibold text-[var(--ppn-text)]">{setupMode}</span>.</p>
+
+              <div className="mt-3 rounded-xl border-l-4 bg-[var(--ppn-bg)] p-4" style={{ borderColor: "var(--ppn-brand)" }}>
+                <p className="text-xs uppercase tracking-wide text-[var(--ppn-muted)]">Prepared content profile · {mixName}</p>
+                <p className="mt-1 text-sm">The quiz can be tuned to the venue. For this prepared demo, the content is weighted towards <span className="font-semibold">{mixTop.join(", ")}</span> questions{(hasPicture || hasVideo) ? <> — including {hasPicture && hasVideo ? "picture and video rounds" : hasPicture ? "a picture round" : "a video round"}</> : null}. The final content can be tailored per venue before launch.</p>
+              </div>
             </div>
           )}
 
