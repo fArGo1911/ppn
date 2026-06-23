@@ -7,6 +7,7 @@
 import { DemoShell } from "../components/shells";
 import { DEMO_BRAND } from "../demo/brand";
 import { activeMarket } from "../demo/markets";
+import { clientFacingIdentity } from "../lib/clientFacingDemo";
 import { deriveStage, getEffectiveKpiSeed, getEffectiveStageVenues, getEffectiveVenueMix, deriveVenueMix } from "../demo/kpiModel";
 import { SETUP_MODES } from "../demo/setup";
 
@@ -33,7 +34,8 @@ const STAGE: Record<string, { title: string; purpose: string[]; gate: string; ev
 
 export default function Rollout() {
   const m = activeMarket();
-  const s = getEffectiveKpiSeed(m.kpiSeed); // market default + any operator scenario override (/config)
+  const ci = clientFacingIdentity();
+  const s = getEffectiveKpiSeed(m.kpiSeed); // market default + any operator scenario override
   const n = (x: number) => x.toLocaleString();
   const brand = "var(--ppn-brand)";
   const stageVenues = getEffectiveStageVenues({
@@ -68,10 +70,10 @@ export default function Rollout() {
   ];
 
   return (
-    <DemoShell>
+    <DemoShell clientFacing>
       <div className="mx-auto max-w-4xl px-5 py-10">
         <p className="text-sm uppercase tracking-widest" style={{ color: brand }}>{m.flag} {m.label} · Campaign plan · seeded projection</p>
-        <h1 className="mt-2 text-3xl font-extrabold">From pilot night to {DEMO_BRAND.sponsorName} activation</h1>
+        <h1 className="mt-2 text-3xl font-extrabold">From pilot night to {ci.sponsorName} activation</h1>
         <p className="mt-1 text-[var(--ppn-muted)]">{m.context}</p>
         <p className="mt-2 text-sm text-[var(--ppn-text)]">An illustrative plan: how a controlled pilot proves the format, what evidence the brewery gets, and what must be true before scaling. Numbers are estimated from the campaign assumptions — not live operations data.</p>
 
@@ -177,7 +179,7 @@ export default function Rollout() {
             </div>
           ))}
         </div>
-        <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Audio/AI voice are demonstrated in the POC; richer venue audio routing is roadmap, not a finished integration.</p>
+        <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Audio/AI voice are demonstrated in this demo; richer venue audio routing is roadmap, not a finished integration.</p>
 
         {/* ── Venue readiness ── */}
         <Section title="Pilot venue readiness checklist" />
@@ -220,7 +222,7 @@ export default function Rollout() {
           ))}
         </div>
 
-        <p className="mt-8 text-xs text-[var(--ppn-muted)]">Illustrative seeded campaign plan — not live rollout data. Switch market/brewery in Presenter tools or /config.</p>
+        <p className="mt-8 text-xs text-[var(--ppn-muted)]">Illustrative seeded campaign plan — not live rollout data. The scenario can be tailored for the chosen venue mix before a pilot.</p>
       </div>
     </DemoShell>
   );

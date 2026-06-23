@@ -59,7 +59,7 @@ export default function Presentation() {
   );
 
   return (
-    <DemoShell>
+    <DemoShell clientFacing>
       <div className="mx-auto max-w-4xl px-5 py-8">
         <p className="text-sm uppercase tracking-[0.25em]" style={{ color: "var(--ppn-brand)" }}>Client presentation</p>
         <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">{campaign}</h1>

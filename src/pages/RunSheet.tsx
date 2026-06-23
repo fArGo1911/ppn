@@ -4,11 +4,12 @@
  * venue & host handoff. Not pub onboarding — no accounts, no contracts, no data capture.
  */
 import { DemoShell } from "../components/shells";
-import { DEMO_BRAND } from "../demo/brand";
+import { clientFacingIdentity } from "../lib/clientFacingDemo";
 import { SETUP_MODE_INFO } from "../demo/kpiModel";
 
 export default function RunSheet() {
   const brand = "var(--ppn-brand)";
+  const ci = clientFacingIdentity();
   const Section = ({ title }: { title: string }) => <h2 className="mt-8 text-sm font-semibold uppercase tracking-wider text-[var(--ppn-muted)]">{title}</h2>;
   const List = ({ items }: { items: string[] }) => (
     <ul className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -23,11 +24,11 @@ export default function RunSheet() {
   ];
 
   return (
-    <DemoShell>
+    <DemoShell clientFacing>
       <div className="mx-auto max-w-4xl px-5 py-10">
         <p className="text-sm uppercase tracking-widest" style={{ color: brand }}>Venue &amp; host handoff</p>
-        <h1 className="mt-2 text-3xl font-extrabold">Run sheet — {DEMO_BRAND.eventName}</h1>
-        <p className="mt-1 text-[var(--ppn-muted)]">A simple sheet to run the night. {DEMO_BRAND.broughtBy}. Demo handoff — not pub onboarding.</p>
+        <h1 className="mt-2 text-3xl font-extrabold">Run sheet — {ci.eventName}</h1>
+        <p className="mt-1 text-[var(--ppn-muted)]">A simple sheet to run the night. {ci.broughtBy}. Demo handoff — not pub onboarding.</p>
 
         <Section title="What the venue needs" />
         <List items={["Acceptable Wi-Fi or mobile signal for guests", "A TV / projector (optional — phones work without one)", "An audio route / speaker (optional)", "QR codes placed on tables", "Sponsor product stocked", "A member of staff to host or support"]} />
@@ -68,7 +69,7 @@ export default function RunSheet() {
 
         <Section title="What the venue reports after" />
         <List items={["Total guests during the event window", "Sponsored product units sold", "Offer / voucher redemptions", "Busier than a normal night? (yes/no)", "Would you run it again? (yes/no)", "A short staff comment"]} />
-        <p className="mt-2 text-xs text-[var(--ppn-muted)]">Manual venue report is enough for the POC. PPN measures engagement; the venue reports commercial outcome; POS can support it later. PPN does not measure bar sales.</p>
+        <p className="mt-2 text-xs text-[var(--ppn-muted)]">A short manual venue report is enough. PPN measures engagement; the venue reports commercial outcome; POS can support it later. PPN does not measure bar sales.</p>
       </div>
     </DemoShell>
   );

@@ -15,6 +15,7 @@ import { QRCodeSVG } from "qrcode.react";
 import type { ReactNode } from "react";
 import { resolveJoinToken, listTeams, getSessionState, getSessionQuestions } from "../lib/ppnApi";
 import { DEMO_BRAND } from "../demo/brand";
+import { clientFacingIdentity } from "../lib/clientFacingDemo";
 import { TvShell } from "../components/shells";
 import { OfferBadge, AiAnnouncementSlot } from "../components/brandZones";
 import { Carousel } from "../components/Carousel";
@@ -35,8 +36,11 @@ export default function Tv() {
 
   const resolveQ = useQuery({ queryKey: ["tv-resolve", token], queryFn: () => resolveJoinToken(token) });
   const session = resolveQ.data && resolveQ.data.kind !== "invalid" ? resolveQ.data.session : undefined;
-  const venue = session?.venueName ?? DEMO_BRAND.pubName;
-  const event = session?.eventTitle ?? DEMO_BRAND.eventName;
+  // Controlled POC: a prepared demo brief's client/venue identity takes precedence over the DB session label so
+  // a client never sees another brewery's pub/event. Display-only — never mutates the session or join logic.
+  const ci = clientFacingIdentity();
+  const venue = ci.hasBrief ? ci.venueName : (session?.venueName ?? DEMO_BRAND.pubName);
+  const event = ci.hasBrief ? ci.eventName : (session?.eventTitle ?? DEMO_BRAND.eventName);
 
   const liveStateQ = useQuery({ queryKey: ["tv-live", session?.sessionId], queryFn: () => getSessionState(session!.sessionId), enabled: !!session && !hasOverride, refetchInterval: 2500 });
   const liveQsQ = useQuery({ queryKey: ["tv-live-q", session?.sessionId], queryFn: () => getSessionQuestions(session!.sessionId), enabled: !!session && !hasOverride, staleTime: 60_000 });
@@ -73,7 +77,7 @@ export default function Tv() {
   const Title = () => (
     <>
       <h1 className="text-7xl font-black leading-none">{venue}</h1>
-      <p className="mt-3 text-3xl font-semibold" style={{ color: "var(--ppn-brand)" }}>{event} · {DEMO_BRAND.broughtBy}</p>
+      <p className="mt-3 text-3xl font-semibold" style={{ color: "var(--ppn-brand)" }}>{event} · {ci.broughtBy}</p>
     </>
   );
   const Options = ({ options }: { options: string[] }) => (
@@ -108,7 +112,7 @@ export default function Tv() {
     const sponsored = q.kind === "sponsored";
     return wrap(!sponsored, (
       <>
-        <Kicker>{sponsored ? `Sponsored round · ${DEMO_BRAND.sponsorName}` : `Round ${q.roundSeq ?? 1} · Question ${q.sequence ?? 1}`}</Kicker>
+        <Kicker>{sponsored ? `Sponsored round · ${ci.sponsorName}` : `Round ${q.roundSeq ?? 1} · Question ${q.sequence ?? 1}`}</Kicker>
         <h1 className="mt-4 max-w-6xl text-6xl font-black leading-tight">{q.prompt}</h1>
         {q.options && <Options options={q.options} />}
         <p className="mt-9 text-3xl text-[var(--ppn-muted)]">⏱ Answer on your phones</p>
@@ -117,7 +121,7 @@ export default function Tv() {
   };
   const RevealView = (q: { correctAnswer: string | null; explanation?: string | null; kind?: string }) => wrap(q.kind !== "sponsored", (
     <>
-      <Kicker>Answer{q.kind === "sponsored" ? ` · ${DEMO_BRAND.sponsorName}` : ""}</Kicker>
+      <Kicker>Answer{q.kind === "sponsored" ? ` · ${ci.sponsorName}` : ""}</Kicker>
       <h1 className="mt-4 text-8xl font-black">{q.correctAnswer}</h1>
       {q.explanation && <p className="mt-4 max-w-4xl text-3xl text-[var(--ppn-muted)]">{q.explanation}</p>}
       <div className="mt-8 w-full max-w-4xl"><AiAnnouncementSlot scriptKey="answerReveal" size="tv" /></div>
@@ -173,7 +177,7 @@ export default function Tv() {
       <>
         <p className="text-3xl uppercase tracking-[0.2em]" style={{ color: "var(--ppn-brand)" }}>🏆 Tonight's champions</p>
         <h1 className="mt-4 text-8xl font-black">{winner}</h1>
-        <p className="mt-5 text-3xl">Thanks to <span className="font-bold" style={{ color: "var(--ppn-brand)" }}>{DEMO_BRAND.sponsorName}</span></p>
+        <p className="mt-5 text-3xl">Thanks to <span className="font-bold" style={{ color: "var(--ppn-brand)" }}>{ci.sponsorName}</span></p>
         <div className="mt-6"><OfferBadge size="tv" /></div>
         <div className="mt-8 w-full max-w-4xl"><AiAnnouncementSlot scriptKey="winner" size="tv" /></div>
       </>
@@ -241,7 +245,7 @@ export default function Tv() {
       <>
         <h1 className="text-7xl font-black">Thanks for playing!</h1>
         <p className="mt-4 text-3xl" style={{ color: "var(--ppn-brand)" }}>{DEMO_BRAND.cta}</p>
-        <p className="mt-2 text-2xl text-[var(--ppn-muted)]">Brought to you by {DEMO_BRAND.sponsorName}</p>
+        <p className="mt-2 text-2xl text-[var(--ppn-muted)]">Brought to you by {ci.sponsorName}</p>
         <div className="mt-6 w-full max-w-3xl"><VideoSlot url={DEMO_BRAND.video.closingVideoUrl} sourceType={DEMO_BRAND.video.closingVideoSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Closing sponsor video (optional)" /></div>
         <div className="mt-6"><OfferBadge size="tv" /></div>
       </>

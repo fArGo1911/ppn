@@ -58,6 +58,8 @@ test("/presentation uses demo brief data when present", async ({ page }) => {
   await page.goto("/presentation");
   await expect(page.getByText("Harbourline Quiz Series").first()).toBeVisible();
   await expect(page.getByText(/Harbourline Brewery/).first()).toBeVisible();
+  // Header chrome follows the brief client, not the preset brewery.
+  await expect(page.locator('[data-testid="demo-shell"] > div').first()).not.toContainText("Northgate");
   // Brief desired outcome surfaces in step 1.
   await expect(page.getByText(/Fill quiet Tuesdays/)).toBeVisible();
 });

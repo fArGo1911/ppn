@@ -5,6 +5,7 @@
  */
 import { useState, type ReactNode } from "react";
 import { DEMO_BRAND, brandInitials } from "../demo/brand";
+import { clientFacingIdentity } from "../lib/clientFacingDemo";
 
 type Size = "phone" | "host" | "tv";
 const LOGO = { phone: "h-9 w-9 text-sm", host: "h-9 w-9 text-sm", tv: "h-20 w-20 text-3xl" } as const;
@@ -58,15 +59,19 @@ export function BrandAssetPreview({
   );
 }
 
-/** Top BREWERY banner (primary). Logo + brewery name; no PPN here. */
+/** Top BREWERY banner (primary). Client-facing: follows the prepared brief identity (logo-safe). No PPN here. */
 export function BrandBanner({ size = "phone" }: { size?: Size }) {
   const tv = size === "tv";
+  const id = clientFacingIdentity();
+  const [broken, setBroken] = useState(false);
   return (
     <header className={`flex items-center gap-3 ${tv ? "px-10 py-6" : "px-4 py-3"}`}>
-      <BrandLogo size={size} />
+      {id.logoUrl && !broken
+        ? <img src={id.logoUrl} alt={id.sponsorName} onError={() => setBroken(true)} className={`${LOGO[size]} rounded-xl object-contain`} style={{ background: "var(--ppn-surface)" }} />
+        : <div className={`grid place-items-center rounded-xl font-black ${LOGO[size]}`} style={onBrand} aria-hidden>{id.initials}</div>}
       <div className="min-w-0">
-        <p className={`font-bold leading-tight ${tv ? "text-3xl" : "text-base"}`}>{DEMO_BRAND.sponsorName}</p>
-        <p className={`truncate text-[var(--ppn-muted)] ${tv ? "text-lg" : "text-xs"}`}>{DEMO_BRAND.tagline}</p>
+        <p className={`font-bold leading-tight ${tv ? "text-3xl" : "text-base"}`}>{id.sponsorName}</p>
+        <p className={`truncate text-[var(--ppn-muted)] ${tv ? "text-lg" : "text-xs"}`}>{id.tagline}</p>
       </div>
     </header>
   );
@@ -94,16 +99,17 @@ export function OfferBadge({ size = "phone" }: { size?: Size }) {
       className={`inline-flex items-center gap-1 rounded-full font-semibold ${tv ? "px-4 py-1.5 text-lg" : "px-2.5 py-1 text-xs"}`}
       style={{ background: "color-mix(in srgb, var(--ppn-brand) 18%, transparent)", color: "var(--ppn-brand)", border: "1px solid color-mix(in srgb, var(--ppn-brand) 45%, transparent)" }}
     >
-      🎁 {DEMO_BRAND.offer}
+      🎁 {clientFacingIdentity().offer}
     </span>
   );
 }
 
 export function SponsorMessageSlot({ size = "phone" }: { size?: Size }) {
   const tv = size === "tv";
+  const id = clientFacingIdentity();
   return (
     <p className={`text-[var(--ppn-muted)] ${tv ? "text-2xl" : "text-sm"}`}>
-      <span className="font-semibold text-[var(--ppn-brand)]">{DEMO_BRAND.sponsorName}</span> · {DEMO_BRAND.broughtBy}
+      <span className="font-semibold text-[var(--ppn-brand)]">{id.sponsorName}</span> · {id.broughtBy}
     </p>
   );
 }

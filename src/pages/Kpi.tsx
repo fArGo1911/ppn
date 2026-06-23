@@ -6,10 +6,12 @@
 import { DemoShell } from "../components/shells";
 import { DEMO_BRAND } from "../demo/brand";
 import { activeMarket } from "../demo/markets";
+import { clientFacingIdentity } from "../lib/clientFacingDemo";
 import { deriveKpi, perVenue, perRound, pct, getEffectiveKpiSeed, getEffectiveVenueMix, deriveVenueMix } from "../demo/kpiModel";
 
 export default function Kpi() {
   const m = activeMarket();
+  const ci = clientFacingIdentity();
   const s = getEffectiveKpiSeed(m.kpiSeed); // market default + any operator scenario override (/config)
   const mix = getEffectiveVenueMix();
   const setupMix = mix ? deriveVenueMix(mix, s.campaignReachMultiplier, s.avgPlayersPerTeam).setupMix : null;
@@ -24,7 +26,7 @@ export default function Kpi() {
   const vr = m.venueReport;
   const yn = (b: boolean) => (b ? "Yes" : "No");
 
-  // Where the brewery appears across the evening (status = how real it is in the POC).
+  // Where the brewery appears across the evening (status = how real it is in this demo).
   type Live = "live" | "presenter" | "future";
   const phoneExposure: { m: string; s: Live }[] = [
     { m: "Splash / arrival", s: "live" }, { m: "Join success", s: "live" }, { m: "Lobby / waiting", s: "live" }, { m: "Sponsored question", s: "live" }, { m: "Winner / post-event card", s: "live" },
@@ -36,7 +38,7 @@ export default function Kpi() {
     { m: "Evening intro mention", s: "live" }, { m: "Sponsored round readout", s: "live" }, { m: "Winner / thanks", s: "live" },
   ];
   const StatusChip = ({ s }: { s: Live }) => s === "live"
-    ? <Tag text="live in POC" />
+    ? <Tag text="live in demo" />
     : s === "presenter"
       ? <span className="rounded-full bg-[var(--ppn-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--ppn-muted)]">presenter demo</span>
       : <Tag text="future" warn />;
@@ -52,7 +54,7 @@ export default function Kpi() {
 
   // ── Executive snapshot cards (what the brewery gets) ──
   const exec: { value: string; label: string; meaning: string; basis: string; tag?: { text: string; warn?: boolean } }[] = [
-    { value: n(d.eventsRun), label: "Branded events delivered", meaning: `${DEMO_BRAND.sponsorName} nights actually staged in venues.`, basis: `${s.venuesActivated} venues × ${s.avgEventsPerVenue} events/venue` },
+    { value: n(d.eventsRun), label: "Branded events delivered", meaning: `${ci.sponsorName} nights actually staged in venues.`, basis: `${s.venuesActivated} venues × ${s.avgEventsPerVenue} events/venue` },
     { value: n(d.playersCompleted), label: "Engaged players", meaning: "Played through to the final question — active participation, not passive impressions.", basis: `${pct(s.completionRate)} of ${n(d.playersJoined)} who joined` },
     { value: pct(s.sponsoredAnswerRate), label: "Sponsor-round engagement", meaning: "Teams that actively answered your sponsored question.", basis: `${n(d.sponsoredTeamsAnswered)} of ${n(d.teamsCreated)} teams` },
     { value: pct(s.repeatBookingRate), label: "Venue repeat signal", meaning: "Venues that booked again — a recurring channel, not a one-off.", basis: `${d.repeatVenuesEstimate} of ${s.venuesActivated} venues booked 2+ events` },
@@ -61,12 +63,12 @@ export default function Kpi() {
   ];
 
   return (
-    <DemoShell>
+    <DemoShell clientFacing>
       <div className="mx-auto max-w-4xl px-5 py-10">
         {/* A. Header */}
         <p className="text-sm uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>{m.flag} {m.label} · Brewery report (demo projection)</p>
-        <h1 className="mt-2 text-3xl font-extrabold">{DEMO_BRAND.campaignName}</h1>
-        <p className="mt-1 text-[var(--ppn-muted)]">{DEMO_BRAND.broughtBy}</p>
+        <h1 className="mt-2 text-3xl font-extrabold">{ci.campaignName}</h1>
+        <p className="mt-1 text-[var(--ppn-muted)]">{ci.broughtBy}</p>
         <div className="mt-3 rounded-xl border-2 p-3 text-sm" style={{ borderColor: "color-mix(in srgb, var(--ppn-warning) 40%, var(--ppn-border))", background: "color-mix(in srgb, var(--ppn-warning) 8%, transparent)" }}>
           <span className="font-semibold">Demo projection</span> — this is what a brewery report will look like <span className="font-semibold">after a pilot</span>. The figures here are seeded campaign assumptions used for the pitch, not a measured campaign. In a live pilot the assumptions are replaced by actual event data.
         </div>
@@ -90,7 +92,7 @@ export default function Kpi() {
         </div>
 
         {/* C. Commercial interpretation */}
-        <Section title={`What this means for ${DEMO_BRAND.sponsorName}`} />
+        <Section title={`What this means for ${ci.sponsorName}`} />
         <div className="mt-3 rounded-xl border-2 bg-[var(--ppn-surface)] p-4" style={{ borderColor: "color-mix(in srgb, var(--ppn-brand) 30%, var(--ppn-border))" }}>
           <p className="text-sm text-[var(--ppn-text)]">
             This projection shows whether a brewery-funded pub night can create <span className="font-semibold">repeatable on-trade participation</span> —
@@ -107,7 +109,7 @@ export default function Kpi() {
 
         {/* Brand exposure delivered */}
         <Section title="Brand exposure delivered" />
-        <p className="mt-1 text-xs text-[var(--ppn-muted)]">Where {DEMO_BRAND.sponsorName} appears across the evening.</p>
+        <p className="mt-1 text-xs text-[var(--ppn-muted)]">Where {ci.sponsorName} appears across the evening.</p>
         <div className="mt-3 grid gap-3 md:grid-cols-3">
           {[{ head: "On the phone", items: phoneExposure }, { head: "On the TV", items: tvExposure }, { head: "Host / AI script", items: hostExposure }].map((col) => (
             <div key={col.head} className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
@@ -120,7 +122,7 @@ export default function Kpi() {
             </div>
           ))}
         </div>
-        <p className="mt-2 text-xs text-[var(--ppn-muted)]"><span className="font-semibold" style={{ color: DEMO_BRAND.primary }}>live in POC</span> runs in the live demo · <span className="font-semibold">presenter demo</span> shown on demand · <span className="font-semibold" style={{ color: "var(--ppn-warning)" }}>future</span> not built yet.</p>
+        <p className="mt-2 text-xs text-[var(--ppn-muted)]"><span className="font-semibold" style={{ color: DEMO_BRAND.primary }}>live in demo</span> runs in the live demo · <span className="font-semibold">presenter demo</span> shown on demand · <span className="font-semibold" style={{ color: "var(--ppn-warning)" }}>future</span> not built yet.</p>
 
         {/* D. Decision support after pilot */}
         <Section title="Decision support after a pilot" />
@@ -203,7 +205,7 @@ export default function Kpi() {
                 <span className="font-semibold">{r.name}{r.sponsor && <span className="ml-2"><Tag text="brand exposure moment" /></span>}</span>
                 <span className="font-bold">{pct(r.answerRate)}</span>
               </div>
-              <p className="mt-1 text-xs text-[var(--ppn-muted)]">{n(r.teamsAnswered)} of {n(r.teamsShown)} teams answered{r.sponsor ? ` — ${n(r.teamsAnswered)} teams actively engaged with the ${DEMO_BRAND.sponsorName} round` : ""}.</p>
+              <p className="mt-1 text-xs text-[var(--ppn-muted)]">{n(r.teamsAnswered)} of {n(r.teamsShown)} teams answered{r.sponsor ? ` — ${n(r.teamsAnswered)} teams actively engaged with the ${ci.sponsorName} round` : ""}.</p>
             </div>
           ))}
         </div>
@@ -234,7 +236,7 @@ export default function Kpi() {
             <ul className="mt-2 space-y-1 text-sm text-[var(--ppn-muted)]">
               <li>Till / POS screenshot</li><li>POS / EPOS export</li><li>Stock report</li><li>Distributor / EPOS integration</li>
             </ul>
-            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Not connected in the POC. PPN does not measure bar sales directly.</p>
+            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Not connected in this demo. PPN does not measure bar sales directly.</p>
           </div>
           <div className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
             <div className="flex items-center justify-between"><p className="text-sm font-semibold">Estimated</p><Tag text="estimate" warn /></div>
@@ -248,7 +250,7 @@ export default function Kpi() {
 
         {/* Post-event venue report (mock — manual, POS optional later) */}
         <Section title="Post-event venue report" />
-        <p className="mt-1 text-xs text-[var(--ppn-muted)]">Example venue-reported outcome — manual entry is enough for the POC; POS is future / optional.</p>
+        <p className="mt-1 text-xs text-[var(--ppn-muted)]">Example venue-reported outcome — a short manual report is enough; POS is future / optional.</p>
         <div className="mt-3 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
           <div className="flex items-center justify-between"><p className="font-semibold">{m.venueExample}</p><span className="rounded-full bg-[var(--ppn-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--ppn-muted)]">venue-reported</span></div>
           <div className="mt-3 grid gap-2 sm:grid-cols-2 text-sm">
@@ -264,7 +266,7 @@ export default function Kpi() {
             ))}
           </div>
           <p className="mt-3 text-sm italic text-[var(--ppn-text)]">“{vr.staffComment}”</p>
-          <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">POS evidence: {vr.posEvidenceStatus} · Manual venue report is enough for the POC; PPN does not claim to measure bar sales directly.</p>
+          <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">POS evidence: {vr.posEvidenceStatus} · A short manual venue report is enough; PPN does not claim to measure bar sales directly.</p>
         </div>
 
         {/* Occasion-value lens (ROI — clearly an assumption) */}
@@ -337,7 +339,7 @@ export default function Kpi() {
             <li>In a real deployment these assumptions are replaced by actual event data.</li>
           </ul>
         </div>
-        <p className="mt-6 text-xs text-[var(--ppn-muted)]">{DEMO_BRAND.responsibleNote} · Switch market/brewery in Presenter tools or /config.</p>
+        <p className="mt-6 text-xs text-[var(--ppn-muted)]">{ci.responsibleNote} · Prepared demo scenario — assumptions can be tailored for the chosen venue mix before a pilot.</p>
       </div>
     </DemoShell>
   );

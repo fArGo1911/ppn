@@ -81,7 +81,7 @@ export const MARKETS: Record<Market, MarketData> = {
     venueReport: {
       attendanceEstimate: 84, sponsorUnitsSold: 66, offerRedemptions: 15, busierThanUsual: true, stockOut: false, wouldRunAgain: true,
       staffComment: "Quizkvällen höll borden längre och gav personalen ett tydligt sponsormoment.",
-      posEvidenceStatus: "Manuell rapport i POC; POS-bevis valfritt senare.",
+      posEvidenceStatus: "Manuell rapport i demon; POS-bevis valfritt senare.",
     },
   },
   DE: {
@@ -116,7 +116,7 @@ export const MARKETS: Record<Market, MarketData> = {
     venueReport: {
       attendanceEstimate: 110, sponsorUnitsSold: 88, offerRedemptions: 22, busierThanUsual: true, stockOut: false, wouldRunAgain: true,
       staffComment: "Der Quizabend hat die Gäste länger gehalten und Adlerbräu klar in Szene gesetzt.",
-      posEvidenceStatus: "Manuelle Rückmeldung im POC; POS-Beleg später optional.",
+      posEvidenceStatus: "Manuelle Rückmeldung in der Demo; POS-Beleg später optional.",
     },
   },
   UK: {
@@ -151,7 +151,7 @@ export const MARKETS: Record<Market, MarketData> = {
     venueReport: {
       attendanceEstimate: 92, sponsorUnitsSold: 74, offerRedemptions: 18, busierThanUsual: true, stockOut: false, wouldRunAgain: true,
       staffComment: "Quiz night kept tables in longer and gave staff a clear sponsor moment.",
-      posEvidenceStatus: "Manual venue report in POC; POS proof optional later.",
+      posEvidenceStatus: "Manual venue report in this demo; POS proof optional later.",
     },
   },
 };

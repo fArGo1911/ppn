@@ -106,10 +106,10 @@ test("applying saves the brief and /operator shows client/campaign/target reach"
   // Back on /operator the saved brief summary shows (operator stays unlocked via initScript).
   await page.goto("/operator");
   await expect(page.getByText("Brief saved")).toBeVisible();
-  await expect(page.getByText(/Pinegate Test Brewery/)).toBeVisible();
-  await expect(page.getByText(/Pinegate Quiz Pilot/)).toBeVisible();
+  await expect(page.getByText(/Pinegate Test Brewery/).first()).toBeVisible();
+  await expect(page.getByText(/Pinegate Quiz Pilot/).first()).toBeVisible();
   await expect(page.getByText(/Target reach:/)).toBeVisible();
-  await expect(page.getByRole("link", { name: /Edit setup wizard/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Edit setup wizard/i }).first()).toBeVisible();
 });
 
 // ── Wrong-client protection: a loaded brief warns + offers clear-and-start-new ──

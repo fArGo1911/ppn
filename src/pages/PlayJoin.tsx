@@ -12,6 +12,7 @@ import { PlayerShell } from "../components/shells";
 import { PlayerLive } from "../components/PlayerLive";
 import { OfferBadge, SponsorMessageSlot, PoweredByPpnMark } from "../components/brandZones";
 import { DEMO_BRAND } from "../demo/brand";
+import { clientFacingIdentity } from "../lib/clientFacingDemo";
 import { validateTeamName, validatePlayerName } from "../lib/moderation";
 
 type StoredTeam = { teamId: string; playerId: string; teamName: string; joinCode?: string | null };
@@ -152,14 +153,18 @@ export default function PlayJoin() {
   if (joined && !enteredLobby) return <JoinSuccess session={session} team={joined} onContinue={() => setEnteredLobby(true)} onChooseAgain={chooseAgain} />;
 
   // ── A. Event splash / confirmation (you're in the right place) ──
+  // Controlled POC: prefer a prepared brief's client/venue identity over the DB label (display-only).
+  const ci = clientFacingIdentity();
+  const dVenue = ci.hasBrief ? ci.venueName : session.venueName;
+  const dEvent = ci.hasBrief ? ci.eventName : session.eventTitle;
   if (step === "splash") {
     return (
       <PlayerShell venue={session.venueName} event={session.eventTitle}>
         <div className="pt-2 text-center">
           <p className="text-5xl">🍻</p>
           <p className="mt-2 text-xs font-semibold uppercase tracking-widest text-[var(--ppn-brand)]">You're in the right place</p>
-          <h2 className="mt-1 text-3xl font-extrabold">{session.venueName}</h2>
-          <p className="mt-1 text-[var(--ppn-muted)]">{session.eventTitle} · {DEMO_BRAND.broughtBy}</p>
+          <h2 className="mt-1 text-3xl font-extrabold">{dVenue}</h2>
+          <p className="mt-1 text-[var(--ppn-muted)]">{dEvent} · {ci.broughtBy}</p>
           <div className="mt-3 flex justify-center"><OfferBadge /></div>
           <button onClick={() => setStep("name")} className="mt-6 w-full rounded-xl px-4 py-3.5 text-lg font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>
             Continue →

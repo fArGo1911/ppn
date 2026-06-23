@@ -6,6 +6,7 @@
 import type { ReactNode } from "react";
 import { DEMO_BRAND, brandInitials } from "../demo/brand";
 import { BrandBanner, BrandAssetPreview, SponsorStrip, PoweredByPpnMark, PubEventHeader, BrandLogo } from "./brandZones";
+import { clientFacingIdentity } from "../lib/clientFacingDemo";
 
 const onBrand = { background: "var(--ppn-brand)", color: "var(--ppn-on-brand)" };
 
@@ -24,8 +25,12 @@ function BreweryChip() {
 // `focus` trims the hero + sponsor strip for gameplay states (active question / qintro / reveal) so the
 // player's action is the only thing on screen — sponsor stays only as the subtle top brewery banner.
 export function PlayerShell({ venue, event, focus = false, children }: { venue?: string; event?: string; focus?: boolean; children: ReactNode }) {
-  const pub = venue ?? DEMO_BRAND.pubName;
-  const ev = event ?? DEMO_BRAND.eventName;
+  // In the controlled POC, a prepared demo brief's client/venue identity takes precedence over the DB session
+  // label so a client never sees another brewery's pub/event. Display-only — never mutates the session.
+  const id = clientFacingIdentity();
+  const pub = id.hasBrief ? id.venueName : (venue ?? DEMO_BRAND.pubName);
+  const ev = id.hasBrief ? id.eventName : (event ?? DEMO_BRAND.eventName);
+  const sponsor = id.sponsorName;
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col bg-[var(--ppn-bg)] text-[var(--ppn-text)]">
       <BrandBanner size="phone" />
@@ -34,7 +39,7 @@ export function PlayerShell({ venue, event, focus = false, children }: { venue?:
           <BrandAssetPreview aspect="16/9" overlay="dark" image={DEMO_BRAND.images.heroUrl} alt={DEMO_BRAND.heroImageAltText} className="max-h-44 w-full">
             <div>
               <h1 className="text-2xl font-extrabold leading-tight text-white drop-shadow">{pub}</h1>
-              <p className="text-sm font-semibold text-white/90 drop-shadow">{ev} · {DEMO_BRAND.sponsorName}</p>
+              <p className="text-sm font-semibold text-white/90 drop-shadow">{ev} · {sponsor}</p>
             </div>
           </BrandAssetPreview>
         </div>
@@ -81,12 +86,19 @@ export function TvShell({ children, focus = false }: { children: ReactNode; focu
 // ── Presentation shell (buyer + operator pages): brewery header + subtle powered-by. NO operator route bar —
 // operator navigation lives in /operator and the Presenter Tools pill, so buyer/client pages stay presentation-
 // clean and never show Host/Brand-assets/Config-style links. (data-testid="demo-shell" for the e2e smoke.)
-export function DemoShell({ children }: { children: ReactNode }) {
+// `clientFacing` makes the header follow the prepared demo brief's client identity (logo-safe) for journey-2
+// client pages. Operator pages omit it and keep showing the active preset.
+export function DemoShell({ children, clientFacing = false }: { children: ReactNode; clientFacing?: boolean }) {
+  const id = clientFacing ? clientFacingIdentity() : null;
   return (
     <div data-testid="demo-shell" className="flex min-h-screen flex-col bg-[var(--ppn-bg)] text-[var(--ppn-text)]">
       <div className="flex items-center gap-3 border-b border-[var(--ppn-border)] px-4 py-3">
-        <BrandLogo size="host" />
-        <span className="font-semibold">{DEMO_BRAND.sponsorName}</span>
+        {id
+          ? (id.logoUrl
+            ? <img src={id.logoUrl} alt={id.sponsorName} className="h-9 w-9 rounded-xl object-contain" style={{ background: "var(--ppn-surface)" }} />
+            : <div className="grid h-9 w-9 place-items-center rounded-xl text-sm font-black" style={{ background: "var(--ppn-brand)", color: "var(--ppn-on-brand)" }} aria-hidden>{id.initials}</div>)
+          : <BrandLogo size="host" />}
+        <span className="font-semibold">{id ? id.sponsorName : DEMO_BRAND.sponsorName}</span>
         <div className="ml-auto"><PoweredByPpnMark /></div>
       </div>
       <main className="flex-1">{children}</main>
