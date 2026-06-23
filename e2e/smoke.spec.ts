@@ -75,20 +75,22 @@ test("/operator is gated when locked", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /PPN Demo Control Centre/i })).toBeVisible();
 });
 
-test("/operator shows current demo, guided journey, surface buttons and free exploration", async ({ page }) => {
+test("/operator shows current demo, the three demo lanes, appendix and surface links", async ({ page }) => {
   await unlockOperator(page);
   await page.goto("/operator");
-  await expect(page.getByText(/demo control centre/i)).toBeVisible();
+  await expect(page.getByText(/demo control centre/i).first()).toBeVisible();
   await expect(page.getByText("Current demo")).toBeVisible();
-  await expect(page.getByText(/guided demo journey/i)).toBeVisible();
-  await expect(page.getByText(/free exploration/i)).toBeVisible();
-  // Open-surface buttons exist (new-tab anchors).
-  await expect(page.getByRole("link", { name: /Open TV/ }).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: /Open Host/ }).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: /Open Player/ }).first()).toBeVisible();
-  // Free-exploration route groups + persona warning.
-  await expect(page.getByText("Operator prep")).toBeVisible();
-  await expect(page.getByText(/never show a client/i)).toBeVisible();
+  // Reframed into three lanes + appendix.
+  await expect(page.getByText("Start here", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Design demo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Preview client tour" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Run live demo" })).toBeVisible();
+  await expect(page.getByText(/Appendix \/ supporting material/i)).toBeVisible();
+  // Gated-hub safety note + live surface links exist.
+  await expect(page.getByText(/not shown to clients/i)).toBeVisible();
+  await expect(page.locator('a[href="/host"]').first()).toBeVisible();
+  await expect(page.locator('a[href="/tv/DEMO"]').first()).toBeVisible();
+  await expect(page.locator('a[href="/play/DEMO"]').first()).toBeVisible();
 });
 
 test("/operator surfaces wrong-client override warning + clear action when overrides are set", async ({ page }) => {

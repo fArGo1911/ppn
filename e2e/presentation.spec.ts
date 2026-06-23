@@ -74,10 +74,12 @@ test("/presentation falls back to the active preset when no brief exists", async
 });
 
 // ── /operator links to the client presentation (operator must be unlocked) ──
-test("/operator offers an 'Open client presentation' action", async ({ page }) => {
+test("/operator offers a client presentation action", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("ppn_operator_unlocked", "1"));
   await page.goto("/operator");
-  await expect(page.getByRole("link", { name: /Open client presentation/i })).toBeVisible();
+  // Lives in the "Preview client tour" lane as a link to /presentation.
+  await expect(page.locator('a[href="/presentation"]').first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /Client presentation/i }).first()).toBeVisible();
 });
 
 // ── Invariants: setup wizard stays gated; presentation does not gate ──

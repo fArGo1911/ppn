@@ -1,7 +1,8 @@
 /**
- * /operator — Operator Demo Control Centre (gated). The guided "start here" hub: active-demo status, an ordered
- * run-the-demo journey with real buttons, and a persona-grouped route map for free exploration. Sits ABOVE
- * /config (which stays as the detailed setup). No game-loop/scoring changes.
+ * /operator — Operator Demo Control Centre (gated). The truthful "start here" hub: active-demo status, then three
+ * lanes that match the operator's real job — Design demo → Preview client tour → Run live demo — plus an appendix
+ * of supporting material (rollout / run-sheet / capabilities / asset reference). Sits ABOVE /config (the detailed
+ * setup). IA/copy only — no game-loop/scoring/runtime changes.
  */
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -17,26 +18,48 @@ import { applyScenarioToSeed, deriveKpi, setupModeLabel } from "../demo/kpiModel
 import { resolveContentMix, contentMixSummary, contentMixWarnings, contentMixSetupWarnings, presetById, matchPresetId } from "../lib/contentMix";
 import { getStagedDemoQuiz, clearStagedDemoQuiz } from "../lib/stagedDemoQuiz";
 
-type Step = { t: string; i: string; to?: string; href?: string; label: string };
-const JOURNEY: Step[] = [
-  { t: "1 · Prepare brand assets", i: "Pick the brewery preset and upload or select the client's asset pack.", to: "/config", label: "Open setup" },
-  { t: "2 · Prepare scenario", i: "Choose a venue-mix scenario template for believable numbers.", to: "/config", label: "Open setup" },
-  { t: "3 · Reset / seed demo", i: "Clean the session and seed demo teams (small / medium / busy).", to: "/config", label: "Open setup" },
-  { t: "4 · Open TV", i: "Full-screen the room display on the TV / projector.", href: "/tv/DEMO", label: "Open TV ↗" },
-  { t: "5 · Open Host", i: "The host console — start, reveal, next, recover. Operator-only.", href: "/host", label: "Open Host ↗" },
-  { t: "6 · Open Player", i: "A guest joins on their own phone. Players wait; the host starts.", href: "/play/DEMO", label: "Open Player ↗" },
-  { t: "7 · Start from Host", i: "Press Play AI intro / Start game on the host console.", href: "/host", label: "Open Host ↗" },
-  { t: "8 · Run question → reveal → scoreboard", i: "Drive each question, reveal & score, show the scoreboard.", href: "/host", label: "Open Host ↗" },
-  { t: "9 · Show KPI / report", i: "The reconciled KPIs and the seeded brewery report.", to: "/report", label: "Open report" },
-  { t: "10 · Show rollout / run sheet", i: "The campaign plan and the venue/host run sheet.", to: "/rollout", label: "Open rollout" },
-  { t: "11 · What the brewery gets / next step", i: "Close on the proof + pilot recommendation.", to: "/report", label: "Open report" },
+// The operator's real job is to DESIGN the demo, PREVIEW the client tour, then RUN the live demo. Each lane lists
+// the truthful surface for that job — not a forced route-checklist, and with no vague "setup"/"scenario"/"AI intro"
+// wording. `href` opens a live surface in a new tab (↗); `to` is an in-app page.
+type Action = { to?: string; href?: string; label: string; note: string; role: string; primary?: boolean };
+type Lane = { n: string; title: string; blurb: string; actions: Action[] };
+const LANES: Lane[] = [
+  {
+    n: "1", title: "Design demo", blurb: "Prepare the client demo before anyone sees it.",
+    actions: [
+      { to: "/operator/setup-wizard", label: "Demo setup wizard", note: "Start here — client, outcome, scale and content mix.", role: "Operator-only", primary: true },
+      { to: "/config", label: "Detailed config / brand & media setup", note: "Brewery preset, uploaded or selected assets, theme.", role: "Operator-only" },
+      { to: "/config", label: "Campaign assumptions / demo numbers", note: "The venue-mix numbers that feed the KPI, report and rollout pages.", role: "Operator-only" },
+      { to: "/operator/setup-wizard", label: "Content mix", note: "Choose the quiz content profile — the proposed-quiz preview.", role: "Operator-only" },
+    ],
+  },
+  {
+    n: "2", title: "Preview client tour", blurb: "Open the client-safe surfaces to tell the story.",
+    actions: [
+      { to: "/presentation", label: "Client presentation", note: "The guided buyer showcase.", role: "Client-safe", primary: true },
+      { href: "/tv/DEMO", label: "TV display / audience screen", note: "The room screen guests see.", role: "TV / audience" },
+      { href: "/play/DEMO", label: "Player phone", note: "What a guest sees on their own phone.", role: "Guest / player" },
+      { to: "/report", label: "Report", note: "The seeded pilot report.", role: "Client-safe" },
+      { to: "/kpi", label: "KPI summary", note: "The reconciled engagement projection.", role: "Client-safe" },
+    ],
+  },
+  {
+    n: "3", title: "Run live demo", blurb: "The seeded live game on the DEMO session. The tailored content mix / staged quiz plan is prepared only — the default live demo quiz still runs the event (not live runtime).",
+    actions: [
+      { href: "/host", label: "Host console", note: "Start the live demo from here (start intro / start game), reveal, next, recover.", role: "Operator-only", primary: true },
+      { href: "/tv/DEMO", label: "TV display", note: "Full-screen on the TV / projector.", role: "TV / audience" },
+      { href: "/play/DEMO", label: "Player phone", note: "A guest joins and plays.", role: "Guest / player" },
+      { to: "/config", label: "Reset / seed demo", note: "Clean the session and seed demo teams in detailed config.", role: "Operator-only" },
+    ],
+  },
 ];
 
-const GROUPS: { label: string; note: string; danger?: boolean; routes: [string, string][] }[] = [
-  { label: "Operator prep", note: "Never show a client", danger: true, routes: [["/operator", "Control centre"], ["/config", "Detailed setup"], ["/setup", "Brand assets"]] },
-  { label: "Event operation", note: "TV & player are client-safe; host controls are operator-only", routes: [["/host", "Host console (operator)"], ["/tv/DEMO", "TV display (client-safe)"], ["/play/DEMO", "Player phone (client-safe)"]] },
-  { label: "Buyer / presentation", note: "Client-safe", routes: [["/", "Campaign"], ["/kpi", "KPI report"], ["/report", "Pilot report"], ["/rollout", "Rollout plan"], ["/capabilities", "Beyond quiz"]] },
-  { label: "Venue handoff", note: "Operator / venue", routes: [["/run-sheet", "Run sheet"]] },
+// Available for depth, but NOT core guided-demo steps.
+const APPENDIX: { to: string; label: string; role: string }[] = [
+  { to: "/rollout", label: "Rollout", role: "Supporting / appendix" },
+  { to: "/run-sheet", label: "Run sheet", role: "Supporting / appendix" },
+  { to: "/capabilities", label: "Beyond quiz / capabilities", role: "Supporting / appendix" },
+  { to: "/setup", label: "Asset reference / slot guide", role: "Reference" },
 ];
 
 export default function Operator() {
@@ -69,7 +92,7 @@ export default function Operator() {
       <div className="mx-auto max-w-4xl px-5 py-8">
         <p className="text-sm uppercase tracking-widest" style={{ color: "var(--ppn-brand)" }}>Operator · demo control centre</p>
         <h1 className="mt-2 text-3xl font-extrabold">Run a {DEMO_BRAND.sponsorName} demo</h1>
-        <p className="mt-1 text-[var(--ppn-muted)]">Start here, follow the steps, or jump anywhere. Gated operator hub — not shown to clients.</p>
+        <p className="mt-1 text-[var(--ppn-muted)]">Start here: design the demo, preview the client tour, then run the live demo. Gated operator hub — not shown to clients.</p>
 
         {/* A. Current demo status */}
         <div className="mt-5 rounded-xl border-2 bg-[var(--ppn-surface)] p-4" style={{ borderColor: "color-mix(in srgb, var(--ppn-brand) 30%, var(--ppn-border))" }}>
@@ -175,52 +198,54 @@ export default function Operator() {
           )}
         </div>
 
-        {/* A3. Client presentation — the client-facing showcase (distinct from internal setup) */}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold">Client presentation</p>
-            <p className="text-xs text-[var(--ppn-muted)]">Internal setup prepares the demo · the client presentation shows the demo story. Read-only and client-safe.</p>
-          </div>
-          <Link to="/presentation" className={surfaceBtn} style={{ background: "var(--ppn-brand)" }}>Open client presentation →</Link>
+        {/* B. The three demo lanes — the operator's real job, in order */}
+        <div className="mt-6 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
+          <p className="text-sm font-semibold">Start here</p>
+          <p className="mt-1 text-sm text-[var(--ppn-muted)]">Design the demo, preview the client tour, then run the live demo. The three lanes below follow that order; rollout / run-sheet / beyond-quiz are appendix material, not core steps.</p>
         </div>
 
-        {/* B. Guided journey */}
-        <h2 className="mt-8 text-sm font-semibold uppercase tracking-wider text-[var(--ppn-muted)]">Guided demo journey</h2>
-        <div className="mt-3 space-y-2">
-          {JOURNEY.map((s) => (
-            <div key={s.t} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold">{s.t}</p>
-                <p className="text-xs text-[var(--ppn-muted)]">{s.i}</p>
+        <div className="mt-4 space-y-4">
+          {LANES.map((lane) => (
+            <div key={lane.n} className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
+              <div className="flex items-baseline gap-2">
+                <span className="grid h-6 w-6 place-items-center rounded-full text-xs font-black text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>{lane.n}</span>
+                <h2 className="text-lg font-bold">{lane.title}</h2>
               </div>
-              {s.href
-                ? <a href={s.href} target="_blank" rel="noreferrer" className={surfaceBtn} style={{ background: "var(--ppn-brand)" }}>{s.label}</a>
-                : <Link to={s.to!} className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-sm font-semibold">{s.label}</Link>}
+              <p className="mt-1 text-xs text-[var(--ppn-muted)]">{lane.blurb}</p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {lane.actions.map((a, i) => {
+                  const inner = (
+                    <>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold">
+                          {a.label}
+                          <span className="ml-2 rounded border border-[var(--ppn-border)] px-1.5 py-0.5 text-[9px] font-medium text-[var(--ppn-muted)]">{a.role}</span>
+                        </p>
+                        <p className="text-xs text-[var(--ppn-muted)]">{a.note}</p>
+                      </div>
+                      <span className="shrink-0 text-[var(--ppn-brand)]">{a.href ? "↗" : "→"}</span>
+                    </>
+                  );
+                  const cls = "flex items-center justify-between gap-2 rounded-lg border p-3 hover:border-[var(--ppn-brand)]";
+                  const style = { borderColor: a.primary ? "color-mix(in srgb, var(--ppn-brand) 45%, var(--ppn-border))" : "var(--ppn-border)" };
+                  return a.href
+                    ? <a key={i} href={a.href} target="_blank" rel="noreferrer" className={cls} style={style}>{inner}</a>
+                    : <Link key={i} to={a.to!} className={cls} style={style}>{inner}</Link>;
+                })}
+              </div>
             </div>
           ))}
         </div>
 
-        {/* C. Open demo surfaces (quick) */}
-        <h2 className="mt-8 text-sm font-semibold uppercase tracking-wider text-[var(--ppn-muted)]">Open demo surfaces</h2>
+        {/* C. Appendix / supporting material — available, but not core guided-demo steps */}
+        <h2 className="mt-8 text-sm font-semibold uppercase tracking-wider text-[var(--ppn-muted)]">Appendix / supporting material</h2>
+        <p className="mt-1 text-xs text-[var(--ppn-muted)]">Available for depth, but not core guided-demo steps.</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <a href="/tv/DEMO" target="_blank" rel="noreferrer" className={surfaceBtn} style={{ background: "var(--ppn-brand)" }}>Open TV ↗</a>
-          <a href="/host" target="_blank" rel="noreferrer" className={surfaceBtn} style={{ background: "var(--ppn-brand)" }}>Open Host ↗</a>
-          <a href="/play/DEMO" target="_blank" rel="noreferrer" className={surfaceBtn} style={{ background: "var(--ppn-brand)" }}>Open Player ↗</a>
-          <Link to="/config" className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-sm font-semibold">Detailed config</Link>
-        </div>
-
-        {/* D. Free exploration / route map */}
-        <h2 className="mt-8 text-sm font-semibold uppercase tracking-wider text-[var(--ppn-muted)]">All surfaces (free exploration)</h2>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          {GROUPS.map((g) => (
-            <div key={g.label} className="rounded-xl border bg-[var(--ppn-surface)] p-3" style={{ borderColor: g.danger ? "color-mix(in srgb, var(--ppn-warning) 40%, var(--ppn-border))" : "var(--ppn-border)" }}>
-              <p className="text-sm font-semibold">{g.label} <span className="text-[10px] font-normal" style={{ color: g.danger ? "var(--ppn-warning)" : "var(--ppn-muted)" }}>· {g.note}</span></p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {g.routes.map(([to, label]) => (
-                  <Link key={to} to={to} className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1 text-xs hover:text-[var(--ppn-brand)]">{label}</Link>
-                ))}
-              </div>
-            </div>
+          {APPENDIX.map((a) => (
+            <Link key={a.to} to={a.to} className="flex items-center gap-2 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-3 py-1.5 text-xs hover:text-[var(--ppn-brand)]">
+              <span className="font-semibold">{a.label}</span>
+              <span className="text-[9px] text-[var(--ppn-muted)]">· {a.role}</span>
+            </Link>
           ))}
         </div>
         {/* E. Troubleshooting */}
