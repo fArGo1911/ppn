@@ -36,6 +36,7 @@ import {
   bankCategoryCounts, QUESTION_BANK, MIX_PROFILES, DEMO_COMPILE_OPTIONS, buildAnswerReviewScript,
   buildProductionList, ANSWER_REVIEW_TONE, ANSWER_REVIEW_EXAMPLES, type ProductionStatus,
 } from "../demo/questionBank";
+import { VARIANT_BANKS, VARIETY_RECORDING_TIPS, type VariantColour } from "../demo/scriptVariants";
 
 const THEME_FIELDS: { key: keyof ThemeColours; label: string }[] = [
   { key: "primary", label: "Primary / brand" }, { key: "primaryDark", label: "Brand dark" }, { key: "accent", label: "Accent" },
@@ -819,6 +820,37 @@ export default function Config() {
               {REPEAT_PHRASE_EXAMPLES.map((p) => <span key={p} className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2 py-0.5 text-[10px] text-[var(--ppn-muted)]">“{p}”</span>)}
             </div>
             <p className="mt-2 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1.5 text-[11px] text-[var(--ppn-muted)]"><span className="font-semibold text-[var(--ppn-text)]">Winner announcement uses Team number, not team name:</span> “{WINNER_SCRIPT_REF}”. {TEAM_NUMBER_FOLLOWUP}</p>
+          </Card>
+
+          {/* Generic script variant banks — multiple varied takes per high-frequency cue so audio never sounds templated */}
+          <Card title="Generic script variant banks">
+            <p className="text-xs text-[var(--ppn-muted)]">The fastest way to spot AI-made audio is hearing the <span className="font-semibold text-[var(--ppn-text)]">same line every time</span>. Each high-frequency generic cue below has a bank of varied lines — <span className="font-semibold text-[var(--ppn-text)]">record every one as its own MP3</span> so repeats sound natural. These are a script bank to record from; the app does not yet rotate them at runtime (rotation parked).</p>
+            {VARIANT_BANKS.map((bank) => {
+              const colourTone = (c: VariantColour): React.CSSProperties =>
+                c === "generic" ? slotTone("preview") : { background: "color-mix(in srgb, var(--ppn-brand) 14%, transparent)", color: "var(--ppn-brand)" };
+              return (
+                <div key={bank.id} className="mt-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--ppn-brand)" }}>{bank.label}</p>
+                    <span className="rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase" style={slotTone("uploaded")}>{bank.variants.length} variants</span>
+                  </div>
+                  <p className="text-[10px] text-[var(--ppn-muted)]">{bank.blurb}</p>
+                  <ul className="mt-1.5 space-y-1">
+                    {bank.variants.map((v) => (
+                      <li key={v.file} className="flex flex-wrap items-baseline gap-2 text-[11px]">
+                        <span className="font-mono text-[9px] text-[var(--ppn-muted)]">{v.file}</span>
+                        {v.colour !== "generic" && <span className="rounded-full px-1.5 py-0.5 text-[8px] font-semibold uppercase" style={colourTone(v.colour)}>{v.colour}</span>}
+                        <span className="text-[var(--ppn-text)]">“{v.text}”</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+            <p className="mt-3 text-[11px] font-semibold text-[var(--ppn-text)]">Keeping it from sounding artificial</p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-5 text-[10px] text-[var(--ppn-muted)]">
+              {VARIETY_RECORDING_TIPS.map((t) => <li key={t}>{t}</li>)}
+            </ul>
           </Card>
 
           {/* Brand identity & offer copy (a required "slot") */}
