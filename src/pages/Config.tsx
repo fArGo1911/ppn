@@ -50,17 +50,17 @@ const PACK_COPY_FIELDS: { key: string; label: string }[] = [
 // Slot-based asset manager catalogue. Each media slot maps to an AssetPack override field (manual path) AND an
 // AssetType (storage upload), so each slot gets its own upload/replace/clear — reusing the existing primitives.
 type SlotGroup = "Required" | "Recommended" | "Optional";
-interface MediaSlot { group: SlotGroup; field: keyof AssetPack; type: AssetType; label: string; size: string; aspect: string; fileType: string; appears: string; kind: "image" | "video" }
+interface MediaSlot { group: SlotGroup; field: keyof AssetPack; type: AssetType; label: string; size: string; aspect: string; fileType: string; accept: string; appears: string; kind: "image" | "video"; live: "live" | "preview-only" }
 const MEDIA_SLOTS: MediaSlot[] = [
-  { group: "Required", field: "logoUrl", type: "logo", label: "Brewery / client logo", size: "SVG / transparent PNG", aspect: "1/1", fileType: "PNG / SVG", appears: "TV banner · player header · KPI", kind: "image" },
-  { group: "Required", field: "heroUrl", type: "hero", label: "TV hero / campaign background", size: "1920×1080", aspect: "16/9", fileType: "JPG / PNG", appears: "TV welcome · presentation landing", kind: "image" },
-  { group: "Required", field: "sponsorSlideUrl", type: "sponsor_slide", label: "TV sponsor slide / offer card", size: "1920×1080", aspect: "16/9", fileType: "JPG / PNG", appears: "TV sponsor slideshow / pause", kind: "image" },
-  { group: "Recommended", field: "phoneCardUrl", type: "phone_card", label: "Phone sponsor card", size: "1080×1350", aspect: "4/5", fileType: "JPG / PNG", appears: "player waiting / sponsored Q (preview)", kind: "image" },
-  { group: "Recommended", field: "lowerThirdUrl", type: "lower_third", label: "TV lower-third / offer strip", size: "1920×240", aspect: "8/1", fileType: "PNG (transparent)", appears: "TV offer strip (preview)", kind: "image" },
-  { group: "Recommended", field: "venueUrl", type: "venue_image", label: "Venue / background image", size: "1600×900", aspect: "16/9", fileType: "JPG / PNG", appears: "presentation venue (preview)", kind: "image" },
-  { group: "Optional", field: "tvIntroVideoUrl", type: "intro_video", label: "Intro video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 URL / file", appears: "TV intro", kind: "video" },
-  { group: "Optional", field: "sponsorBumperVideoUrl", type: "sponsor_bumper_video", label: "Sponsor bumper video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 URL / file", appears: "TV sponsor bumper", kind: "video" },
-  { group: "Optional", field: "closingVideoUrl", type: "closing_video", label: "Closing video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 URL / file", appears: "TV closing", kind: "video" },
+  { group: "Required", field: "logoUrl", type: "logo", label: "Brewery / client logo", size: "≥512px · transparent", aspect: "1/1", fileType: "PNG · SVG · JPG · GIF", accept: "image/*", appears: "TV banner · player header · KPI", kind: "image", live: "live" },
+  { group: "Required", field: "heroUrl", type: "hero", label: "TV hero / campaign background", size: "1920×1080", aspect: "16/9", fileType: "JPG · PNG · GIF", accept: "image/*", appears: "TV welcome · presentation landing", kind: "image", live: "live" },
+  { group: "Required", field: "sponsorSlideUrl", type: "sponsor_slide", label: "TV sponsor slide / offer card", size: "1920×1080", aspect: "16/9", fileType: "JPG · PNG · GIF", accept: "image/*", appears: "TV sponsor slideshow / pause", kind: "image", live: "live" },
+  { group: "Recommended", field: "phoneCardUrl", type: "phone_card", label: "Phone sponsor card", size: "1080×1350", aspect: "4/5", fileType: "JPG · PNG · GIF", accept: "image/*", appears: "player waiting / sponsored Q", kind: "image", live: "preview-only" },
+  { group: "Recommended", field: "lowerThirdUrl", type: "lower_third", label: "TV lower-third / offer strip", size: "1920×240", aspect: "8/1", fileType: "PNG (transparent)", accept: "image/*", appears: "TV offer strip", kind: "image", live: "preview-only" },
+  { group: "Recommended", field: "venueUrl", type: "venue_image", label: "Venue / background image", size: "1600×900", aspect: "16/9", fileType: "JPG · PNG", accept: "image/*", appears: "presentation venue", kind: "image", live: "preview-only" },
+  { group: "Optional", field: "tvIntroVideoUrl", type: "intro_video", label: "Intro video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 · WebM", accept: "video/*", appears: "TV intro", kind: "video", live: "live" },
+  { group: "Optional", field: "sponsorBumperVideoUrl", type: "sponsor_bumper_video", label: "Sponsor bumper video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 · WebM", accept: "video/*", appears: "TV sponsor bumper", kind: "video", live: "live" },
+  { group: "Optional", field: "closingVideoUrl", type: "closing_video", label: "Closing video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 · WebM", accept: "video/*", appears: "TV closing", kind: "video", live: "live" },
 ];
 // Read-only preview surfaces (link to the real route; no iframe, no preview engine, no generated graphics).
 const PREVIEW_SURFACES: { to: string; label: string; icon: string }[] = [
@@ -254,8 +254,23 @@ export default function Config() {
 
           {activeSection === "brand-media" && (<>
           <div id="brand-media" className="scroll-mt-20 pt-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--ppn-brand)" }}>Brand &amp; media setup</h2>
-            <p className="mt-1 text-xs text-[var(--ppn-muted)]">Everything the client sees: brewery / client identity, logo &amp; brand colours, offer / sponsor copy, and the TV/audience + player-facing visuals. Each slot below has its own upload / manual-path / clear; then apply to the demo.</p>
+            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--ppn-brand)" }}>Media asset manager</h2>
+            <p className="mt-1 text-xs text-[var(--ppn-muted)]"><span className="font-semibold text-[var(--ppn-text)]">CMS-lite media asset manager for the POC.</span> Upload real files from your machine, assign each to a demo slot, then apply to the active demo and open a surface to see it in place. Manual URLs are an advanced fallback, not the main workflow. Spec / sizes: <Link to="/setup#asset-slots" className="text-[var(--ppn-brand)]">asset reference / slot guide</Link>.</p>
+            {/* What's actually dynamic vs fixed vs not-built in this controlled POC */}
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              <div className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3 text-[11px]">
+                <p className="text-xs font-semibold" style={{ color: "var(--ppn-success)" }}>Dynamic (you set these)</p>
+                <p className="mt-1 text-[var(--ppn-muted)]">Uploaded logo, TV hero, sponsor slide, phone card, lower-third, venue image, intro/bumper/closing video, identity / offer copy, brand colours, demo numbers.</p>
+              </div>
+              <div className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3 text-[11px]">
+                <p className="text-xs font-semibold text-[var(--ppn-text)]">Static (fixed in this POC)</p>
+                <p className="mt-1 text-[var(--ppn-muted)]">Layout templates, game flow, scoring/reveal, routes, slot definitions, required sizes/aspect ratios, placement rules.</p>
+              </div>
+              <div className="rounded-lg border border-dashed border-[var(--ppn-border)] p-3 text-[11px]">
+                <p className="text-xs font-semibold" style={{ color: "var(--ppn-warning)" }}>Not built yet</p>
+                <p className="mt-1 text-[var(--ppn-muted)]">Approval workflow, venue self-service, full production CMS, media library, MP3/audio via the pack (file-based only), picture/video question media, rollout image, auto-cropping.</p>
+              </div>
+            </div>
           </div>
 
           <Card title="Active preset · change preset">
@@ -323,8 +338,8 @@ export default function Config() {
           </Card>
 
           {/* Step 2 — slot manager: each slot has its own preview + manual path + upload + clear */}
-          <Card title="Step 2 · brand & media slots">
-            <p className="text-xs text-[var(--ppn-muted)]">Each slot has its own upload / manual-path / clear. Uploads go to the Step-1 pack and auto-fill the slot path; manual paths work anytime. Per-slot spec: <Link to="/setup#asset-slots" className="text-[var(--ppn-brand)]">asset reference / slot guide</Link>.</p>
+          <Card title="Step 2 · upload &amp; assign per slot">
+            <p className="text-xs text-[var(--ppn-muted)]">Upload a real file into each slot — it's stored on the Step-1 pack and assigned to that slot. The <span className="font-semibold text-[var(--ppn-text)]">live</span> / <span className="font-semibold text-[var(--ppn-text)]">preview-only</span> badge says whether that slot renders on the live demo surfaces or only in preview. Manual URL/path is an advanced fallback. Per-slot spec: <Link to="/setup#asset-slots" className="text-[var(--ppn-brand)]">asset reference / slot guide</Link>.</p>
             {(["Required", "Recommended", "Optional"] as SlotGroup[]).map((g) => (
               <div key={g} className="mt-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-muted)]">{g}</p>
@@ -333,30 +348,38 @@ export default function Config() {
                     const ss = slotState(s);
                     return (
                       <div key={s.field} className="flex flex-col rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-3">
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-start justify-between gap-2">
                           <p className="truncate text-sm font-semibold">{s.label}</p>
-                          <span className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase" style={slotTone(ss.status)}>{ss.status}</span>
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            <span className="rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase" style={slotTone(ss.status)}>{ss.status}</span>
+                            <span className="rounded-full px-2 py-0.5 text-[8px] font-semibold uppercase" style={slotTone(s.live === "live" ? "uploaded" : "preview")}>{s.live}</span>
+                          </div>
                         </div>
                         <div className="mt-2 flex items-center gap-2">
                           {ss.url && s.kind === "image"
                             ? <img src={ss.url} alt={s.label} className="h-10 w-14 shrink-0 rounded border border-[var(--ppn-border)] object-contain" style={{ background: "var(--ppn-surface)" }} />
-                            : <span className="grid h-10 w-14 shrink-0 place-items-center rounded border border-dashed border-[var(--ppn-border)] text-[8px] text-[var(--ppn-muted)]" aria-hidden>{ss.url ? "video set" : "no asset"}</span>}
+                            : <span className="grid h-10 w-14 shrink-0 place-items-center rounded border border-dashed border-[var(--ppn-border)] text-[8px] text-[var(--ppn-muted)]" aria-hidden>{ss.url ? "video set" : "no file"}</span>}
                           <div className="min-w-0 text-[10px] text-[var(--ppn-muted)]">
                             <p>{s.size} · {s.aspect}</p>
-                            <p className="truncate">{s.fileType}</p>
+                            <p className="truncate">Files: {s.fileType}</p>
                           </div>
                         </div>
                         <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">Appears: {s.appears}</p>
-                        <input value={(pack[s.field] as string) ?? ""} placeholder="paste path / URL" onChange={(e) => updatePack(s.field, e.target.value)} className="mt-2 w-full rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-2 py-1 font-mono text-[11px] text-[var(--ppn-text)]" />
+                        {/* Primary action: upload a real file from the machine */}
                         <div className="mt-2 flex items-center justify-between gap-2">
                           <label className="cursor-pointer" title={activePack ? "Upload a file to this slot" : "Create/select a pack in Step 1 first"}>
-                            <span className={`rounded border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-2 py-1 text-[10px] font-semibold ${!activePack ? "opacity-40" : ""}`}>Upload…</span>
-                            <input type="file" accept={s.kind === "video" ? "video/*" : "image/*"} disabled={assetBusy || !activePack}
+                            <span className="rounded-lg px-3 py-1.5 text-[11px] font-semibold text-[var(--ppn-on-brand)]" style={{ background: activePack ? "var(--ppn-brand)" : "var(--ppn-border)", opacity: activePack ? 1 : 0.6 }}>⬆ {ss.status === "uploaded" ? "Replace file" : "Upload file"}</span>
+                            <input type="file" accept={s.accept} disabled={assetBusy || !activePack}
                               onChange={(e) => { const f = e.target.files?.[0]; if (f && activePack) runA(() => uploadAssetFile(activePack.id, s.type, f).then((row) => updatePack(s.field, getAssetUrl(row)))); e.currentTarget.value = ""; }}
                               className="hidden" />
                           </label>
-                          <button onClick={() => clearSlot(s)} className="text-[10px] font-semibold text-[var(--ppn-muted)] hover:text-[var(--ppn-text)]">Clear</button>
+                          <button onClick={() => clearSlot(s)} disabled={ss.status === "preset" || ss.status === "missing"} className="text-[10px] font-semibold text-[var(--ppn-muted)] hover:text-[var(--ppn-text)] disabled:opacity-40">Clear</button>
                         </div>
+                        {!activePack && <p className="mt-1 text-[9px] text-[var(--ppn-muted)]">Create/select an asset pack (Step 1) to upload.</p>}
+                        <details className="mt-1">
+                          <summary className="cursor-pointer text-[9px] text-[var(--ppn-muted)]">Advanced fallback: manual path / URL</summary>
+                          <input value={(pack[s.field] as string) ?? ""} placeholder="paste path / URL" onChange={(e) => updatePack(s.field, e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-2 py-1 font-mono text-[11px] text-[var(--ppn-text)]" />
+                        </details>
                       </div>
                     );
                   })}

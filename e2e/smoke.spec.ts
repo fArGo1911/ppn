@@ -52,7 +52,7 @@ test("correct code unlocks /config and shows clean asset IA (no stale copy)", as
   // Current-demo status + the slot-based asset manager (Card titles render as <p>).
   await expect(page.getByText("Current demo", { exact: true })).toBeVisible();
   await expect(page.getByText("Asset readiness", { exact: true })).toBeVisible();
-  await expect(page.getByText(/Step 2 · brand & media slots/)).toBeVisible();
+  await expect(page.getByText(/Step 2 · upload & assign per slot/)).toBeVisible();
   await expect(page.getByText("Where assets appear", { exact: true })).toBeVisible();
   // Stale contradictory copy must be gone.
   await expect(page.getByText(/no upload or storage yet/i)).toHaveCount(0);
