@@ -21,7 +21,23 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+const SLOT_IMAGE: Record<string, keyof typeof DEMO_BRAND.images> = {
+  logo: "logoUrl", tvHero: "heroUrl", campaignHero: "heroUrl", tvSponsorSlide: "sponsorSlideUrl",
+  tvLowerThird: "lowerThirdUrl", phoneCard: "phoneCardUrl", venue: "venueUrl",
+};
+
+const AUDIO_FILES = [
+  "event-intro.mp3", "round-intro.mp3", "sponsored-round-intro.mp3", "question-readout.mp3", "answer-reveal.mp3",
+  "winner.mp3", "question-chime.mp3", "sponsor-message.mp3", "question-01.mp3 … question-10.mp3", "reveal-01.mp3 … reveal-10.mp3",
+];
+
 export default function BrandAssets() {
+  const img = DEMO_BRAND.images;
+  const slotImage = (key: string): string | undefined => {
+    const f = SLOT_IMAGE[key];
+    return f ? img[f] : undefined;
+  };
+  const visualCount = Object.values(img).filter(Boolean).length;
   return (
     <DemoShell>
       <div className="mx-auto max-w-5xl px-5 py-8">
@@ -70,11 +86,22 @@ export default function BrandAssets() {
           </div>
         </div>
 
+        <div className="mt-3 rounded-xl border-2 bg-[var(--ppn-surface)] p-4 text-sm" style={{ borderColor: "color-mix(in srgb, var(--ppn-brand) 30%, var(--ppn-border))" }}>
+          <p className="font-semibold">Demo asset readiness · {DEMO_BRAND.sponsorName}</p>
+          <ul className="mt-2 space-y-1 text-xs text-[var(--ppn-muted)]">
+            <li><span style={{ color: visualCount >= 6 ? "var(--ppn-success)" : "var(--ppn-warning)" }}>●</span> Visual asset pack: <span className="text-[var(--ppn-text)]">{visualCount >= 6 ? "present" : "partial"}</span> ({visualCount}/6 image slots wired — fictional in-repo SVGs).</li>
+            <li><span style={{ color: "var(--ppn-warning)" }}>●</span> Audio: <span className="text-[var(--ppn-text)]">file-based playback</span> — MP3s expected under <span className="font-mono">public/demo/audio/{DEMO_BRAND.audio.audioBaseDir?.split("/").pop()}/</span>. Missing files fall back to <span className="text-[var(--ppn-text)]">script-only</span> (honest).</li>
+            <li>Expected MP3s: <span className="font-mono text-[10px]">{AUDIO_FILES.join(" · ")}</span></li>
+            <li>Scripts to record: <span className="font-mono">docs/demo-assets/NORTHGATE_AUDIO_SCRIPT_PACK.md</span>. After dropping MP3s in, re-open <span className="font-mono">/host</span> — the audio cues show "audio ready" instead of "no file".</li>
+            <li className="text-[var(--ppn-muted)]">This is file-based playback, <span className="text-[var(--ppn-text)]">not an AI voice generation system</span>. Fictional demo brewery — no real brewery, no production campaign.</li>
+          </ul>
+        </div>
+
         <Section title="Image assets">
           <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {IMAGE_SLOTS.map((s) => (
               <div key={s.key}>
-                <BrandAssetPreview aspect={s.aspect} label={`${s.aspect} · ${s.recommended}`} />
+                <BrandAssetPreview aspect={s.aspect} image={slotImage(s.key)} label={`${s.aspect} · ${s.recommended}`} />
                 <p className="mt-1.5 font-medium">{s.label}</p>
                 <p className="text-xs text-[var(--ppn-muted)]">Appears on: {s.appearsOn.join(" · ")}</p>
                 {s.notes && <p className="text-xs text-[var(--ppn-muted)]">{s.notes}</p>}

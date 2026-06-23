@@ -49,3 +49,14 @@ Export as MP3, name them per the table above, and place them in the preset folde
 - Keep filenames **stable** so the preset config keeps resolving them.
 
 These demo audio files are intentionally **not committed** (this folder ships with `.gitkeep` only).
+
+## Northgate default demo
+
+The default demo (Northgate Brewing Co.) has a ready-to-record script pack with exact filenames + scripts,
+voice/pacing direction, and the per-question alignment to the seeded game:
+
+> `docs/demo-assets/NORTHGATE_AUDIO_SCRIPT_PACK.md`
+
+Drop the recorded MP3s in `public/demo/audio/northgate/`. **Fallback:** any missing file degrades to the
+on-screen script (the host audio chip shows "no file · script only"); present files show "audio ready" and play
+through the host device / room PA. This is **file-based playback**, not an AI-voice generation system.

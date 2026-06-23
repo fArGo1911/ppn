@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-label="Northgate sponsor slide background (fictional demo)">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#10182c"/><stop offset="1" stop-color="#0a0f1a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.85" r="0.7">
+      <stop offset="0" stop-color="#f59e0b" stop-opacity="0.28"/><stop offset="1" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbbf24"/><stop offset="1" stop-color="#b45309"/></linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect width="1600" height="900" fill="url(#glow)"/>
+  <!-- pint glass abstract, right -->
+  <g transform="translate(1240 250)" opacity="0.85">
+    <rect x="0" y="60" width="180" height="300" rx="22" fill="none" stroke="url(#amber)" stroke-width="6"/>
+    <rect x="14" y="150" width="152" height="196" rx="14" fill="#f59e0b" fill-opacity="0.22"/>
+    <ellipse cx="90" cy="70" rx="92" ry="34" fill="#fde7b8" fill-opacity="0.35"/>
+  </g>
+  <!-- gate arch, left -->
+  <path d="M120 720 V470 a210 210 0 0 1 420 0 V720" fill="none" stroke="#f59e0b" stroke-opacity="0.16" stroke-width="4"/>
+  <!-- north-star -->
+  <g transform="translate(330 300)" fill="url(#amber)" opacity="0.8">
+    <path d="M0 -90 L16 -16 L0 0 L-16 -16 Z"/><path d="M0 0 L16 -16 L90 0 L16 16 Z" opacity="0.8"/><path d="M0 0 L-16 -16 L-90 0 L-16 16 Z" opacity="0.8"/>
+  </g>
+  <text x="100" y="840" font-family="Georgia, 'Times New Roman', serif" font-size="90" font-weight="700" letter-spacing="5" fill="#ffffff" fill-opacity="0.06">NORTHGATE</text>
+</svg>

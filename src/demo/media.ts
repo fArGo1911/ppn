@@ -114,7 +114,7 @@ export function preEventSlides(b: DemoBrand): Slide[] {
 }
 export function sponsorSlides(b: DemoBrand): Slide[] {
   return [
-    { id: "spo-1", headline: b.sponsorName, subtitle: b.tagline, logo: true },
+    { id: "spo-1", headline: b.sponsorName, subtitle: b.tagline, logo: true, image: b.images.sponsorSlideUrl },
     { id: "spo-2", headline: "On the menu tonight", subtitle: b.offer, offer: true, responsible: true },
     { id: "spo-3", headline: "Next round coming up", subtitle: "Grab a drink — back in a moment", cta: b.cta },
   ];
@@ -133,7 +133,7 @@ export function victorySlides(b: DemoBrand): Slide[] {
 }
 export function playerHeroSlides(b: DemoBrand): Slide[] {
   return [
-    { id: "ph-1", headline: b.pubName, subtitle: `${b.eventName} · ${b.sponsorName}`, aspect: "16/9" },
+    { id: "ph-1", headline: b.pubName, subtitle: `${b.eventName} · ${b.sponsorName}`, aspect: "16/9", image: b.images.heroUrl },
     { id: "ph-2", headline: "Tonight's reward", subtitle: b.offer, offer: true, aspect: "16/9" },
   ];
 }

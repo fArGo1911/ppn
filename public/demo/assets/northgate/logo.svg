@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Northgate Brewing Co. (fictional demo)">
+  <defs>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbbf24"/>
+      <stop offset="1" stop-color="#b45309"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="90" height="90" rx="20" fill="#0b1220" stroke="url(#amber)" stroke-width="3"/>
+  <!-- north-gate arch -->
+  <path d="M30 64 V46 a18 18 0 0 1 36 0 V64" fill="none" stroke="url(#amber)" stroke-width="4" stroke-linecap="round"/>
+  <!-- north-star / compass -->
+  <g fill="url(#amber)">
+    <path d="M48 18 L52 40 L48 46 L44 40 Z"/>
+    <path d="M48 46 L52 40 L70 44 L52 48 Z" opacity="0.85"/>
+    <path d="M48 46 L44 40 L26 44 L44 48 Z" opacity="0.85"/>
+  </g>
+  <circle cx="48" cy="44" r="3.2" fill="#0b1220" stroke="url(#amber)" stroke-width="2"/>
+  <text x="48" y="80" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="12" font-weight="700" letter-spacing="3" fill="#e2e8f0">NB</text>
+</svg>
