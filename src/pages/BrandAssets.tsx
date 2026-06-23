@@ -9,6 +9,7 @@ import { BrandAssetPreview } from "../components/brandZones";
 import { Carousel } from "../components/Carousel";
 import { VideoSlot } from "../components/VideoSlot";
 import { DEMO_BRAND } from "../demo/brand";
+import { anyOverrideActive, overrideStatus, clearClientOverrides } from "../lib/demoStatus";
 import { IMAGE_SLOTS, TEXT_SLOTS, AI_SLOTS, VIDEO_SLOTS, ZONE_MAP, ASSET_USAGE, TRANSPARENCY } from "../demo/brandAssets";
 import { MEDIA_ZONES, CAROUSEL_GUIDANCE, COPY_SLOTS, preEventSlides, VIDEO_GUIDANCE, VIDEO_RULES } from "../demo/media";
 
@@ -44,9 +45,15 @@ export default function BrandAssets() {
         <p className="text-sm uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>Operator · asset prep</p>
         <h1 className="mt-2 text-3xl font-extrabold">Prepare a brewery demo — asset checklist</h1>
         <p className="mt-2 max-w-2xl text-[var(--ppn-muted)]">
-          What to gather before a brewery demo, and where each asset appears. Paste paths in <span className="font-mono">/config → Brewery asset pack</span>.
-          <span className="text-[var(--ppn-muted)]"> POC: URL/path only — no upload or storage yet.</span>
+          What to gather before a brewery demo, and where each asset appears. Set the client's brand in detailed config — paste paths (Quick manual paths) or upload files (Upload asset pack).
         </p>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3 text-xs">
+          <span className="rounded-full px-2 py-1 font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>{DEMO_BRAND.sponsorName} · {DEMO_BRAND.market}</span>
+          <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Client assets: <span className="font-semibold" style={{ color: overrideStatus().asset ? "var(--ppn-warning)" : "var(--ppn-muted)" }}>{overrideStatus().asset ? "custom" : "default"}</span></span>
+          <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1">Theme: <span className="font-semibold" style={{ color: overrideStatus().theme ? "var(--ppn-warning)" : "var(--ppn-muted)" }}>{overrideStatus().theme ? "custom" : "default"}</span></span>
+          {anyOverrideActive() && <button onClick={() => { clearClientOverrides(); window.location.reload(); }} className="rounded-lg border border-[var(--ppn-border)] px-3 py-1 font-semibold">Clear client overrides</button>}
+        </div>
 
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           <div className="rounded-xl border-2 bg-[var(--ppn-surface)] p-4" style={{ borderColor: "color-mix(in srgb, var(--ppn-brand) 30%, var(--ppn-border))" }}>
@@ -74,11 +81,11 @@ export default function BrandAssets() {
         <div className="mt-3 grid gap-3 md:grid-cols-3">
           <div className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3 text-sm">
             <p className="font-semibold">POC manual path mode</p>
-            <p className="mt-1 text-xs text-[var(--ppn-muted)]">Paste URLs / local paths in <span className="font-mono">/config → Brewery asset pack</span> (localStorage). No storage — quickest for a controlled demo.</p>
+            <p className="mt-1 text-xs text-[var(--ppn-muted)]">Paste paths or URLs in <span className="font-mono">detailed config → Quick manual paths</span>. Quickest for a controlled demo; no upload needed.</p>
           </div>
           <div className="rounded-xl border-2 bg-[var(--ppn-surface)] p-3 text-sm" style={{ borderColor: "color-mix(in srgb, var(--ppn-brand) 30%, var(--ppn-border))" }}>
             <p className="font-semibold">Beta storage-backed mode</p>
-            <p className="mt-1 text-xs text-[var(--ppn-muted)]">Upload files in <span className="font-mono">/config → Stored asset packs</span> → Supabase Storage (<span className="font-mono">ppn-brand-assets</span>) + asset registry (draft/active). Operator beta foundation.</p>
+            <p className="mt-1 text-xs text-[var(--ppn-muted)]">Upload client files in <span className="font-mono">detailed config → Upload asset pack</span> → PPN storage + asset registry. Needs the local PPN database running.</p>
           </div>
           <div className="rounded-xl border border-dashed border-[var(--ppn-border)] p-3 text-sm">
             <p className="font-semibold">Not built yet</p>

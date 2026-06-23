@@ -58,9 +58,16 @@ export default function Operator() {
         <h1 className="mt-2 text-3xl font-extrabold">Run a {DEMO_BRAND.sponsorName} demo</h1>
         <p className="mt-1 text-[var(--ppn-muted)]">Start here, follow the steps, or jump anywhere. Gated operator hub — not shown to clients.</p>
 
-        {/* A. Active demo status */}
+        {/* A. Current demo status */}
         <div className="mt-5 rounded-xl border-2 bg-[var(--ppn-surface)] p-4" style={{ borderColor: "color-mix(in srgb, var(--ppn-brand) 30%, var(--ppn-border))" }}>
-          <p className="text-sm font-semibold">Active demo</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold">Current demo</p>
+            {sessQ.isLoading
+              ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold text-[var(--ppn-muted)]" style={{ background: "var(--ppn-bg)" }}>checking…</span>
+              : (sessQ.data && sessQ.data.kind !== "invalid")
+                ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-success) 18%, transparent)", color: "var(--ppn-success)" }}>Ready to run</span>
+                : <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>Needs attention</span>}
+          </div>
           <div className="mt-2 flex flex-wrap gap-2">
             <Chip label="Brewery:" on onText={`${DEMO_BRAND.sponsorName} (${m.market})`} />
             <Chip label="Custom assets" on={ov.asset} />
@@ -118,7 +125,13 @@ export default function Operator() {
             </div>
           ))}
         </div>
-        <p className="mt-6 text-xs text-[var(--ppn-muted)]">Players wait on their phones; the host starts the quiz. The player page intentionally has no "start" button.</p>
+        {/* E. Troubleshooting */}
+        <h2 className="mt-8 text-sm font-semibold uppercase tracking-wider text-[var(--ppn-muted)]">Troubleshooting</h2>
+        <div className="mt-3 rounded-xl border border-dashed border-[var(--ppn-border)] p-3 text-xs text-[var(--ppn-muted)]">
+          <p>· Player/TV stuck on "waiting"? The host starts the quiz — open Host and press Start. Players never start the event.</p>
+          <p className="mt-1">· Storage uploads unavailable? Start the local PPN database, or use manual paths in detailed config.</p>
+          <p className="mt-1">· Wrong brewery showing? Clear client overrides above, then re-apply the right pack.</p>
+        </div>
       </div>
     </DemoShell>
   );

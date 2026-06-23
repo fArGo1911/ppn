@@ -8,7 +8,7 @@ import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DemoShell } from "../components/shells";
 import { PRESETS, getActiveBrand, brandInitials, type ThemeColours } from "../demo/brand";
-import { switchPresetGuarded } from "../lib/demoStatus";
+import { switchPresetGuarded, overrideStatus, anyOverrideActive, clearClientOverrides } from "../lib/demoStatus";
 import { activeMarket } from "../demo/markets";
 import { SETUP_MODES } from "../demo/setup";
 import { useAudienceMode } from "../lib/audience";
@@ -182,6 +182,19 @@ export default function Config() {
             <p className="mt-2 text-xs text-[var(--ppn-muted)]">Players wait on their phones; the host starts the quiz. (The player page intentionally has no "start" button.)</p>
           </Card>
 
+          <Card title="Current demo">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-full px-2 py-1 font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>{active.sponsorName} · {active.market}</span>
+              {([["Client assets", overrideStatus().asset], ["Theme", overrideStatus().theme], ["Scenario", overrideStatus().scenario]] as [string, boolean][]).map(([label, on]) => (
+                <span key={label} className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-2.5 py-1">{label}: <span className="font-semibold" style={{ color: on ? "var(--ppn-warning)" : "var(--ppn-muted)" }}>{on ? "custom" : "default"}</span></span>
+              ))}
+              <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-2.5 py-1">Storage upload: <span className="font-semibold">{packsQ.isError ? "unavailable" : packsQ.isSuccess ? "available" : "checking…"}</span></span>
+            </div>
+            {anyOverrideActive()
+              ? <div className="mt-3 flex flex-wrap items-center gap-2"><span className="text-xs" style={{ color: "var(--ppn-warning)" }}>⚠ Custom client overrides are active — clear them before prepping a different brewery.</span><button onClick={() => { clearClientOverrides(); window.location.reload(); }} className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-xs font-semibold">Clear client overrides</button></div>
+              : <p className="mt-2 text-xs text-[var(--ppn-muted)]">Showing preset defaults — no custom client branding applied. Switching brewery below will ask before carrying any overrides over.</p>}
+          </Card>
+
           <Card title="Brewery preset · market">
             <div className="space-y-2">
               {PRESETS.map((p) => {
@@ -200,14 +213,14 @@ export default function Config() {
             </div>
           </Card>
 
-          <Card title="Brewery asset pack (operator only)">
+          <Card title="Quick manual paths">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-[var(--ppn-muted)]">Active preset: <span className="font-semibold text-[var(--ppn-text)]">{active.sponsorName}</span></p>
+              <p className="text-xs text-[var(--ppn-muted)]">Fast brand swap — paste paths or URLs (no upload needed). For files, use <span className="text-[var(--ppn-text)]">Upload asset pack</span> below.</p>
               {packActive
-                ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>Asset override active</span>
+                ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>Custom assets applied</span>
                 : <span className="text-[10px] text-[var(--ppn-muted)]">preset defaults</span>}
             </div>
-            <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">POC asset pack: URL/path only — no upload or storage yet. Place files under <span className="font-mono">public/demo/assets/&lt;preset&gt;/</span> and paste the paths. See <Link to="/setup" className="text-[var(--ppn-brand)]">/setup</Link> for where each appears.</p>
+            <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">Drop files under <span className="font-mono">public/demo/assets/&lt;preset&gt;/</span> and paste the paths. See <Link to="/setup" className="text-[var(--ppn-brand)]">Brand assets</Link> for where each one appears.</p>
 
             <p className="mt-3 text-xs font-semibold text-[var(--ppn-muted)]">Copy</p>
             <div className="mt-1 grid gap-2 sm:grid-cols-2">
@@ -247,10 +260,10 @@ export default function Config() {
             <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Apply reloads so every surface re-merges the pack. Blank fields keep the preset value — an override can never blank a page.</p>
           </Card>
 
-          <Card title="Stored asset packs (operator beta)">
-            <p className="text-[11px] text-[var(--ppn-muted)]">Beta foundation: files are uploaded to Supabase Storage and registered in the asset registry. Still not a full CMS or brewery self-service portal.</p>
+          <Card title="Upload asset pack (storage-backed)">
+            <p className="text-[11px] text-[var(--ppn-muted)]">Upload client branding files to PPN storage and apply a named pack. Storage upload: <span className="font-semibold">{packsQ.isError ? "unavailable" : packsQ.isSuccess ? "available" : "checking…"}</span> — needs the local PPN database running. The manual paths above always work.</p>
             {packsQ.isError ? (
-              <p className="mt-2 rounded-lg border border-dashed border-[var(--ppn-border)] p-3 text-xs text-amber-400">Asset registry not reachable (Supabase offline?) — the manual asset pack above and preset defaults still work.</p>
+              <p className="mt-2 rounded-lg border border-dashed border-[var(--ppn-border)] p-3 text-xs text-amber-400">Storage is unavailable right now (the local PPN database isn't reachable). Use Quick manual paths above, or start the local database to enable uploads.</p>
             ) : (
               <>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -310,6 +323,27 @@ export default function Config() {
                 {assetErr && <p className="mt-2 text-xs text-red-400">{assetErr}</p>}
               </>
             )}
+          </Card>
+
+          <Card title="Where assets appear">
+            <div className="space-y-1.5 text-xs">
+              {([
+                ["Logo", "Brewery banner / header on player + TV", "live"],
+                ["Hero image", "Landing + player splash", "live"],
+                ["Sponsor slide", "TV sponsor slideshow", "live"],
+                ["Phone card", "Brand-assets preview only — not in live gameplay yet", "preview"],
+                ["Lower third", "Brand-assets preview only — not in live gameplay yet", "preview"],
+                ["Venue image", "Brand-assets preview only — not in live gameplay yet", "preview"],
+                ["Videos", "TV intro / sponsor-bumper / closing slots where wired", "where wired"],
+                ["Audio (MP3)", "Script pack ready; MP3s not added — host/TV use the on-screen script", "not yet"],
+              ] as [string, string, string][]).map(([a, where, tag]) => (
+                <div key={a} className="flex items-center justify-between gap-2 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1.5">
+                  <span><span className="font-semibold text-[var(--ppn-text)]">{a}</span> <span className="text-[var(--ppn-muted)]">— {where}</span></span>
+                  <span className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase" style={tag === "live" ? { background: "color-mix(in srgb, var(--ppn-success) 18%, transparent)", color: "var(--ppn-success)" } : { background: "var(--ppn-surface)", color: "var(--ppn-muted)" }}>{tag}</span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Uploaded assets are stored even if not shown live — only the surfaces marked "live" appear during a run.</p>
           </Card>
 
           <Card title="Internal theme studio (operator only)">

@@ -32,22 +32,30 @@ for (const route of ["/", "/report", "/kpi"]) {
   });
 }
 
-// ── B. Operator gate ──
-test("operator gate blocks /config when locked", async ({ page }) => {
+// ── B. Operator gate (polished product entry) ──
+test("operator gate blocks /config when locked + shows polished control-centre copy", async ({ page }) => {
   await page.goto("/config");
-  await expect(page.getByText(/enter the demo operator code/i)).toBeVisible();
+  await expect(page.getByRole("heading", { name: /PPN Demo Control Centre/i })).toBeVisible();
+  await expect(page.getByText(/enter the operator code/i)).toBeVisible();
 });
 
 test("operator gate blocks /host when locked", async ({ page }) => {
   await page.goto("/host");
-  await expect(page.getByText(/enter the demo operator code/i)).toBeVisible();
+  await expect(page.getByRole("heading", { name: /PPN Demo Control Centre/i })).toBeVisible();
 });
 
-test("correct code unlocks /config", async ({ page }) => {
+test("correct code unlocks /config and shows clean asset IA (no stale copy)", async ({ page }) => {
   await page.goto("/config");
   await page.getByPlaceholder("operator code").fill(CODE);
   await page.getByRole("button", { name: "Unlock" }).click();
   await expect(page.getByText(/run the demo/i)).toBeVisible();
+  // Current-demo status + separated manual vs upload asset modes (Card titles render as <p>).
+  await expect(page.getByText("Current demo", { exact: true })).toBeVisible();
+  await expect(page.getByText("Quick manual paths", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Upload asset pack/).first()).toBeVisible();
+  await expect(page.getByText("Where assets appear", { exact: true })).toBeVisible();
+  // Stale contradictory copy must be gone.
+  await expect(page.getByText(/no upload or storage yet/i)).toHaveCount(0);
 });
 
 test("/play/DEMO is not gated and has no AI-host/script exposure", async ({ page }) => {
@@ -64,15 +72,16 @@ test("/tv/DEMO is not gated", async ({ page }) => {
 // ── C. Operator Demo Control Centre ──
 test("/operator is gated when locked", async ({ page }) => {
   await page.goto("/operator");
-  await expect(page.getByText(/enter the demo operator code/i)).toBeVisible();
+  await expect(page.getByRole("heading", { name: /PPN Demo Control Centre/i })).toBeVisible();
 });
 
-test("/operator shows status, guided journey, surface buttons and route groups when unlocked", async ({ page }) => {
+test("/operator shows current demo, guided journey, surface buttons and free exploration", async ({ page }) => {
   await unlockOperator(page);
   await page.goto("/operator");
   await expect(page.getByText(/demo control centre/i)).toBeVisible();
-  await expect(page.getByText("Active demo")).toBeVisible();
+  await expect(page.getByText("Current demo")).toBeVisible();
   await expect(page.getByText(/guided demo journey/i)).toBeVisible();
+  await expect(page.getByText(/free exploration/i)).toBeVisible();
   // Open-surface buttons exist (new-tab anchors).
   await expect(page.getByRole("link", { name: /Open TV/ }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: /Open Host/ }).first()).toBeVisible();
@@ -80,4 +89,14 @@ test("/operator shows status, guided journey, surface buttons and route groups w
   // Free-exploration route groups + persona warning.
   await expect(page.getByText("Operator prep")).toBeVisible();
   await expect(page.getByText(/never show a client/i)).toBeVisible();
+});
+
+test("/operator surfaces wrong-client override warning + clear action when overrides are set", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("ppn_operator_unlocked", "1");
+    localStorage.setItem("ppn_asset_pack", JSON.stringify({ sponsorName: "Other Client Co." }));
+  });
+  await page.goto("/operator");
+  await expect(page.getByText(/client overrides are active/i)).toBeVisible();
+  await expect(page.getByRole("button", { name: /clear client overrides/i })).toBeVisible();
 });

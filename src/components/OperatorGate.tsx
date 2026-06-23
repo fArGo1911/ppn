@@ -18,20 +18,20 @@ export function OperatorGate({ children }: { children: ReactNode }) {
 
   return (
     <DemoShell>
-      <div className="mx-auto max-w-md px-5 py-16">
-        <p className="text-sm uppercase tracking-widest" style={{ color: "var(--ppn-brand)" }}>Operator tools</p>
-        <h1 className="mt-2 text-2xl font-extrabold">Enter the demo operator code</h1>
-        <p className="mt-2 text-sm text-[var(--ppn-muted)]">These control surfaces can change or reset the demo, so they're behind a code. <span className="text-[var(--ppn-text)]">POC gate only — not production authentication.</span></p>
+      <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-5 py-12">
+        <p className="text-sm font-semibold uppercase tracking-widest" style={{ color: "var(--ppn-brand)" }}>Operator</p>
+        <h1 className="mt-2 text-3xl font-extrabold leading-tight">PPN Demo Control Centre</h1>
+        <p className="mt-2 text-[var(--ppn-muted)]">Enter the operator code to prepare or run the demo.</p>
         <input
           type="password" value={code} autoFocus
           onChange={(e) => { setCode(e.target.value); setBad(false); }}
           onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
           placeholder="operator code"
-          className="mt-5 w-full rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-4 py-3 text-base outline-none focus:border-[color:var(--ppn-brand)]"
+          className="mt-6 w-full rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-4 py-3.5 text-base outline-none focus:border-[color:var(--ppn-brand)]"
         />
-        {bad && <p className="mt-2 text-sm text-red-400">Wrong code.</p>}
-        <button onClick={submit} className="mt-3 w-full rounded-xl px-4 py-3 font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>Unlock</button>
-        <p className="mt-3 text-[11px] text-[var(--ppn-muted)]">Unlock is remembered on this device only. Player and TV screens are never gated.</p>
+        {bad && <p className="mt-2 text-sm text-red-400">That code didn't match — try again.</p>}
+        <button onClick={submit} className="mt-3 w-full rounded-xl px-4 py-3.5 text-base font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>Unlock</button>
+        <p className="mt-4 text-[11px] text-[var(--ppn-muted)]">Remembered on this device. Player and TV screens are never gated. <span className="opacity-80">POC gate — not production authentication.</span></p>
       </div>
     </DemoShell>
   );
