@@ -127,6 +127,48 @@ const DEMO_VIDEO: DemoBrand["video"] = {
   sourceNote: "Demo references (CC / public samples) — replace with the brewery's own clips.",
 };
 
+// ── Shared AI-script + audio-variant generators (keep the broad preset library compact) ──
+const EN_QI = ["Next question coming up.", "Get ready for the next one.", "Here comes the next question.", "Eyes down — next question.", "Right then, next up…"];
+const EN_QN = ["Question {n}.", "Question {n} — listen carefully.", "Next up, question {n}.", "Here comes question {n}.", "Right then, question {n}."];
+const DE_QI = ["Gleich kommt die nächste Frage.", "Macht euch bereit.", "Die nächste Frage kommt.", "Aufgepasst — nächste Frage.", "Weiter geht's…"];
+const DE_QN = ["Frage {n}.", "Frage {n} — hört gut zu.", "Als Nächstes: Frage {n}.", "Es kommt Frage {n}.", "Also dann, Frage {n}."];
+const SE_QI = ["Strax kommer nästa fråga.", "Gör er redo.", "Nästa fråga kommer nu.", "Skärpning — nästa fråga.", "Vi kör vidare…"];
+const SE_QN = ["Fråga {n}.", "Fråga {n} — lyssna noga.", "Härnäst: fråga {n}.", "Här kommer fråga {n}.", "Nå då så, fråga {n}."];
+
+function enAi(b: string, pub: string): DemoBrand["ai"] {
+  return {
+    eventIntro: `Good evening and welcome to ${pub} for tonight's Quiz Night, brought to you by ${b}. Scan the QR on your table, name your team, and answer on your phone — one shared answer per team. Tonight we'll mix general knowledge, a local round, sport, music and a ${b} sponsored round, with a tie-breaker to finish. Your hosts are in control all night — give us a shout if you need a hand. Phones ready — let's play!`,
+    roundIntro: "Round {n} coming up — phones ready, teams.",
+    sponsoredIntro: `This round is brought to you by ${b} — answer well for bonus bragging rights.`,
+    questionReadout: "Here's your question…",
+    answerReveal: "And the correct answer is…",
+    intermission: `Quick breather — grab a drink. Next round in a moment, courtesy of ${b}.`,
+    winner: `Tonight's champions are {team}! Brilliantly played. Thanks to ${b} — see you next week.`,
+  };
+}
+function deAi(b: string, pub: string): DemoBrand["ai"] {
+  return {
+    eventIntro: `Herzlich willkommen im ${pub} zum heutigen Quizabend, präsentiert von ${b}. Scannt den QR-Code am Tisch, gebt eurem Team einen Namen und antwortet am Handy — eine gemeinsame Antwort pro Team. Heute mischen wir Allgemeinwissen, eine Lokalrunde, Sport, Musik und eine ${b}-Sponsorenrunde, mit einem Stechen zum Schluss. Das Personal hat alles im Griff — meldet euch, wenn ihr Hilfe braucht. Handys bereit — auf geht's!`,
+    roundIntro: "Runde {n} steht an — Handys bereit, Teams.",
+    sponsoredIntro: `Diese Runde präsentiert ${b} — antwortet gut für Bonus-Ruhm.`,
+    questionReadout: "Hier kommt eure Frage…",
+    answerReveal: "Und die richtige Antwort ist…",
+    intermission: `Kurze Pause — holt euch ein Getränk. Gleich geht's weiter, dank ${b}.`,
+    winner: `Die heutigen Sieger sind {team}! Stark gespielt. Danke an ${b} — bis nächste Woche!`,
+  };
+}
+function seAi(b: string, pub: string): DemoBrand["ai"] {
+  return {
+    eventIntro: `Varmt välkomna till ${pub} och kvällens Quizkväll, som presenteras av ${b}. Skanna QR-koden på bordet, döp ert lag och svara i mobilen — ett gemensamt svar per lag. Ikväll blandar vi allmänbildning, en lokal runda, sport, musik och en ${b}-sponsrad runda, med en utslagsfråga på slutet. Personalen styr kvällen — ropa till om ni behöver hjälp. Mobiler redo — nu kör vi!`,
+    roundIntro: "Runda {n} på gång — mobiler redo, lag.",
+    sponsoredIntro: `Den här rundan presenteras av ${b} — svara rätt för bonuspoäng i ära.`,
+    questionReadout: "Här kommer er fråga…",
+    answerReveal: "Och det rätta svaret är…",
+    intermission: `Kort paus — hämta något att dricka. Nästa runda strax, tack vare ${b}.`,
+    winner: `Kvällens mästare är {team}! Snyggt spelat. Tack till ${b} — vi ses nästa vecka!`,
+  };
+}
+
 // ── Demo C — UK: Northgate Brewing Co. (default; matches the seeded venue "The Anchor") ──────────
 const NORTHGATE: DemoBrand = {
   id: "northgate",
@@ -250,9 +292,120 @@ const NORDSTROM: DemoBrand = {
   },
 };
 
-/** Demo A (SE) · Demo B (DE) · Demo C (UK) — swappable presets, one per market. UK is the default
- * because the seeded live venue is The Anchor (UK). Switch at /config (persists + reloads). */
-export const PRESETS: DemoBrand[] = [NORDSTROM, ADLERBRAU, NORTHGATE];
+// ── Light / red ──
+const CRIMSON: DemoBrand = {
+  id: "crimson", sponsorName: "Crimson & Co. Brewery", tagline: "Bold ales · proper pub quizzes",
+  broughtBy: "Brought to you by Crimson & Co.", campaignName: "Crimson Pub League", pubName: "The Scarlet Tap", eventName: "Quiz Night",
+  offer: "Winning team: a Crimson & Co. sharing platter", responsibleNote: "Please drink responsibly. 18+. Non-alcohol prize — ask staff for tonight's offer.",
+  cta: "Next match-day special soon — see you then!", market: "UK", network: "PubPlay Network", poweredBy: "powered by PubPlay Network",
+  heroOverlayMode: "dark", heroImageAltText: "Crimson & Co. quiz night campaign image at The Scarlet Tap", images: {}, video: { ...DEMO_VIDEO }, aiIntroEnabled: true,
+  audio: demoAudio("/demo/audio/crimson", EN_QI, EN_QN), ai: enAi("Crimson & Co.", "The Scarlet Tap"),
+  primary: "#dc2626", primaryDark: "#991b1b",
+  colours: { primary: "#dc2626", primaryDark: "#991b1b", secondary: "#1f2937", accent: "#dc2626", bg: "#fdf6f6", surface: "#ffffff", border: "rgba(15,23,42,0.12)", text: "#1f1416", muted: "#6b7280", onBrand: "#ffffff", success: "#16a34a", warning: "#b45309" },
+};
+
+// ── Light / blue ──
+const AZURE: DemoBrand = {
+  id: "azure", sponsorName: "Azurbräu", tagline: "Frisches Lager · gute Stimmung",
+  broughtBy: "Präsentiert von Azurbräu", campaignName: "Azurbräu Quizabend", pubName: "Blauer Anker", eventName: "Quizabend",
+  offer: "Heute Abend: eine Brotzeit für das Siegerteam", responsibleNote: "Bitte trinke verantwortungsvoll. Ab 18. Preis ohne Alkohol.",
+  cta: "Nächste Woche wieder — bis dann!", market: "DE", network: "PubPlay Network", poweredBy: "ermöglicht durch PubPlay Network",
+  heroOverlayMode: "dark", heroImageAltText: "Azurbräu Quizabend-Kampagnenbild im Blauen Anker", images: {}, video: { ...DEMO_VIDEO }, aiIntroEnabled: true,
+  audio: demoAudio("/demo/audio/azure", DE_QI, DE_QN), ai: deAi("Azurbräu", "Blauer Anker"),
+  primary: "#2563eb", primaryDark: "#1d4ed8",
+  colours: { primary: "#2563eb", primaryDark: "#1d4ed8", secondary: "#0ea5e9", accent: "#2563eb", bg: "#f4f8ff", surface: "#ffffff", border: "rgba(15,23,42,0.12)", text: "#0f1b2d", muted: "#5b6b82", onBrand: "#ffffff", success: "#16a34a", warning: "#b45309" },
+};
+
+// ── Light / green ──
+const VERDANT: DemoBrand = {
+  id: "verdant", sponsorName: "Grönlund Bryggeri", tagline: "Ekologiskt hantverk · god stämning",
+  broughtBy: "Presenteras av Grönlund Bryggeri", campaignName: "Grönlund Quizkväll", pubName: "Gröna Lyktan", eventName: "Quizkväll",
+  offer: "Ikväll: 20% på köket för varje lag", responsibleNote: "Drick ansvarsfullt. 18+. Alkoholfritt pris.",
+  cta: "Tillbaka nästa torsdag — vi ses!", market: "SE", network: "PubPlay Network", poweredBy: "drivs av PubPlay Network",
+  heroOverlayMode: "dark", heroImageAltText: "Grönlund Bryggeri quizkväll-kampanjbild på Gröna Lyktan", images: {}, video: { ...DEMO_VIDEO }, aiIntroEnabled: true,
+  audio: demoAudio("/demo/audio/verdant", SE_QI, SE_QN), ai: seAi("Grönlund Bryggeri", "Gröna Lyktan"),
+  primary: "#15803d", primaryDark: "#166534",
+  colours: { primary: "#15803d", primaryDark: "#166534", secondary: "#ca8a04", accent: "#16a34a", bg: "#f3faf5", surface: "#ffffff", border: "rgba(15,23,42,0.12)", text: "#11241a", muted: "#5d7065", onBrand: "#ffffff", success: "#16a34a", warning: "#b45309" },
+};
+
+// ── Light / neutral premium ──
+const IVORY: DemoBrand = {
+  id: "ivory", sponsorName: "Ivory & Oak", tagline: "Refined ales · quietly premium",
+  broughtBy: "Brought to you by Ivory & Oak", campaignName: "Ivory & Oak Evenings", pubName: "The Gallery Rooms", eventName: "Quiz Night",
+  offer: "Winning team: an Ivory & Oak tasting board", responsibleNote: "Please drink responsibly. 18+. Non-alcohol prize.",
+  cta: "Back next week — see you then!", market: "UK", network: "PubPlay Network", poweredBy: "powered by PubPlay Network",
+  heroOverlayMode: "dark", heroImageAltText: "Ivory & Oak quiz night campaign image at The Gallery Rooms", images: {}, video: { ...DEMO_VIDEO }, aiIntroEnabled: true,
+  audio: demoAudio("/demo/audio/ivory", EN_QI, EN_QN), ai: enAi("Ivory & Oak", "The Gallery Rooms"),
+  primary: "#334155", primaryDark: "#1e293b",
+  colours: { primary: "#334155", primaryDark: "#1e293b", secondary: "#b08d57", accent: "#b08d57", bg: "#faf9f7", surface: "#ffffff", border: "rgba(15,23,42,0.12)", text: "#1c1c1c", muted: "#6b7280", onBrand: "#ffffff", success: "#16a34a", warning: "#b45309" },
+};
+
+// ── Black / gold premium ──
+const NOIR: DemoBrand = {
+  id: "noir", sponsorName: "Noir Royale", tagline: "Midnight stout · pure gold",
+  broughtBy: "Brought to you by Noir Royale", campaignName: "Noir Royale Society", pubName: "The Midnight Vault", eventName: "Quiz Night",
+  offer: "Winning team: a Noir Royale reserve flight", responsibleNote: "Please drink responsibly. 18+. Non-alcohol prize.",
+  cta: "The vault reopens next week.", market: "UK", network: "PubPlay Network", poweredBy: "powered by PubPlay Network",
+  heroOverlayMode: "dark", heroImageAltText: "Noir Royale quiz night campaign image at The Midnight Vault", images: {}, video: { ...DEMO_VIDEO }, aiIntroEnabled: true,
+  audio: demoAudio("/demo/audio/noir", EN_QI, EN_QN), ai: enAi("Noir Royale", "The Midnight Vault"),
+  primary: "#c9a227", primaryDark: "#9a7b1a",
+  colours: { primary: "#c9a227", primaryDark: "#9a7b1a", secondary: "#e5c558", accent: "#c9a227", bg: "#0a0a0b", surface: "rgba(255,255,255,0.05)", border: "rgba(255,255,255,0.12)", text: "#f5f0e6", muted: "#a39e93", onBrand: "#0a0a0b", success: "#22c55e", warning: "#c9a227" },
+};
+
+// ── Cream / burgundy heritage ──
+const VINTRY: DemoBrand = {
+  id: "vintry", sponsorName: "The Old Vintry", tagline: "Cask heritage since the cellar days",
+  broughtBy: "Brought to you by The Old Vintry", campaignName: "Old Vintry Quiz Evenings", pubName: "The Old Cellar", eventName: "Quiz Night",
+  offer: "Winning team: an Old Vintry cellar platter", responsibleNote: "Please drink responsibly. 18+. Non-alcohol prize.",
+  cta: "Back next week by the fire — see you then!", market: "UK", network: "PubPlay Network", poweredBy: "powered by PubPlay Network",
+  heroOverlayMode: "dark", heroImageAltText: "The Old Vintry quiz night campaign image at The Old Cellar", images: {}, video: { ...DEMO_VIDEO }, aiIntroEnabled: true,
+  audio: demoAudio("/demo/audio/vintry", EN_QI, EN_QN), ai: enAi("The Old Vintry", "The Old Cellar"),
+  primary: "#7b1e3b", primaryDark: "#5a1530",
+  colours: { primary: "#7b1e3b", primaryDark: "#5a1530", secondary: "#b08d57", accent: "#7b1e3b", bg: "#f6efe3", surface: "#fffaf2", border: "rgba(74,30,30,0.18)", text: "#2a1a1f", muted: "#6f5b55", onBrand: "#ffffff", success: "#2f7d4f", warning: "#a35a14" },
+};
+
+// ── Modern / bright lager ──
+const SUNHAUS: DemoBrand = {
+  id: "sunhaus", sponsorName: "Sonnenhaus Lager", tagline: "Helles Lager · gute Laune",
+  broughtBy: "Präsentiert von Sonnenhaus", campaignName: "Sonnenhaus Quizabend", pubName: "Sonnenhof Stube", eventName: "Quizabend",
+  offer: "Heute Abend: Brotzeit für das Siegerteam", responsibleNote: "Bitte trinke verantwortungsvoll. Ab 18. Preis ohne Alkohol.",
+  cta: "Nächste Woche wieder — bis dann!", market: "DE", network: "PubPlay Network", poweredBy: "ermöglicht durch PubPlay Network",
+  heroOverlayMode: "dark", heroImageAltText: "Sonnenhaus Lager Quizabend-Kampagnenbild in der Sonnenhof Stube", images: {}, video: { ...DEMO_VIDEO }, aiIntroEnabled: true,
+  audio: demoAudio("/demo/audio/sunhaus", DE_QI, DE_QN), ai: deAi("Sonnenhaus Lager", "Sonnenhof Stube"),
+  primary: "#f5b301", primaryDark: "#c98a00",
+  colours: { primary: "#f5b301", primaryDark: "#c98a00", secondary: "#0ea5e9", accent: "#f5b301", bg: "#fffdf5", surface: "#ffffff", border: "rgba(15,23,42,0.12)", text: "#20242b", muted: "#6b7280", onBrand: "#20242b", success: "#16a34a", warning: "#b45309" },
+};
+
+// ── Dark / navy · copper craft ──
+const COPPERWORKS: DemoBrand = {
+  id: "copperworks", sponsorName: "Kopparverk Bryggeri", tagline: "Kopparkokt hantverk",
+  broughtBy: "Presenteras av Kopparverk", campaignName: "Kopparverk Quizkväll", pubName: "Kopparkrogen", eventName: "Quizkväll",
+  offer: "Ikväll: 20% på köket för varje lag", responsibleNote: "Drick ansvarsfullt. 18+. Alkoholfritt pris.",
+  cta: "Tillbaka nästa vecka — vi ses!", market: "SE", network: "PubPlay Network", poweredBy: "drivs av PubPlay Network",
+  heroOverlayMode: "dark", heroImageAltText: "Kopparverk Bryggeri quizkväll-kampanjbild på Kopparkrogen", images: {}, video: { ...DEMO_VIDEO }, aiIntroEnabled: true,
+  audio: demoAudio("/demo/audio/copperworks", SE_QI, SE_QN), ai: seAi("Kopparverk Bryggeri", "Kopparkrogen"),
+  primary: "#c2703d", primaryDark: "#9c5a30",
+  colours: { primary: "#c2703d", primaryDark: "#9c5a30", secondary: "#d98e5a", accent: "#c2703d", bg: "#0f1722", surface: "rgba(255,255,255,0.05)", border: "rgba(255,255,255,0.10)", text: "#e6ebf2", muted: "#93a1b5", onBrand: "#ffffff", success: "#22c55e", warning: "#d98e5a" },
+};
+
+// ── Sport / match-day bold ──
+const MATCHDAY: DemoBrand = {
+  id: "matchday", sponsorName: "MatchDay Brewing", tagline: "Brewed for the big game",
+  broughtBy: "Brought to you by MatchDay Brewing", campaignName: "MatchDay Pub Series", pubName: "The Final Whistle", eventName: "Quiz Night",
+  offer: "Winning team: a MatchDay match-night bundle", responsibleNote: "Please drink responsibly. 18+. Non-alcohol prize.",
+  cta: "Back for the next fixture — see you then!", market: "UK", network: "PubPlay Network", poweredBy: "powered by PubPlay Network",
+  heroOverlayMode: "dark", heroImageAltText: "MatchDay Brewing quiz night campaign image at The Final Whistle", images: {}, video: { ...DEMO_VIDEO }, aiIntroEnabled: true,
+  audio: demoAudio("/demo/audio/matchday", EN_QI, EN_QN), ai: enAi("MatchDay Brewing", "The Final Whistle"),
+  primary: "#e11d48", primaryDark: "#9f1239",
+  colours: { primary: "#e11d48", primaryDark: "#9f1239", secondary: "#f59e0b", accent: "#e11d48", bg: "#0b0e14", surface: "rgba(255,255,255,0.05)", border: "rgba(255,255,255,0.12)", text: "#eef2f7", muted: "#9aa6b6", onBrand: "#ffffff", success: "#22c55e", warning: "#f59e0b" },
+};
+
+/** Brewery/demo preset library (≥10, balanced light/dark + premium/heritage/modern/craft/sport). Each maps to a
+ * UK/SE/DE market for KPI seeding. UK Northgate is the default (matches the seeded live venue "The Anchor").
+ * Switch at /config or Presenter tools (persists + reloads). NO real brewery names/logos/IP — all fictional. */
+export const PRESETS: DemoBrand[] = [
+  NORTHGATE, CRIMSON, AZURE, VERDANT, IVORY, NOIR, VINTRY, SUNHAUS, COPPERWORKS, MATCHDAY, ADLERBRAU, NORDSTROM,
+];
 
 const STORAGE_KEY = "ppn_brand";
 

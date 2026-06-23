@@ -3,15 +3,23 @@
  * brewery preset, market, setup mode, reset demo, seed/clear teams, audience-mode toggle. Richer profile pickers
  * are labelled stubs. NOT an admin/CMS/portal — just enough to prepare a demo run.
  */
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DemoShell } from "../components/shells";
-import { PRESETS, getActiveBrand, setActiveBrand, brandInitials } from "../demo/brand";
+import { PRESETS, getActiveBrand, setActiveBrand, brandInitials, type ThemeColours } from "../demo/brand";
 import { activeMarket } from "../demo/markets";
 import { SETUP_MODES } from "../demo/setup";
 import { useAudienceMode } from "../lib/audience";
+import { applyTheme, getThemeOverride, setThemeOverride, clearThemeOverride, themeWarnings, type ColourOverride } from "../demo/theme";
 import { resolveJoinToken, getSessionState, setSessionSetup, resetDemo, clearTeams, seedDemoTeams, listTeams } from "../lib/ppnApi";
+
+const THEME_FIELDS: { key: keyof ThemeColours; label: string }[] = [
+  { key: "primary", label: "Primary / brand" }, { key: "primaryDark", label: "Brand dark" }, { key: "accent", label: "Accent" },
+  { key: "bg", label: "Background" }, { key: "surface", label: "Surface / card" }, { key: "border", label: "Border" },
+  { key: "text", label: "Main text" }, { key: "muted", label: "Muted text" }, { key: "onBrand", label: "Button text" },
+  { key: "success", label: "Success" }, { key: "warning", label: "Warning" },
+];
 
 export default function Config() {
   const active = getActiveBrand();
@@ -37,6 +45,17 @@ export default function Config() {
     { name: market.teamNames[1], players: market.playerNames.slice(3, 6) },
     { name: market.teamNames[2], players: market.playerNames.slice(6, 8) },
   ];
+
+  // ── Internal theme studio (operator-only colour override; localStorage; applies live) ──
+  const [over, setOver] = useState<ColourOverride>(getThemeOverride());
+  const update = (key: keyof ThemeColours, value: string) => {
+    const next = { ...over, [key]: value };
+    setOver(next); setThemeOverride(next); applyTheme(active);
+  };
+  const resetTheme = () => { clearThemeOverride(); setOver({}); applyTheme(active); };
+  const effective = { ...active.colours, ...over } as ThemeColours;
+  const warns = themeWarnings(effective);
+  const hasOver = Object.keys(over).length > 0;
 
   const choose = (id: string) => { setActiveBrand(id); window.location.reload(); };
   const Card = ({ title, children }: { title: string; children: ReactNode }) => (
@@ -69,6 +88,62 @@ export default function Config() {
                   </button>
                 );
               })}
+            </div>
+          </Card>
+
+          <Card title="Internal theme studio (operator only)">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-[var(--ppn-muted)]">Base preset: <span className="font-semibold text-[var(--ppn-text)]">{active.sponsorName}</span> <span className="ml-1 rounded bg-[var(--ppn-bg)] px-1.5 py-0.5 text-[10px]">{active.market}</span></p>
+              {hasOver
+                ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>Custom colours active</span>
+                : <span className="text-[10px] text-[var(--ppn-muted)]">preset defaults</span>}
+            </div>
+            <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">Predesign a brewery look before the pitch. Internal only — applies to all demo surfaces; never shown to the brewery.</p>
+
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {THEME_FIELDS.map((f) => {
+                const val = (over[f.key] ?? active.colours[f.key]) as string;
+                const isHex = /^#([0-9a-f]{6})$/i.test(val);
+                return (
+                  <div key={f.key} className="flex items-center gap-2">
+                    <span className="h-7 w-7 shrink-0 rounded border border-[var(--ppn-border)]" style={{ background: val }} />
+                    {isHex && <input type="color" value={val} onChange={(e) => update(f.key, e.target.value)} className="h-7 w-8 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0" aria-label={`${f.label} picker`} />}
+                    <label className="w-24 shrink-0 text-xs text-[var(--ppn-muted)]">{f.label}</label>
+                    <input value={val} onChange={(e) => update(f.key, e.target.value)} className="min-w-0 flex-1 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2 py-1 font-mono text-xs" />
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button onClick={resetTheme} disabled={!hasOver} className="rounded-lg border border-[var(--ppn-border)] px-3 py-2 text-sm font-semibold disabled:opacity-40">↺ Reset to preset defaults</button>
+            </div>
+
+            {warns.length > 0 ? (
+              <div className="mt-3 rounded-lg border p-3" style={{ borderColor: "color-mix(in srgb, var(--ppn-warning) 45%, transparent)", background: "color-mix(in srgb, var(--ppn-warning) 12%, transparent)" }}>
+                <p className="text-xs font-semibold" style={{ color: "var(--ppn-warning)" }}>⚠ Readability warnings (operator-only)</p>
+                <ul className="mt-1 list-disc pl-5 text-xs text-[var(--ppn-muted)]">{warns.map((w) => <li key={w}>{w}</li>)}</ul>
+              </div>
+            ) : <p className="mt-2 text-xs" style={{ color: "var(--ppn-success)" }}>✓ Contrast looks readable.</p>}
+
+            {/* Live preview */}
+            <p className="mt-4 text-xs font-semibold text-[var(--ppn-muted)]">Live preview</p>
+            <div className="mt-2 rounded-xl border border-[var(--ppn-border)] p-3" style={{ background: "var(--ppn-bg)" }}>
+              <div className="rounded-lg p-3" style={{ background: "var(--ppn-surface)", border: "1px solid var(--ppn-border)" }}>
+                <p className="text-sm font-semibold" style={{ color: "var(--ppn-text)" }}>Sample card · {active.sponsorName}</p>
+                <p className="text-xs" style={{ color: "var(--ppn-muted)" }}>Muted text reads here.</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button className="rounded-lg px-3 py-1.5 text-xs font-semibold" style={{ background: "var(--ppn-brand)", color: "var(--ppn-on-brand)" }}>Primary</button>
+                  <button className="rounded-lg px-3 py-1.5 text-xs font-semibold" style={{ border: "1px solid var(--ppn-border)", color: "var(--ppn-text)" }}>Secondary</button>
+                  <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-success) 20%, transparent)", color: "var(--ppn-success)" }}>success</span>
+                  <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>warning</span>
+                </div>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg px-3 py-2" style={{ background: "linear-gradient(90deg, color-mix(in srgb, var(--ppn-brand-dark) 14%, transparent), transparent)", borderTop: "1px solid var(--ppn-border)" }}>
+                <span className="text-xs" style={{ color: "var(--ppn-muted)" }}><span className="font-semibold" style={{ color: "var(--ppn-brand)" }}>{active.sponsorName}</span> · {active.broughtBy}</span>
+                <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-brand) 18%, transparent)", color: "var(--ppn-brand)" }}>🎁 {active.offer}</span>
+                <span className="ml-auto text-[10px]" style={{ color: "var(--ppn-muted)" }}>⚡ {active.poweredBy}</span>
+              </div>
             </div>
           </Card>
 

@@ -1,12 +1,12 @@
 /**
  * Theme application — turns a brewery preset's colour TOKENS into CSS variables on :root so the whole app
- * re-skins (dark amber ↔ light red, etc.). Includes a simple readability guardrail so brand colours can't
- * destroy contrast (falls back to a neutral surface/text where a brand pairing is too low-contrast).
+ * re-skins (dark amber ↔ light red, etc.). An OPERATOR colour override (localStorage) can be merged on top for
+ * internal demo prep in /config. Includes a simple readability guardrail + exported contrast helpers (operator-only).
  */
-import type { DemoBrand } from "./brand";
+import type { DemoBrand, ThemeColours } from "./brand";
 
-/** Relative luminance from a hex or rgb(a)/hex color (best-effort; ignores alpha). */
-function luminance(color: string): number {
+/** Relative luminance from a hex or rgb(a) color (best-effort; ignores alpha → returns 0.5 if unresolvable). */
+export function luminance(color: string): number {
   let r = 0, g = 0, b = 0;
   const hex = color.trim().match(/^#([0-9a-f]{6})$/i);
   const rgb = color.trim().match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i);
@@ -16,7 +16,7 @@ function luminance(color: string): number {
   } else if (rgb) {
     r = +rgb[1]; g = +rgb[2]; b = +rgb[3];
   } else {
-    return 0.5; // unknown (e.g. rgba over a surface) — treat as mid
+    return 0.5;
   }
   const f = (v: number) => {
     const s = v / 255;
@@ -25,9 +25,14 @@ function luminance(color: string): number {
   return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
 }
 
-function contrast(a: string, b: string): number {
+export function contrast(a: string, b: string): number {
   const la = luminance(a), lb = luminance(b);
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/** Whether a colour string can be luminance-resolved (hex / rgb). rgba surfaces over a parent can't, reliably. */
+export function resolvable(color: string): boolean {
+  return /^#([0-9a-f]{6})$/i.test(color.trim()) || /rgba?\(\s*\d+[,\s]+\d+[,\s]+\d+/i.test(color.trim());
 }
 
 /** Readable text colour for a given background (guardrail: never white-on-light / dark-on-dark). */
@@ -35,11 +40,31 @@ export function readableOn(bg: string): string {
   return luminance(bg) > 0.5 ? "#0f172a" : "#ffffff";
 }
 
+// ── Operator colour override (internal demo prep — localStorage only, never a backend) ──
+const OVERRIDE_KEY = "ppn_theme_override";
+export type ColourOverride = Partial<ThemeColours>;
+
+export function getThemeOverride(): ColourOverride {
+  try { const r = localStorage.getItem(OVERRIDE_KEY); return r ? (JSON.parse(r) as ColourOverride) : {}; } catch { return {}; }
+}
+export function setThemeOverride(o: ColourOverride) {
+  try { localStorage.setItem(OVERRIDE_KEY, JSON.stringify(o)); } catch { /* ignore */ }
+}
+export function clearThemeOverride() {
+  try { localStorage.removeItem(OVERRIDE_KEY); } catch { /* ignore */ }
+}
+export function hasThemeOverride(): boolean {
+  return Object.keys(getThemeOverride()).length > 0;
+}
+/** Effective colours = preset defaults merged with any operator override. */
+export function effectiveColours(brand: DemoBrand): ThemeColours {
+  return { ...brand.colours, ...getThemeOverride() };
+}
+
 export function applyTheme(brand: DemoBrand): { warnings: string[] } {
-  const c = brand.colours;
+  const c = effectiveColours(brand);
   const warnings: string[] = [];
 
-  // Guardrail: ensure on-brand text is readable on the brand colour.
   let onBrand = c.onBrand;
   if (contrast(onBrand, c.primary) < 3) {
     onBrand = readableOn(c.primary);
@@ -65,4 +90,15 @@ export function applyTheme(brand: DemoBrand): { warnings: string[] } {
 
   if (warnings.length && import.meta.env.DEV) console.warn("[ppn theme]", brand.id, warnings);
   return { warnings };
+}
+
+/** Operator-only readability audit for the EFFECTIVE colours (used in /config; never on buyer surfaces). */
+export function themeWarnings(c: ThemeColours): string[] {
+  const w: string[] = [];
+  if (contrast(c.text, c.bg) < 4.5) w.push("Main text on background is low-contrast — hard to read.");
+  if (resolvable(c.surface) && contrast(c.text, c.surface) < 4.5) w.push("Main text on cards/surface is low-contrast.");
+  if (contrast(c.onBrand, c.primary) < 3) w.push("Button text on the primary colour is low-contrast.");
+  if (contrast(c.muted, c.bg) < 2.2) w.push("Muted text is too faint against the background.");
+  if (resolvable(c.border) && contrast(c.border, c.bg) < 1.12) w.push("Border is nearly invisible against the background.");
+  return w;
 }
