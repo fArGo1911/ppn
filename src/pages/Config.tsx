@@ -28,6 +28,10 @@ import {
 } from "../demo/audioCues";
 import { QUESTION_POOL } from "../demo/questionPool";
 import { CONTENT_CATEGORIES, categoryLabel, type ContentCategoryId } from "../lib/contentMix";
+import {
+  DEMO_PLAYLIST, buildRunOrder, HOST_RUN_MODES, SCRIPT_STYLES, DEMO_EVENT_CONTEXT, eventOpenerReference,
+  type RunStatus, type HostRunModeId,
+} from "../demo/quizPlaylist";
 
 const THEME_FIELDS: { key: keyof ThemeColours; label: string }[] = [
   { key: "primary", label: "Primary / brand" }, { key: "primaryDark", label: "Brand dark" }, { key: "accent", label: "Accent" },
@@ -243,6 +247,12 @@ export default function Config() {
   const libRows = QUESTION_POOL
     .filter((q) => q.category === libCat)
     .filter((q) => !libSearch.trim() || q.prompt.toLowerCase().includes(libSearch.trim().toLowerCase()));
+  // Tonight's playlist / run order (planning model) + host-run-mode + script-style concept selectors.
+  const runOrder = buildRunOrder();
+  const [runMode, setRunMode] = useState<HostRunModeId>("manual");
+  const [scriptStyle, setScriptStyle] = useState(SCRIPT_STYLES[0].id);
+  const runTone = (s: RunStatus): React.CSSProperties => slotTone(s === "live" ? "uploaded" : "preview");
+  const runStatusLabel: Record<RunStatus, string> = { live: "live (host)", "stored-only": "stored-only · file-drop", "not-wired": "not wired" };
 
   const previewLogoUrl = slotState(logoSlot).url;
   const previewHeroUrl = slotState(heroSlot).url;
@@ -508,6 +518,99 @@ export default function Config() {
             ))}
           </Card>
 
+          {/* Tonight's demo playlist & run order — 5 selected questions, then answer-review, then winner/outro.
+              Planning/script model only (does NOT drive the live game loop). Keeps the main view small + honest. */}
+          <Card title="Tonight's demo playlist &amp; run order">
+            <p className="text-xs text-[var(--ppn-muted)]">A small POC evening: <span className="font-semibold text-[var(--ppn-text)]">5 selected questions</span> from the question bank, read in the question phase, then revealed later in the answer-review phase, then the winner &amp; outro. This is a <span className="font-semibold text-[var(--ppn-text)]">script/run-order plan</span> — it doesn't change the live game loop. The full bank stays collapsed below.</p>
+            <div className="mt-2 overflow-x-auto">
+              <table className="w-full min-w-[680px] border-collapse text-left text-[11px]">
+                <thead>
+                  <tr className="border-b border-[var(--ppn-border)] text-[10px] uppercase tracking-wide text-[var(--ppn-muted)]">
+                    <th className="py-1.5 pr-2 font-semibold">Step</th>
+                    <th className="py-1.5 pr-2 font-semibold">Phase</th>
+                    <th className="py-1.5 pr-2 font-semibold">Category</th>
+                    <th className="py-1.5 pr-2 font-semibold">Script / audio cue</th>
+                    <th className="py-1.5 pr-2 font-semibold">Cue file</th>
+                    <th className="py-1.5 pr-2 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {runOrder.map((s) => (
+                    <tr key={s.step} className="border-b border-[var(--ppn-border)] align-top">
+                      <td className="py-1.5 pr-2 font-semibold">{s.step}</td>
+                      <td className="py-1.5 pr-2 text-[var(--ppn-muted)]">{s.phaseLabel}</td>
+                      <td className="py-1.5 pr-2 text-[var(--ppn-muted)]">{s.category ?? "—"}</td>
+                      <td className="py-1.5 pr-2"><span className="font-semibold text-[var(--ppn-text)]">{s.label}</span><span className="block max-w-[260px] truncate text-[10px] text-[var(--ppn-muted)]" title={s.detail ?? s.cue}>{s.detail ?? s.cue}</span></td>
+                      <td className="py-1.5 pr-2 font-mono text-[10px] text-[var(--ppn-muted)]">{s.file ?? "—"}</td>
+                      <td className="py-1.5 pr-2"><span className="rounded-full px-2 py-0.5 text-[8px] font-semibold uppercase" style={runTone(s.status)}>{runStatusLabel[s.status]}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-2 text-[10px] text-[var(--ppn-muted)]">The host reads <span className="font-semibold text-[var(--ppn-text)]">all five questions first</span>; answers are revealed later in the answer-review phase — never straight after each question. Global cues (intro / winner) are host-triggered today; per-question readout/review files are <span className="font-semibold text-[var(--ppn-text)]">stored-only · file-drop</span> (in-app per-question upload is parked — needs a keyed asset set).</p>
+
+            <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-[var(--ppn-muted)]">The 5 selected questions</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {DEMO_PLAYLIST.map((q) => (
+                <div key={q.id} className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold">Q{q.order} · {q.categoryLabel}{q.sponsor && <span className="ml-1 rounded bg-[var(--ppn-surface)] px-1.5 py-0.5 text-[9px] text-[var(--ppn-muted)]">sponsor</span>}</p>
+                    {q.difficulty && <span className="text-[9px] uppercase text-[var(--ppn-muted)]">{q.difficulty}</span>}
+                  </div>
+                  <p className="mt-1 text-[11px] text-[var(--ppn-text)]">{q.prompt}</p>
+                  <p className="text-[11px] text-[var(--ppn-muted)]">Answer (review phase): <span className="font-semibold text-[var(--ppn-text)]">{q.answer}</span></p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5 text-[9px]">
+                    <span className="rounded-full px-2 py-0.5 font-semibold uppercase" style={runTone("stored-only")}>readout: {q.readoutFile}</span>
+                    <span className="rounded-full px-2 py-0.5 font-semibold uppercase" style={runTone("stored-only")}>review: {q.reviewFile}</span>
+                    {q.mediaSlot && <span className="rounded-full border border-[var(--ppn-border)] px-2 py-0.5 text-[var(--ppn-muted)]">media: {q.mediaSlot}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <details className="mt-3">
+              <summary className="cursor-pointer text-[11px] text-[var(--ppn-muted)]">Full question bank ({QUESTION_POOL.length} seeded) — selection source</summary>
+              <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">The wider bank is a seeded reference pool ({CONTENT_CATEGORIES.length} categories). The main view shows only tonight's 5 — use the per-category audio library table below to browse the full bank.</p>
+            </details>
+          </Card>
+
+          {/* Host run mode — manual / semi-automatic / automatic (concept + honest live status) */}
+          <Card title="Host run mode">
+            <p className="text-xs text-[var(--ppn-muted)]">How the run order is driven on the night. Only <span className="font-semibold text-[var(--ppn-text)]">Manual</span> is live today (the host already controls every cue from the host console); the rest are modelled, not wired.</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+              {HOST_RUN_MODES.map((m) => {
+                const on = runMode === m.id;
+                return (
+                  <button key={m.id} onClick={() => setRunMode(m.id)} className="rounded-xl border bg-[var(--ppn-bg)] p-3 text-left" style={{ borderColor: on ? "var(--ppn-brand)" : "var(--ppn-border)" }}>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold">{m.label}</p>
+                      <span className="rounded-full px-2 py-0.5 text-[8px] font-semibold uppercase" style={slotTone(m.status === "live now" ? "uploaded" : "preview")}>{m.status}</span>
+                    </div>
+                    <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">{m.blurb}</p>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-[10px] text-[var(--ppn-muted)]">What changes today: nothing in the game loop. Manual run is the existing host console; semi-automatic &amp; automatic are concept-only models for a later slice (no timers/auto-advance wired).</p>
+          </Card>
+
+          {/* Event & tournament context — POC reference placeholders that feed scripts (NOT scoring) */}
+          <Card title="Event &amp; tournament context">
+            <p className="text-xs text-[var(--ppn-muted)]">Imaginary POC context so scripts can reference the evening. Reference placeholders only — feeds script copy, not scoring or any tournament engine.</p>
+            <div className="mt-2 grid gap-1.5 sm:grid-cols-2 text-[11px]">
+              {([
+                ["Event date", DEMO_EVENT_CONTEXT.eventDate], ["Venue", DEMO_EVENT_CONTEXT.venue],
+                ["Quiz series", DEMO_EVENT_CONTEXT.series], ["Event in series", DEMO_EVENT_CONTEXT.eventNumberInMonth],
+                ["Stage", DEMO_EVENT_CONTEXT.stage], ["Winner advances to", DEMO_EVENT_CONTEXT.advancesTo],
+                ["Sponsor / brewery", active.sponsorName], ["Host", DEMO_EVENT_CONTEXT.hostName],
+                ["Next event", DEMO_EVENT_CONTEXT.nextEventDate],
+              ] as [string, string][]).map(([k, v]) => (
+                <div key={k} className="flex justify-between gap-2 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1.5"><span className="text-[var(--ppn-muted)]">{k}</span><span className="font-semibold text-[var(--ppn-text)]">{v}</span></div>
+              ))}
+            </div>
+            <p className="mt-2 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1.5 text-[11px] text-[var(--ppn-muted)]"><span className="font-semibold text-[var(--ppn-text)]">Opener reference:</span> “{eventOpenerReference()}”</p>
+          </Card>
+
           {/* Script & audio cue library — scalable pub-quiz cue taxonomy (operator-supplied MP3s; NO generation).
               Grouped by cue family; uploadable cues upload/preview/clear here, reference cues are structure only. */}
           <Card title="Script &amp; audio cue library">
@@ -617,6 +720,16 @@ export default function Config() {
           {/* Script style & winner guidance — production-script rules (no generated final content) */}
           <Card title="Script style &amp; winner guidance">
             <p className="text-xs text-[var(--ppn-muted)]">Guidance for writing/recording cue audio. Examples are direction, not generated final scripts.</p>
+            <p className="mt-2 text-[11px] font-semibold text-[var(--ppn-text)]">Script style variant</p>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {SCRIPT_STYLES.map((s) => {
+                const on = scriptStyle === s.id;
+                return (
+                  <button key={s.id} onClick={() => setScriptStyle(s.id)} title={s.blurb} className="rounded-full border px-2.5 py-1 text-[10px] font-semibold" style={{ borderColor: on ? "var(--ppn-brand)" : "var(--ppn-border)", color: on ? "var(--ppn-brand)" : "var(--ppn-muted)" }}>{s.label}</button>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">{SCRIPT_STYLES.find((s) => s.id === scriptStyle)?.blurb} <span className="italic">Style is a script-direction concept — it doesn't auto-rewrite cue text.</span></p>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-[11px] text-[var(--ppn-muted)]">
               {SCRIPT_STYLE_RULES.map((r) => <li key={r}>{r}</li>)}
             </ul>

@@ -73,8 +73,8 @@ test("/config#brand-media question audio library is a table with category select
   await unlockOperator(page);
   await page.goto("/config#brand-media");
   await expect(page.getByText("Question audio library", { exact: true })).toBeVisible();
-  // It is a real table with the documented columns.
-  const table = page.locator("table").first();
+  // It is a real table with the documented columns (the per-question library table, not the run-order table).
+  const table = page.locator("table").filter({ hasText: "Readout audio" }).first();
   await expect(table.getByText("Readout audio", { exact: true })).toBeVisible();
   await expect(table.getByText("Answer-review audio", { exact: true })).toBeVisible();
   await expect(table.locator("tbody tr").first()).toBeVisible();
