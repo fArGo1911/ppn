@@ -4,9 +4,8 @@
  * var(--ppn-*) tokens so each brewery preset re-skins every surface (e.g. white/red).
  */
 import type { ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
 import { DEMO_BRAND, brandInitials } from "../demo/brand";
-import { BrandBanner, BrandAssetPreview, SponsorStrip, PoweredByPpnMark, PubEventHeader } from "./brandZones";
+import { BrandBanner, BrandAssetPreview, SponsorStrip, PoweredByPpnMark, PubEventHeader, BrandLogo } from "./brandZones";
 
 const onBrand = { background: "var(--ppn-brand)", color: "var(--ppn-on-brand)" };
 
@@ -79,54 +78,16 @@ export function TvShell({ children, focus = false }: { children: ReactNode; focu
   );
 }
 
-// ── Presenter / demo (web presentation): brewery central, PPN subtle ──
-const NAV: { to: string; label: string }[] = [
-  { to: "/", label: "Campaign" },
-  { to: "/play/DEMO", label: "Player" },
-  { to: "/host", label: "Host" },
-  { to: "/tv/demo", label: "TV" },
-  { to: "/setup", label: "Brand assets" },
-  { to: "/kpi", label: "KPIs" },
-  { to: "/rollout", label: "Rollout" },
-  { to: "/capabilities", label: "Beyond quiz" },
-];
-
-export function PresenterNav() {
-  const { pathname } = useLocation();
-  return (
-    <nav className="flex gap-1 overflow-x-auto px-2 py-1">
-      {NAV.map((n) => {
-        const active = pathname === n.to || (n.to !== "/" && pathname.startsWith(n.to));
-        return (
-          <Link
-            key={n.to}
-            to={n.to}
-            className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm transition-colors ${active ? "" : "text-[var(--ppn-muted)] hover:bg-[var(--ppn-surface)]"}`}
-            style={active ? onBrand : undefined}
-          >
-            {n.label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}
-
+// ── Presentation shell (buyer + operator pages): brewery header + subtle powered-by. NO operator route bar —
+// operator navigation lives in /operator and the Presenter Tools pill, so buyer/client pages stay presentation-
+// clean and never show Host/Brand-assets/Config-style links. (data-testid="demo-shell" for the e2e smoke.)
 export function DemoShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--ppn-bg)] text-[var(--ppn-text)]">
+    <div data-testid="demo-shell" className="flex min-h-screen flex-col bg-[var(--ppn-bg)] text-[var(--ppn-text)]">
       <div className="flex items-center gap-3 border-b border-[var(--ppn-border)] px-4 py-3">
-        <span className="grid h-8 w-8 place-items-center rounded-lg text-sm font-black" style={onBrand}>
-          {brandInitials(DEMO_BRAND.sponsorName)}
-        </span>
+        <BrandLogo size="host" />
         <span className="font-semibold">{DEMO_BRAND.sponsorName}</span>
-        <div className="ml-auto hidden items-center gap-3 sm:flex">
-          <PresenterNav />
-          <PoweredByPpnMark />
-        </div>
-      </div>
-      <div className="border-b border-[var(--ppn-border)] sm:hidden">
-        <PresenterNav />
+        <div className="ml-auto"><PoweredByPpnMark /></div>
       </div>
       <main className="flex-1">{children}</main>
     </div>

@@ -145,8 +145,8 @@ export default function Host() {
     : phase === "qintro" ? qIntroLine
     : phase === "lobby" ? `Welcome to ${session?.eventTitle ?? "Quiz Night"} at ${session?.venueName ?? "the pub"} — brought to you by ${DEMO_BRAND.sponsorName}. Grab your phones and join your table team!`
     : phase === "reveal" && q ? `The correct answer is ${q.correctAnswer}.`
-    : phase === "scoreboard" ? `Here are the current standings${standings[0] ? ` — ${standings[0].name} lead the way.` : "."}`
-    : phase === "ended" ? `That's a wrap! ${standings[0]?.name ?? "Our winners"} take it — thanks to ${DEMO_BRAND.sponsorName}, and goodnight!`
+    : phase === "scoreboard" ? `Here are the current standings${standings[0] ? ` — ${safeDisplayName(standings[0].name, "the leaders")} lead the way.` : "."}`
+    : phase === "ended" ? `That's a wrap! ${safeDisplayName(standings[0]?.name, "Our winners")} take it — thanks to ${DEMO_BRAND.sponsorName}, and goodnight!`
     : q ? `Question ${q.roundSeq}.${q.sequence}: ${q.prompt}` : "…";
 
   // ── Primary + secondary actions per phase (one obvious primary) ──

@@ -12,6 +12,7 @@ import { useAudienceMode } from "../lib/audience";
 import { lockOperator, useOperatorUnlocked } from "../lib/operator";
 
 const SECTIONS = [
+  { to: "/operator", label: "Demo control" },
   { to: "/", label: "Campaign" },
   { to: "/play/DEMO", label: "Player" },
   { to: "/host", label: "Host" },

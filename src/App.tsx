@@ -9,6 +9,7 @@ import Host from "./pages/Host";
 import Tv from "./pages/Tv";
 import BrandAssets from "./pages/BrandAssets";
 import Config from "./pages/Config";
+import Operator from "./pages/Operator";
 import Kpi from "./pages/Kpi";
 import Rollout from "./pages/Rollout";
 import Report from "./pages/Report";
@@ -31,7 +32,8 @@ export default function App() {
         {/* Operator/control surfaces — POC gate (not production auth). /play + /tv are never gated. */}
         <Route path="/host" element={<OperatorGate><Host /></OperatorGate>} />
         <Route path="/tv/:sessionId" element={<Tv />} />
-        {/* Commercial surfaces */}
+        {/* Operator hub + detailed setup (gated) */}
+        <Route path="/operator" element={<OperatorGate><Operator /></OperatorGate>} />
         <Route path="/config" element={<OperatorGate><Config /></OperatorGate>} />
         <Route path="/setup" element={<BrandAssets />} />
         <Route path="/kpi" element={<Kpi />} />

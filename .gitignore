@@ -33,3 +33,8 @@ supabase/.temp/
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright (binaries + reports + artifacts are not committed)
+playwright-report/
+test-results/
+/playwright/.cache/

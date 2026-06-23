@@ -1,0 +1,125 @@
+/**
+ * /operator — Operator Demo Control Centre (gated). The guided "start here" hub: active-demo status, an ordered
+ * run-the-demo journey with real buttons, and a persona-grouped route map for free exploration. Sits ABOVE
+ * /config (which stays as the detailed setup). No game-loop/scoring changes.
+ */
+import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { DemoShell } from "../components/shells";
+import { DEMO_BRAND } from "../demo/brand";
+import { activeMarket } from "../demo/markets";
+import { resolveJoinToken, getSessionState, listTeams } from "../lib/ppnApi";
+import { listAssetPacks } from "../lib/ppnAssets";
+import { overrideStatus, anyOverrideActive, clearClientOverrides } from "../lib/demoStatus";
+
+type Step = { t: string; i: string; to?: string; href?: string; label: string };
+const JOURNEY: Step[] = [
+  { t: "1 · Prepare brand assets", i: "Pick the brewery preset and upload or select the client's asset pack.", to: "/config", label: "Open setup" },
+  { t: "2 · Prepare scenario", i: "Choose a venue-mix scenario template for believable numbers.", to: "/config", label: "Open setup" },
+  { t: "3 · Reset / seed demo", i: "Clean the session and seed demo teams (small / medium / busy).", to: "/config", label: "Open setup" },
+  { t: "4 · Open TV", i: "Full-screen the room display on the TV / projector.", href: "/tv/DEMO", label: "Open TV ↗" },
+  { t: "5 · Open Host", i: "The host console — start, reveal, next, recover. Operator-only.", href: "/host", label: "Open Host ↗" },
+  { t: "6 · Open Player", i: "A guest joins on their own phone. Players wait; the host starts.", href: "/play/DEMO", label: "Open Player ↗" },
+  { t: "7 · Start from Host", i: "Press Play AI intro / Start game on the host console.", href: "/host", label: "Open Host ↗" },
+  { t: "8 · Run question → reveal → scoreboard", i: "Drive each question, reveal & score, show the scoreboard.", href: "/host", label: "Open Host ↗" },
+  { t: "9 · Show KPI / report", i: "The reconciled KPIs and the seeded brewery report.", to: "/report", label: "Open report" },
+  { t: "10 · Show rollout / run sheet", i: "The campaign plan and the venue/host run sheet.", to: "/rollout", label: "Open rollout" },
+  { t: "11 · What the brewery gets / next step", i: "Close on the proof + pilot recommendation.", to: "/report", label: "Open report" },
+];
+
+const GROUPS: { label: string; note: string; danger?: boolean; routes: [string, string][] }[] = [
+  { label: "Operator prep", note: "Never show a client", danger: true, routes: [["/operator", "Control centre"], ["/config", "Detailed setup"], ["/setup", "Brand assets"]] },
+  { label: "Event operation", note: "TV & player are client-safe; host controls are operator-only", routes: [["/host", "Host console (operator)"], ["/tv/DEMO", "TV display (client-safe)"], ["/play/DEMO", "Player phone (client-safe)"]] },
+  { label: "Buyer / presentation", note: "Client-safe", routes: [["/", "Campaign"], ["/kpi", "KPI report"], ["/report", "Pilot report"], ["/rollout", "Rollout plan"], ["/capabilities", "Beyond quiz"]] },
+  { label: "Venue handoff", note: "Operator / venue", routes: [["/run-sheet", "Run sheet"]] },
+];
+
+export default function Operator() {
+  const m = activeMarket();
+  const ov = overrideStatus();
+  const sessQ = useQuery({ queryKey: ["op-session"], queryFn: () => resolveJoinToken("DEMO"), retry: false });
+  const sid = sessQ.data && sessQ.data.kind !== "invalid" ? sessQ.data.session.sessionId : undefined;
+  const stateQ = useQuery({ queryKey: ["op-state", sid], queryFn: () => getSessionState(sid!), enabled: !!sid, retry: false });
+  const teamsQ = useQuery({ queryKey: ["op-teams", sid], queryFn: () => listTeams(sid!), enabled: !!sid, retry: false });
+  const healthQ = useQuery({ queryKey: ["op-asset-health"], queryFn: listAssetPacks, retry: false });
+
+  const Chip = ({ label, on, onText = "on", offText = "off" }: { label: string; on: boolean; onText?: string; offText?: string }) => (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1 text-xs">
+      <span className="text-[var(--ppn-muted)]">{label}</span>
+      <span className="font-semibold" style={{ color: on ? "var(--ppn-warning)" : "var(--ppn-muted)" }}>{on ? onText : offText}</span>
+    </span>
+  );
+  const surfaceBtn = "rounded-lg px-3 py-1.5 text-sm font-semibold text-[var(--ppn-on-brand)]";
+
+  return (
+    <DemoShell>
+      <div className="mx-auto max-w-4xl px-5 py-8">
+        <p className="text-sm uppercase tracking-widest" style={{ color: "var(--ppn-brand)" }}>Operator · demo control centre</p>
+        <h1 className="mt-2 text-3xl font-extrabold">Run a {DEMO_BRAND.sponsorName} demo</h1>
+        <p className="mt-1 text-[var(--ppn-muted)]">Start here, follow the steps, or jump anywhere. Gated operator hub — not shown to clients.</p>
+
+        {/* A. Active demo status */}
+        <div className="mt-5 rounded-xl border-2 bg-[var(--ppn-surface)] p-4" style={{ borderColor: "color-mix(in srgb, var(--ppn-brand) 30%, var(--ppn-border))" }}>
+          <p className="text-sm font-semibold">Active demo</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Chip label="Brewery:" on onText={`${DEMO_BRAND.sponsorName} (${m.market})`} />
+            <Chip label="Custom assets" on={ov.asset} />
+            <Chip label="Theme override" on={ov.theme} />
+            <Chip label="Scenario override" on={ov.scenario} />
+            <Chip label="Session:" on={false} offText={stateQ.data ? stateQ.data.phase : (sessQ.isLoading ? "…" : "—")} />
+            <Chip label="Teams:" on={false} offText={teamsQ.data ? String(teamsQ.data.length) : "—"} />
+            <Chip label="Storage assets:" on={healthQ.isError} onText="unavailable" offText={healthQ.isSuccess ? "available" : "checking…"} />
+          </div>
+          {anyOverrideActive() ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs" style={{ color: "var(--ppn-warning)" }}>⚠ Custom client overrides are active — clear them before prepping a different brewery.</span>
+              <button onClick={() => { clearClientOverrides(); window.location.reload(); }} className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-xs font-semibold">Clear client overrides</button>
+            </div>
+          ) : <p className="mt-2 text-xs text-[var(--ppn-muted)]">No client overrides — showing preset defaults. Switching brewery in /config will ask before carrying any overrides over.</p>}
+          {healthQ.isError && <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Storage-backed asset uploads need the local PPN Supabase running (ports 553xx). Manual URL/path mode still works without it.</p>}
+        </div>
+
+        {/* B. Guided journey */}
+        <h2 className="mt-8 text-sm font-semibold uppercase tracking-wider text-[var(--ppn-muted)]">Guided demo journey</h2>
+        <div className="mt-3 space-y-2">
+          {JOURNEY.map((s) => (
+            <div key={s.t} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">{s.t}</p>
+                <p className="text-xs text-[var(--ppn-muted)]">{s.i}</p>
+              </div>
+              {s.href
+                ? <a href={s.href} target="_blank" rel="noreferrer" className={surfaceBtn} style={{ background: "var(--ppn-brand)" }}>{s.label}</a>
+                : <Link to={s.to!} className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-sm font-semibold">{s.label}</Link>}
+            </div>
+          ))}
+        </div>
+
+        {/* C. Open demo surfaces (quick) */}
+        <h2 className="mt-8 text-sm font-semibold uppercase tracking-wider text-[var(--ppn-muted)]">Open demo surfaces</h2>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <a href="/tv/DEMO" target="_blank" rel="noreferrer" className={surfaceBtn} style={{ background: "var(--ppn-brand)" }}>Open TV ↗</a>
+          <a href="/host" target="_blank" rel="noreferrer" className={surfaceBtn} style={{ background: "var(--ppn-brand)" }}>Open Host ↗</a>
+          <a href="/play/DEMO" target="_blank" rel="noreferrer" className={surfaceBtn} style={{ background: "var(--ppn-brand)" }}>Open Player ↗</a>
+          <Link to="/config" className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-sm font-semibold">Detailed config</Link>
+        </div>
+
+        {/* D. Free exploration / route map */}
+        <h2 className="mt-8 text-sm font-semibold uppercase tracking-wider text-[var(--ppn-muted)]">All surfaces (free exploration)</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {GROUPS.map((g) => (
+            <div key={g.label} className="rounded-xl border bg-[var(--ppn-surface)] p-3" style={{ borderColor: g.danger ? "color-mix(in srgb, var(--ppn-warning) 40%, var(--ppn-border))" : "var(--ppn-border)" }}>
+              <p className="text-sm font-semibold">{g.label} <span className="text-[10px] font-normal" style={{ color: g.danger ? "var(--ppn-warning)" : "var(--ppn-muted)" }}>· {g.note}</span></p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {g.routes.map(([to, label]) => (
+                  <Link key={to} to={to} className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1 text-xs hover:text-[var(--ppn-brand)]">{label}</Link>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-6 text-xs text-[var(--ppn-muted)]">Players wait on their phones; the host starts the quiz. The player page intentionally has no "start" button.</p>
+      </div>
+    </DemoShell>
+  );
+}

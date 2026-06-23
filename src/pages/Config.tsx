@@ -7,7 +7,8 @@ import { useState, useEffect, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DemoShell } from "../components/shells";
-import { PRESETS, getActiveBrand, setActiveBrand, brandInitials, type ThemeColours } from "../demo/brand";
+import { PRESETS, getActiveBrand, brandInitials, type ThemeColours } from "../demo/brand";
+import { switchPresetGuarded } from "../lib/demoStatus";
 import { activeMarket } from "../demo/markets";
 import { SETUP_MODES } from "../demo/setup";
 import { useAudienceMode } from "../lib/audience";
@@ -155,7 +156,7 @@ export default function Config() {
   const assetBusy = assetMut.isPending;
   const applyDbPack = () => { if (activePack) { setAssetPackOverride(buildBrandOverrideFromAssetPack(activePack, assetsQ.data ?? [])); window.location.reload(); } };
 
-  const choose = (id: string) => { setActiveBrand(id); window.location.reload(); };
+  const choose = (id: string) => switchPresetGuarded(id);
   const Card = ({ title, children }: { title: string; children: ReactNode }) => (
     <div className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
       <p className="text-sm font-semibold">{title}</p>
