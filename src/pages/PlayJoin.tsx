@@ -12,6 +12,7 @@ import { PlayerShell } from "../components/shells";
 import { PlayerLive } from "../components/PlayerLive";
 import { OfferBadge, SponsorMessageSlot, PoweredByPpnMark } from "../components/brandZones";
 import { DEMO_BRAND } from "../demo/brand";
+import { validateTeamName, validatePlayerName } from "../lib/moderation";
 
 type StoredTeam = { teamId: string; playerId: string; teamName: string; joinCode?: string | null };
 function storeTeam(sid: string, t: StoredTeam) { try { localStorage.setItem(`ppn_team_${sid}`, JSON.stringify(t)); } catch { /* ignore */ } }
@@ -85,10 +86,10 @@ export default function PlayJoin() {
   const createMut = useMutation({
     mutationFn: async () => {
       if (!session) throw new Error("no session");
-      if (!name.trim()) throw new Error("Enter your name");
-      if (!teamName.trim()) throw new Error("Enter a team name");
-      const { teamId, playerId, joinCode } = await createTeamAndJoin(session.sessionId, teamName.trim(), name.trim());
-      return { teamId, playerId, teamName: teamName.trim(), joinCode } as StoredTeam;
+      const pn = validatePlayerName(name); if (!pn.ok) throw new Error(pn.reason);
+      const tn = validateTeamName(teamName); if (!tn.ok) throw new Error(tn.reason);
+      const { teamId, playerId, joinCode } = await createTeamAndJoin(session.sessionId, tn.cleaned!, pn.cleaned!);
+      return { teamId, playerId, teamName: tn.cleaned!, joinCode } as StoredTeam;
     },
     onSuccess: (t) => { storeTeam(session!.sessionId, t); setJoined(t); qc.invalidateQueries({ queryKey: ["teams", session?.sessionId] }); },
   });
@@ -96,8 +97,8 @@ export default function PlayJoin() {
   const joinMut = useMutation({
     mutationFn: async (team: TeamRow) => {
       if (!session) throw new Error("no session");
-      if (!name.trim()) throw new Error("Enter your name first");
-      const playerId = await addPlayer(session.sessionId, team.id, name.trim());
+      const pn = validatePlayerName(name); if (!pn.ok) throw new Error(pn.reason);
+      const playerId = await addPlayer(session.sessionId, team.id, pn.cleaned!);
       return { teamId: team.id, playerId, teamName: team.name, joinCode: team.join_code } as StoredTeam;
     },
     onSuccess: (t) => { storeTeam(session!.sessionId, t); setJoined(t); qc.invalidateQueries({ queryKey: ["teams", session?.sessionId] }); },

@@ -21,6 +21,7 @@ import { Carousel } from "../components/Carousel";
 import { VideoSlot } from "../components/VideoSlot";
 import { sponsorSlides, pauseSlides } from "../demo/media";
 import { useAudienceMode } from "../lib/audience";
+import { safeDisplayName } from "../lib/moderation";
 
 const BASE = import.meta.env.VITE_PPN_BASE_PATH ?? "/";
 const PRESENTER_ONLY = ["slideshow", "pause", "media", "audio", "closing"];
@@ -61,7 +62,7 @@ export default function Tv() {
     enabled: !!session && (state === "scoreboard" || state === "victory"),
   });
   const standings = [...(teamsQ.data ?? [])].sort((a, b) => b.score - a.score);
-  const winner = standings[0]?.name ?? "The Anchor Regulars";
+  const winner = safeDisplayName(standings[0]?.name, "Tonight's winners");
 
   const showDemoBadge = PRESENTER_ONLY.includes(state) && !audience;
 
@@ -159,7 +160,7 @@ export default function Tv() {
         <div className="mt-8 w-full max-w-4xl space-y-3 text-left">
           {(standings.length ? standings : [{ id: "x", name: "The Anchor Regulars", score: 18 }, { id: "y", name: "Quiz Lightning", score: 15 }, { id: "z", name: "Bar Stool Boffins", score: 12 }]).slice(0, 6).map((t, i) => (
             <div key={t.id} className="flex items-center justify-between rounded-2xl border-2 px-7 py-5 text-4xl" style={{ borderColor: i === 0 ? "var(--ppn-brand)" : "var(--ppn-border)", background: "var(--ppn-surface)" }}>
-              <span><span className="mr-5 font-black" style={{ color: "var(--ppn-brand)" }}>{i + 1}</span>{t.name}</span>
+              <span><span className="mr-5 font-black" style={{ color: "var(--ppn-brand)" }}>{i + 1}</span>{safeDisplayName(t.name, `Team ${i + 1}`)}</span>
               <span className="font-bold">{t.score} pts</span>
             </div>
           ))}

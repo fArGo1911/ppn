@@ -11,9 +11,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   resolveJoinToken, listTeams, getSessionState, getSessionQuestions, getAnsweredTeamIds,
   setSessionSetup, startGame, gotoQuestion, setPhase, revealAndScore, endGame,
-  setAiIntroEnabled, startIntro,
+  setAiIntroEnabled, startIntro, updateTeamName, removeTeam,
   type SetupMode, type HostingMode, type Phase,
 } from "../lib/ppnApi";
+import { safeDisplayName, isUnsafeDisplayName, validateTeamName } from "../lib/moderation";
 import { HostShell } from "../components/shells";
 import { SETUP_MODES, HOSTING_MODES, questionCompatibility } from "../demo/setup";
 import { DEMO_BRAND, questionAudio } from "../demo/brand";
@@ -117,6 +118,25 @@ export default function Host() {
   const startFirst = () => { if (chimeOn) playCue(audio.questionChimeAudioUrl); run(() => startGame(sid!, questions[0].id, useQIntro ? "qintro" : "question")); };
   const goNext = () => { if (chimeOn) playCue(audio.questionChimeAudioUrl); run(() => gotoQuestion(sid!, questions[idx + 1].id, useQIntro ? "qintro" : "question")); };
   const showQuestion = () => { playCue(qa.readout); run(() => setPhase(sid!, "question")); };
+
+  // ── Host recovery (rename / lobby-only remove). No scoring/loop change; manual score deferred (the reveal
+  //    RPC recomputes score from answers, so a manual override wouldn't survive). ──
+  const [manageId, setManageId] = useState<string | null>(null);
+  const [renameVal, setRenameVal] = useState("");
+  const [manageErr, setManageErr] = useState<string | null>(null);
+  const startManage = (id: string, currentName: string) => { setManageId(id); setRenameVal(currentName); setManageErr(null); };
+  const doRename = (id: string) => {
+    const v = validateTeamName(renameVal);
+    if (!v.ok) { setManageErr(v.reason ?? "Invalid name."); return; }
+    setManageErr(null); setManageId(null);
+    run(() => updateTeamName(id, v.cleaned!));
+  };
+  const doRemove = (id: string, name: string) => {
+    if (window.confirm(`Remove team "${name}" from this event? Lobby only — other teams and all scores are unaffected. This cannot be undone.`)) {
+      setManageId(null);
+      run(() => removeTeam(id));
+    }
+  };
 
   // Read-aloud script for the current state.
   const scriptLead = setupMode === "local_host" ? "📢 Read aloud via the pub mic/speaker" : hostingMode === "ai_assisted" ? "🤖 AI voice announces" : "🎤 Host reads aloud";
@@ -319,15 +339,31 @@ export default function Host() {
                   const answered = answeredSet.has(t.id);
                   return (
                     <div key={t.id} className="rounded-xl border bg-[var(--ppn-surface)] p-3" style={{ borderColor: answerable ? (answered ? "color-mix(in srgb, var(--ppn-success) 40%, var(--ppn-border))" : "var(--ppn-border)") : "var(--ppn-border)" }}>
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold"><span className="mr-2 font-black text-[var(--ppn-brand)]">{i + 1}</span>{t.name}</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="min-w-0 font-semibold">
+                          <span className="mr-2 font-black text-[var(--ppn-brand)]">{i + 1}</span>
+                          {safeDisplayName(t.name, `Team ${i + 1}`)}
+                          {isUnsafeDisplayName(t.name) && <span className="ml-2 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase" style={{ background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>needs rename</span>}
+                        </span>
                         <span className="flex items-center gap-2">
                           {answerable && (answered
                             ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-success) 20%, transparent)", color: "var(--ppn-success)" }}>✓ answered</span>
                             : <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold text-[var(--ppn-muted)]" style={{ background: "var(--ppn-bg)" }}>waiting</span>)}
                           <span className="text-sm font-bold">{t.score} pts</span>
+                          <button onClick={() => manageId === t.id ? setManageId(null) : startManage(t.id, t.name)} className="rounded border border-[var(--ppn-border)] px-2 py-0.5 text-[10px] text-[var(--ppn-muted)] hover:text-[var(--ppn-text)]">Manage</button>
                         </span>
                       </div>
+                      {manageId === t.id && (
+                        <div className="mt-2 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <input value={renameVal} maxLength={40} onChange={(e) => { setRenameVal(e.target.value); setManageErr(null); }} className="min-w-0 flex-1 rounded border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-2 py-1 text-sm text-[var(--ppn-text)]" />
+                            <button onClick={() => doRename(t.id)} disabled={busy} className="rounded px-2.5 py-1 text-xs font-semibold text-[var(--ppn-on-brand)] disabled:opacity-50" style={{ background: "var(--ppn-brand)" }}>Save name</button>
+                            {phase === "lobby" && <button onClick={() => doRemove(t.id, t.name)} disabled={busy} className="rounded border border-red-500/40 px-2.5 py-1 text-xs font-semibold text-red-400 disabled:opacity-50">Remove</button>}
+                          </div>
+                          {manageErr && <p className="mt-1 text-xs text-red-400">{manageErr}</p>}
+                          <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">Rename updates the scoreboard everywhere. Remove is lobby-only. No scores are changed.</p>
+                        </div>
+                      )}
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
                         {t.players.map((p) => (
                           <span key={p.id} className="inline-flex items-center gap-1 rounded-lg bg-[var(--ppn-bg)] px-2 py-0.5 text-xs">

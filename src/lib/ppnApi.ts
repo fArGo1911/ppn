@@ -262,6 +262,20 @@ export async function resetDemo(sessionId: string) {
   if (error) throw error;
 }
 
+/** Host recovery: rename a single team (validated by the caller via moderation). No scoring/loop change. */
+export async function updateTeamName(teamId: string, name: string) {
+  const { error } = await supabase.from("ppn_teams").update({ name }).eq("id", teamId);
+  if (error) throw error;
+}
+
+/** Host recovery: remove one team (lobby only — caller enforces). Deletes its players, then the team
+ * (answers cascade on team delete). Does NOT touch other teams, scores, or the phase loop. */
+export async function removeTeam(teamId: string) {
+  await supabase.from("ppn_players").delete().eq("team_id", teamId);
+  const { error } = await supabase.from("ppn_teams").delete().eq("id", teamId);
+  if (error) throw error;
+}
+
 /** Remove all teams + players from the session (answers cascade on team delete). */
 export async function clearTeams(sessionId: string) {
   await supabase.from("ppn_players").delete().eq("session_id", sessionId);

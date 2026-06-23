@@ -16,6 +16,7 @@ import RunSheet from "./pages/RunSheet";
 import Capabilities from "./pages/Capabilities";
 import Preview from "./pages/Preview";
 import { PresenterTools } from "./components/PresenterTools";
+import { OperatorGate } from "./components/OperatorGate";
 
 const BASENAME = import.meta.env.VITE_PPN_BASE_PATH ?? "/";
 
@@ -27,10 +28,11 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         {/* Functional surfaces */}
         <Route path="/play/:joinToken" element={<PlayJoin />} />
-        <Route path="/host" element={<Host />} />
+        {/* Operator/control surfaces — POC gate (not production auth). /play + /tv are never gated. */}
+        <Route path="/host" element={<OperatorGate><Host /></OperatorGate>} />
         <Route path="/tv/:sessionId" element={<Tv />} />
         {/* Commercial surfaces */}
-        <Route path="/config" element={<Config />} />
+        <Route path="/config" element={<OperatorGate><Config /></OperatorGate>} />
         <Route path="/setup" element={<BrandAssets />} />
         <Route path="/kpi" element={<Kpi />} />
         <Route path="/rollout" element={<Rollout />} />

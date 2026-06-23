@@ -171,6 +171,16 @@ export default function Config() {
         <p className="mt-2 text-[var(--ppn-muted)]">Prepare a run before a brewery sees it. Hidden from the buyer journey.</p>
 
         <div className="mt-6 space-y-4">
+          <Card title="Run the demo">
+            <ol className="list-decimal space-y-1 pl-5 text-sm">
+              <li>Open the TV: <span className="font-mono">/tv/DEMO</span></li>
+              <li>Open the Host: <span className="font-mono">/host</span></li>
+              <li>Open a Player: <span className="font-mono">/play/DEMO</span></li>
+              <li>Start the quiz from the <span className="font-semibold">Host</span>.</li>
+            </ol>
+            <p className="mt-2 text-xs text-[var(--ppn-muted)]">Players wait on their phones; the host starts the quiz. (The player page intentionally has no "start" button.)</p>
+          </Card>
+
           <Card title="Brewery preset · market">
             <div className="space-y-2">
               {PRESETS.map((p) => {

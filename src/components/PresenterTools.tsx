@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { PRESETS, getActiveBrand, setActiveBrand, brandInitials } from "../demo/brand";
 import { resolveJoinToken, resetDemo } from "../lib/ppnApi";
 import { useAudienceMode } from "../lib/audience";
+import { lockOperator, useOperatorUnlocked } from "../lib/operator";
 
 const SECTIONS = [
   { to: "/", label: "Campaign" },
@@ -30,6 +31,7 @@ export function PresenterTools() {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
   const [audience, setAudience] = useAudienceMode();
+  const opUnlocked = useOperatorUnlocked();
   const onTv = pathname.startsWith("/tv");
   const onPlay = pathname.startsWith("/play");
   const active = getActiveBrand();
@@ -104,9 +106,12 @@ export function PresenterTools() {
               </button>
             ))}
           </div>
-          <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-2">
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/10 pt-2">
             <Link to="/config" onClick={() => setOpen(false)} className="text-[10px] text-slate-400 hover:text-white">Operator prep →</Link>
-            <button onClick={doReset} className="rounded bg-white/5 px-2 py-1 text-[10px] hover:bg-white/10" title="Reset the demo session">↺ Reset demo</button>
+            <span className="flex items-center gap-1">
+              {opUnlocked && <button onClick={() => { lockOperator(); setOpen(false); }} className="rounded bg-white/5 px-2 py-1 text-[10px] hover:bg-white/10" title="Lock /config and /host on this device">🔒 Lock operator</button>}
+              <button onClick={doReset} className="rounded bg-white/5 px-2 py-1 text-[10px] hover:bg-white/10" title="Reset the demo session">↺ Reset demo</button>
+            </span>
           </div>
         </div>
       )}

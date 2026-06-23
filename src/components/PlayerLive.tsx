@@ -12,6 +12,7 @@ import { PlayerShell } from "./shells";
 import { OfferBadge } from "./brandZones";
 import { setupLabel } from "../demo/setup";
 import { DEMO_BRAND } from "../demo/brand";
+import { safeDisplayName } from "../lib/moderation";
 
 export function PlayerLive({ session, team, onLeaveTeam }: { session: ResolvedSession; team: { teamId: string; playerId: string; teamName: string; joinCode?: string | null }; onLeaveTeam?: () => void }) {
   const qc = useQueryClient();
@@ -125,12 +126,12 @@ export function PlayerLive({ session, team, onLeaveTeam }: { session: ResolvedSe
         <>
           <h2 className="text-xl font-bold">{phase === "ended" ? "Final standings" : "Scoreboard"}</h2>
           {phase === "ended" && standings[0] && (
-            <p className="mt-1 text-[var(--ppn-brand)]">🏆 {standings[0].name} win — thanks to {DEMO_BRAND.sponsorName}!</p>
+            <p className="mt-1 text-[var(--ppn-brand)]">🏆 {safeDisplayName(standings[0].name, "Tonight's winners")} win — thanks to {DEMO_BRAND.sponsorName}!</p>
           )}
           <div className="mt-3 space-y-2">
             {standings.slice(0, 8).map((t, i) => (
               <div key={t.id} className="flex items-center justify-between rounded-xl border px-3 py-2.5" style={{ borderColor: t.id === team.teamId ? "var(--ppn-brand)" : "var(--ppn-border)", background: "var(--ppn-surface)" }}>
-                <span><span className="mr-2 font-black text-[var(--ppn-brand)]">{i + 1}</span>{t.name}{t.id === team.teamId ? " (you)" : ""}</span>
+                <span><span className="mr-2 font-black text-[var(--ppn-brand)]">{i + 1}</span>{safeDisplayName(t.name, `Team ${i + 1}`)}{t.id === team.teamId ? " (you)" : ""}</span>
                 <span className="font-bold">{t.score} pts</span>
               </div>
             ))}
