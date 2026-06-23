@@ -1,25 +1,35 @@
 /**
- * /tv/:sessionId — TV / projector display with MULTIPLE branded states (choose via ?state=, e.g. from the
- * presenter tools): welcome · slideshow · question · pause · reveal · scoreboard · victory · closing.
- * Brewery/pub/event-first, distance-readable. Config-driven placeholders + carousels (no media engine).
+ * /tv/:sessionId — the pub-event DISPLAY. A live sponsored-event screen, not a web app on a TV: distance-readable,
+ * theme-aware (works on every preset, light or dark, via --ppn-* tokens), and honest about what's live.
+ *
+ * STATE SOURCES:
+ *  • Live-driven (mirrors the session loop, no ?state): welcome · intro · qintro · live_question · live_reveal ·
+ *    scoreboard · victory · tv_off.
+ *  • Presenter-only demo (?state= only — NOT driven by the loop): slideshow · pause · media · audio · closing.
+ *    These carry a subtle "Presenter demo · not live-driven" badge in presenter mode (hidden in audience mode).
+ *  • Presenter previews of live-capable states (?state=question/reveal/etc.) reuse the live layouts with demo data.
  */
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
+import type { ReactNode } from "react";
 import { resolveJoinToken, listTeams, getSessionState, getSessionQuestions } from "../lib/ppnApi";
 import { DEMO_BRAND } from "../demo/brand";
 import { TvShell } from "../components/shells";
 import { OfferBadge, AiAnnouncementSlot } from "../components/brandZones";
 import { Carousel } from "../components/Carousel";
 import { VideoSlot } from "../components/VideoSlot";
-import { sponsorSlides, pauseSlides, victorySlides } from "../demo/media";
+import { sponsorSlides, pauseSlides } from "../demo/media";
+import { useAudienceMode } from "../lib/audience";
 
 const BASE = import.meta.env.VITE_PPN_BASE_PATH ?? "/";
+const PRESENTER_ONLY = ["slideshow", "pause", "media", "audio", "closing"];
 
 export default function Tv() {
   const [params] = useSearchParams();
   const token = params.get("token") ?? "DEMO";
-  const hasOverride = params.has("state"); // presenter override; otherwise the TV mirrors the live session
+  const hasOverride = params.has("state");
+  const [audience] = useAudienceMode();
   const joinUrl = `${window.location.origin}${BASE === "/" ? "" : BASE}/play/${token}`;
 
   const resolveQ = useQuery({ queryKey: ["tv-resolve", token], queryFn: () => resolveJoinToken(token) });
@@ -27,13 +37,11 @@ export default function Tv() {
   const venue = session?.venueName ?? DEMO_BRAND.pubName;
   const event = session?.eventTitle ?? DEMO_BRAND.eventName;
 
-  // Live session mirror (only when there's no ?state= override).
   const liveStateQ = useQuery({ queryKey: ["tv-live", session?.sessionId], queryFn: () => getSessionState(session!.sessionId), enabled: !!session && !hasOverride, refetchInterval: 2500 });
   const liveQsQ = useQuery({ queryKey: ["tv-live-q", session?.sessionId], queryFn: () => getSessionQuestions(session!.sessionId), enabled: !!session && !hasOverride, staleTime: 60_000 });
   const live = hasOverride ? undefined : liveStateQ.data;
   const liveQ = live && liveQsQ.data ? liveQsQ.data.find((x) => x.id === live.currentQuestionId) ?? null : null;
 
-  // Derive the TV state: explicit override wins; else map the live phase (with setup-mode awareness).
   let state: string;
   if (hasOverride) state = params.get("state") ?? "welcome";
   else if (live) {
@@ -55,219 +63,204 @@ export default function Tv() {
   const standings = [...(teamsQ.data ?? [])].sort((a, b) => b.score - a.score);
   const winner = standings[0]?.name ?? "The Anchor Regulars";
 
-  // Big pub/event title used across most states.
+  const showDemoBadge = PRESENTER_ONLY.includes(state) && !audience;
+
+  // ── Reusable TV layout pieces (consistent across states, theme-token driven) ──
+  const Kicker = ({ children }: { children: ReactNode }) => (
+    <p className="text-2xl font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--ppn-brand)" }}>{children}</p>
+  );
   const Title = () => (
     <>
       <h1 className="text-7xl font-black leading-none">{venue}</h1>
-      <p className="mt-2 text-3xl font-semibold" style={{ color: DEMO_BRAND.primary }}>{event} · {DEMO_BRAND.broughtBy}</p>
+      <p className="mt-3 text-3xl font-semibold" style={{ color: "var(--ppn-brand)" }}>{event} · {DEMO_BRAND.broughtBy}</p>
     </>
   );
-
-  if (state === "slideshow")
-    return (
-      <TvShell>
-        <div className="grid w-full max-w-6xl gap-6">
-          {/* Sponsor bumper video (local in this demo → shows fallback) + the sponsor slide carousel. */}
-          <VideoSlot url={DEMO_BRAND.video.sponsorBumperVideoUrl} sourceType={DEMO_BRAND.video.sponsorBumperVideoSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Sponsor bumper" />
-          <Carousel slides={sponsorSlides(DEMO_BRAND)} auto size="tv" />
+  const Options = ({ options }: { options: string[] }) => (
+    <div className="mt-10 grid w-full max-w-5xl grid-cols-2 gap-6 text-4xl">
+      {options.map((o, i) => (
+        <div key={o} className="flex items-center rounded-2xl border-2 px-7 py-7 text-left font-semibold" style={{ borderColor: "var(--ppn-border)", background: "var(--ppn-surface)", color: "var(--ppn-text)" }}>
+          <span className="mr-5 grid h-14 w-14 shrink-0 place-items-center rounded-xl text-3xl font-black" style={{ background: "var(--ppn-brand)", color: "var(--ppn-on-brand)" }}>{"ABCD"[i]}</span>{o}
         </div>
-      </TvShell>
-    );
-
-  if (state === "pause")
-    return (
-      <TvShell>
-        <p className="mb-4 text-3xl font-bold">Back in a moment…</p>
-        <div className="w-full max-w-6xl"><Carousel slides={pauseSlides(DEMO_BRAND)} auto size="tv" /></div>
-      </TvShell>
-    );
-
-  if (state === "question")
-    return (
-      <TvShell>
-        <p className="text-2xl uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>Round 1 · General knowledge</p>
-        <h1 className="mt-3 max-w-5xl text-6xl font-black leading-tight">Which planet is known as the Red Planet?</h1>
-        <div className="mt-10 grid w-full max-w-5xl grid-cols-2 gap-5 text-3xl">
-          {["Mars", "Venus", "Jupiter", "Mercury"].map((o, i) => (
-            <div key={o} className="rounded-2xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] py-6">
-              <span className="mr-3 font-black" style={{ color: DEMO_BRAND.primary }}>{"ABCD"[i]}</span>{o}
-            </div>
-          ))}
+      ))}
+    </div>
+  );
+  const QrCard = ({ size = 220, caption = "Scan to join" }: { size?: number; caption?: string }) => (
+    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-6">
+      <div className="rounded-2xl bg-white p-4 shadow-2xl"><QRCodeSVG value={joinUrl} size={size} bgColor="#ffffff" fgColor="#0f172a" level="M" /></div>
+      <p className="text-3xl font-bold">{caption}</p>
+      <p className="text-xl text-[var(--ppn-muted)]">No app · code <span className="font-mono font-bold text-[var(--ppn-text)]">{token}</span></p>
+    </div>
+  );
+  const wrap = (focus: boolean, body: ReactNode) => (
+    <TvShell focus={focus}>
+      {showDemoBadge && (
+        <div className="fixed left-4 top-4 z-40 rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1 text-xs font-medium text-[var(--ppn-muted)] print:hidden">
+          Presenter demo · not live-driven
         </div>
-        <p className="mt-8 text-2xl text-[var(--ppn-muted)]">⏱ Answer on your phones</p>
-      </TvShell>
-    );
+      )}
+      {body}
+    </TvShell>
+  );
 
-  if (state === "reveal")
-    return (
-      <TvShell>
-        <p className="text-2xl uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>Answer reveal</p>
-        <h1 className="mt-3 text-7xl font-black">Mars</h1>
-        <p className="mt-3 text-2xl text-[var(--ppn-muted)]">The Red Planet — its colour comes from iron oxide (rust).</p>
-        <div className="mt-6"><AiAnnouncementSlot scriptKey="answerReveal" size="tv" /></div>
-      </TvShell>
-    );
+  // ── Active question (live or presenter preview). Cleanest state; sponsor only if the question is sponsored. ──
+  const QuestionView = (q: { prompt: string; options: string[] | null; kind?: string; roundSeq?: number; sequence?: number }) => {
+    const sponsored = q.kind === "sponsored";
+    return wrap(!sponsored, (
+      <>
+        <Kicker>{sponsored ? `Sponsored round · ${DEMO_BRAND.sponsorName}` : `Round ${q.roundSeq ?? 1} · Question ${q.sequence ?? 1}`}</Kicker>
+        <h1 className="mt-4 max-w-6xl text-6xl font-black leading-tight">{q.prompt}</h1>
+        {q.options && <Options options={q.options} />}
+        <p className="mt-9 text-3xl text-[var(--ppn-muted)]">⏱ Answer on your phones</p>
+      </>
+    ));
+  };
+  const RevealView = (q: { correctAnswer: string | null; explanation?: string | null; kind?: string }) => wrap(q.kind !== "sponsored", (
+    <>
+      <Kicker>Answer{q.kind === "sponsored" ? ` · ${DEMO_BRAND.sponsorName}` : ""}</Kicker>
+      <h1 className="mt-4 text-8xl font-black">{q.correctAnswer}</h1>
+      {q.explanation && <p className="mt-4 max-w-4xl text-3xl text-[var(--ppn-muted)]">{q.explanation}</p>}
+      <div className="mt-8 w-full max-w-4xl"><AiAnnouncementSlot scriptKey="answerReveal" size="tv" /></div>
+    </>
+  ));
 
-  if (state === "scoreboard")
-    return (
-      <TvShell>
-        <Title />
-        <div className="mt-8 w-full max-w-3xl space-y-3 text-left">
-          {(standings.length ? standings : [{ id: "x", name: "The Anchor Regulars", score: 18 }, { id: "y", name: "Quiz Lightning", score: 15 }]).slice(0, 5).map((t, i) => (
-            <div key={t.id} className="flex items-center justify-between rounded-2xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-6 py-4 text-3xl">
-              <span><span className="mr-4 font-black" style={{ color: DEMO_BRAND.primary }}>{i + 1}</span>{t.name}</span>
-              <span className="font-bold">{t.score} pts</span>
-            </div>
-          ))}
-        </div>
-      </TvShell>
-    );
+  // ════════════ Live-driven states ════════════
 
-  if (state === "victory")
-    return (
-      <TvShell>
-        <div className="w-full max-w-5xl"><Carousel slides={victorySlides(DEMO_BRAND).map((s) => ({ ...s, subtitle: s.subtitle === "{team}" ? winner : s.subtitle }))} auto size="tv" /></div>
-        <div className="mt-6 w-full max-w-5xl"><AiAnnouncementSlot scriptKey="winner" size="tv" /></div>
-      </TvShell>
-    );
+  if (state === "qintro")
+    return wrap(true, (
+      <>
+        <Kicker>🔊 Question coming up</Kicker>
+        <h1 className="mt-6 text-8xl font-black leading-none">Get ready</h1>
+        <p className="mt-5 text-3xl text-[var(--ppn-muted)]">Phones ready — answer on your phones</p>
+      </>
+    ));
 
-  if (state === "media")
-    return (
-      <TvShell>
-        <p className="text-2xl uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>Round 2 · Picture / video round</p>
-        <h1 className="mt-2 text-5xl font-black">What's happening in this clip?</h1>
-        <div className="mt-6 grid w-full max-w-6xl grid-cols-[1.5fr_1fr] items-center gap-8 text-left">
-          {/* Large media area — real brewery video asset (external URL or local MP4) with image fallback */}
-          <VideoSlot url={DEMO_BRAND.video.videoQuestionUrl} sourceType={DEMO_BRAND.video.videoQuestionSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Video question media" />
-          <div className="grid gap-3 text-2xl">
-            {["Brewing day", "Match day", "Quiz night", "Delivery run"].map((o, i) => (
-              <div key={o} className="rounded-2xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-5 py-4">
-                <span className="mr-3 font-black" style={{ color: DEMO_BRAND.primary }}>{"ABCD"[i]}</span>{o}
-              </div>
-            ))}
-          </div>
-        </div>
-        <p className="mt-6 text-2xl text-[var(--ppn-muted)]">Answer on your phones · video on the big screen (phone shows the question + options)</p>
-      </TvShell>
-    );
+  if (state === "live_question" && liveQ) return QuestionView(liveQ);
+  if (state === "live_reveal" && liveQ) return RevealView(liveQ);
 
-  if (state === "audio")
-    return (
-      <TvShell>
-        <p className="text-2xl uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>Round 3 · Music / audio round</p>
-        <div className="mt-6 flex items-center justify-center gap-4 text-6xl">
-          <span className="animate-pulse" style={{ color: DEMO_BRAND.primary }}>🎵</span>
-          <span className="text-3xl text-[var(--ppn-muted)]">Now playing… (host triggers audio)</span>
-        </div>
-        <h1 className="mt-6 text-6xl font-black">Name the artist</h1>
-        <p className="mt-4 text-3xl text-[var(--ppn-muted)]">🔊 Listen carefully — answer on your phones</p>
-        <div className="mt-8 w-full max-w-5xl text-left"><AiAnnouncementSlot scriptKey="questionReadout" size="tv" /></div>
-      </TvShell>
-    );
-
-  if (state === "closing")
-    return (
-      <TvShell>
-        <h1 className="text-6xl font-black">Thanks for playing!</h1>
-        <p className="mt-3 text-3xl" style={{ color: DEMO_BRAND.primary }}>{DEMO_BRAND.cta}</p>
-        <p className="mt-2 text-2xl text-[var(--ppn-muted)]">Brought to you by {DEMO_BRAND.sponsorName}</p>
-        <div className="mt-6 w-full max-w-3xl">
-          <VideoSlot url={DEMO_BRAND.video.closingVideoUrl} sourceType={DEMO_BRAND.video.closingVideoSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Closing sponsor video (optional)" />
-        </div>
-        <div className="mt-6"><OfferBadge size="tv" /></div>
-      </TvShell>
-    );
-
-  // ── AI evening intro state (TV+audio): brand atmosphere + the AI host opener, QR still available. ──
   if (state === "intro")
-    return (
-      <TvShell>
-        <p className="text-2xl uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>🔊 AI host intro</p>
+    return wrap(false, (
+      <>
+        <Kicker>🔊 AI host intro</Kicker>
         <Title />
-        <div className="mt-6 grid w-full max-w-6xl grid-cols-[1.5fr_1fr] items-center gap-8 text-left">
+        <div className="mt-8 grid w-full max-w-6xl grid-cols-[1.5fr_1fr] items-center gap-8 text-left">
           <div>
             <VideoSlot url={DEMO_BRAND.video.tvIntroVideoUrl} sourceType={DEMO_BRAND.video.tvIntroVideoSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Intro video (optional campaign visual)" />
             <div className="mt-4"><AiAnnouncementSlot scriptKey="eventIntro" size="tv" /></div>
           </div>
-          <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-6">
-            <div className="rounded-2xl bg-white p-3 shadow-2xl"><QRCodeSVG value={joinUrl} size={180} bgColor="#ffffff" fgColor="#0f172a" level="M" /></div>
-            <p className="text-2xl font-bold">Still time to join</p>
-            <p className="text-lg text-[var(--ppn-muted)]">code <span className="font-mono font-bold text-[var(--ppn-text)]">{token}</span></p>
-          </div>
+          <QrCard size={170} caption="Still time to join" />
         </div>
-      </TvShell>
-    );
+      </>
+    ));
 
-  // ── "Question coming up" pre-roll (chime / AI announcement playing on the PA). ──
-  if (state === "qintro")
-    return (
-      <TvShell>
-        <p className="text-3xl uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>🔊 Question coming up</p>
-        <h1 className="mt-4 text-7xl font-black leading-none">{venue}</h1>
-        <p className="mt-3 text-3xl text-[var(--ppn-muted)]">Phones ready — answer on your phones</p>
-        <p className="mt-2 text-2xl" style={{ color: DEMO_BRAND.primary }}>{event} · {DEMO_BRAND.broughtBy}</p>
-      </TvShell>
-    );
+  if (state === "scoreboard")
+    return wrap(false, (
+      <>
+        <Title />
+        <div className="mt-8 w-full max-w-4xl space-y-3 text-left">
+          {(standings.length ? standings : [{ id: "x", name: "The Anchor Regulars", score: 18 }, { id: "y", name: "Quiz Lightning", score: 15 }, { id: "z", name: "Bar Stool Boffins", score: 12 }]).slice(0, 6).map((t, i) => (
+            <div key={t.id} className="flex items-center justify-between rounded-2xl border-2 px-7 py-5 text-4xl" style={{ borderColor: i === 0 ? "var(--ppn-brand)" : "var(--ppn-border)", background: "var(--ppn-surface)" }}>
+              <span><span className="mr-5 font-black" style={{ color: "var(--ppn-brand)" }}>{i + 1}</span>{t.name}</span>
+              <span className="font-bold">{t.score} pts</span>
+            </div>
+          ))}
+        </div>
+      </>
+    ));
 
-  // ── Live mirror: this venue setup doesn't use the TV as the play surface (phones carry the game). ──
+  if (state === "victory")
+    return wrap(false, (
+      <>
+        <p className="text-3xl uppercase tracking-[0.2em]" style={{ color: "var(--ppn-brand)" }}>🏆 Tonight's champions</p>
+        <h1 className="mt-4 text-8xl font-black">{winner}</h1>
+        <p className="mt-5 text-3xl">Thanks to <span className="font-bold" style={{ color: "var(--ppn-brand)" }}>{DEMO_BRAND.sponsorName}</span></p>
+        <div className="mt-6"><OfferBadge size="tv" /></div>
+        <div className="mt-8 w-full max-w-4xl"><AiAnnouncementSlot scriptKey="winner" size="tv" /></div>
+      </>
+    ));
+
   if (state === "tv_off")
-    return (
-      <TvShell>
+    return wrap(false, (
+      <>
         <Title />
         <p className="mt-6 text-3xl text-[var(--ppn-muted)]">This event runs on phones — no TV needed.</p>
-        <div className="mt-8 flex flex-col items-center gap-4 rounded-2xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-6">
-          <div className="rounded-2xl bg-white p-4 shadow-2xl"><QRCodeSVG value={joinUrl} size={200} bgColor="#ffffff" fgColor="#0f172a" level="M" /></div>
-          <p className="text-2xl font-bold">Scan to join · code <span className="font-mono">{token}</span></p>
-        </div>
-      </TvShell>
-    );
+        <div className="mt-8"><QrCard size={200} /></div>
+      </>
+    ));
 
-  // ── Live mirror: current question (real seeded question + options). ──
-  if (state === "live_question" && liveQ)
-    return (
-      <TvShell>
-        <p className="text-2xl uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>
-          {liveQ.kind === "sponsored" ? `Sponsored · ${DEMO_BRAND.sponsorName}` : `Round ${liveQ.roundSeq} · Question ${liveQ.sequence}`}
-        </p>
-        <h1 className="mt-3 max-w-5xl text-6xl font-black leading-tight">{liveQ.prompt}</h1>
-        {liveQ.options && (
-          <div className="mt-10 grid w-full max-w-5xl grid-cols-2 gap-5 text-3xl">
-            {liveQ.options.map((o, i) => (
-              <div key={o} className="rounded-2xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] py-6">
-                <span className="mr-3 font-black" style={{ color: DEMO_BRAND.primary }}>{"ABCD"[i]}</span>{o}
+  // ════════════ Presenter-only demo states (badged above) ════════════
+
+  if (state === "slideshow")
+    return wrap(false, (
+      <div className="grid w-full max-w-6xl gap-6">
+        <VideoSlot url={DEMO_BRAND.video.sponsorBumperVideoUrl} sourceType={DEMO_BRAND.video.sponsorBumperVideoSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Sponsor bumper" />
+        <Carousel slides={sponsorSlides(DEMO_BRAND)} auto size="tv" />
+      </div>
+    ));
+
+  if (state === "pause")
+    return wrap(false, (
+      <>
+        <p className="mb-4 text-4xl font-bold">Back in a moment…</p>
+        <div className="w-full max-w-6xl"><Carousel slides={pauseSlides(DEMO_BRAND)} auto size="tv" /></div>
+        <div className="mt-6"><QrCard size={150} caption="Join anytime" /></div>
+      </>
+    ));
+
+  if (state === "media")
+    return wrap(false, (
+      <>
+        <Kicker>Picture / video round</Kicker>
+        <h1 className="mt-2 text-5xl font-black">What's happening in this clip?</h1>
+        <div className="mt-6 grid w-full max-w-6xl grid-cols-[1.5fr_1fr] items-center gap-8 text-left">
+          <VideoSlot url={DEMO_BRAND.video.videoQuestionUrl} sourceType={DEMO_BRAND.video.videoQuestionSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Video question media" />
+          <div className="grid gap-3 text-3xl">
+            {["Brewing day", "Match day", "Quiz night", "Delivery run"].map((o, i) => (
+              <div key={o} className="rounded-2xl border-2 px-6 py-5 font-semibold" style={{ borderColor: "var(--ppn-border)", background: "var(--ppn-surface)", color: "var(--ppn-text)" }}>
+                <span className="mr-3 font-black" style={{ color: "var(--ppn-brand)" }}>{"ABCD"[i]}</span>{o}
               </div>
             ))}
           </div>
-        )}
-        <p className="mt-8 text-2xl text-[var(--ppn-muted)]">⏱ Answer on your phones</p>
-      </TvShell>
-    );
+        </div>
+        <p className="mt-6 text-2xl text-[var(--ppn-muted)]">Answer on your phones · the phone always shows the question + options</p>
+      </>
+    ));
 
-  // ── Live mirror: answer reveal (real correct answer). ──
-  if (state === "live_reveal" && liveQ)
-    return (
-      <TvShell>
-        <p className="text-2xl uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>Answer reveal</p>
-        <h1 className="mt-3 text-7xl font-black">{liveQ.correctAnswer}</h1>
-        <div className="mt-6"><AiAnnouncementSlot scriptKey="answerReveal" size="tv" /></div>
-      </TvShell>
-    );
+  if (state === "audio")
+    return wrap(false, (
+      <>
+        <Kicker>Music / audio round</Kicker>
+        <div className="mt-6 flex items-center justify-center gap-4 text-6xl"><span className="animate-pulse" style={{ color: "var(--ppn-brand)" }}>🎵</span><span className="text-3xl text-[var(--ppn-muted)]">Now playing… (host triggers audio)</span></div>
+        <h1 className="mt-6 text-7xl font-black">Name the artist</h1>
+        <p className="mt-5 text-3xl text-[var(--ppn-muted)]">🔊 Listen carefully — answer on your phones</p>
+      </>
+    ));
 
-  // Default: welcome / QR
-  return (
-    <TvShell>
+  if (state === "closing")
+    return wrap(false, (
+      <>
+        <h1 className="text-7xl font-black">Thanks for playing!</h1>
+        <p className="mt-4 text-3xl" style={{ color: "var(--ppn-brand)" }}>{DEMO_BRAND.cta}</p>
+        <p className="mt-2 text-2xl text-[var(--ppn-muted)]">Brought to you by {DEMO_BRAND.sponsorName}</p>
+        <div className="mt-6 w-full max-w-3xl"><VideoSlot url={DEMO_BRAND.video.closingVideoUrl} sourceType={DEMO_BRAND.video.closingVideoSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Closing sponsor video (optional)" /></div>
+        <div className="mt-6"><OfferBadge size="tv" /></div>
+      </>
+    ));
+
+  // ════════════ Presenter previews of live-capable states (demo data) ════════════
+
+  if (state === "question") return QuestionView({ prompt: "Which planet is known as the Red Planet?", options: ["Mars", "Venus", "Jupiter", "Mercury"], roundSeq: 1, sequence: 1 });
+  if (state === "reveal") return RevealView({ correctAnswer: "Mars", explanation: "The Red Planet — its colour comes from iron oxide (rust)." });
+
+  // ── Default: welcome / QR (room-facing start screen) ──
+  return wrap(false, (
+    <>
       <Title />
       <div className="mt-4"><OfferBadge size="tv" /></div>
-      <div className="mt-6 grid w-full max-w-6xl grid-cols-[1.4fr_1fr] items-center gap-8 text-left">
-        {/* Intro video (embed/local/external) — kept SEPARATE from the QR so a video failure never blocks join. */}
+      <div className="mt-7 grid w-full max-w-6xl grid-cols-[1.4fr_1fr] items-center gap-8 text-left">
         <VideoSlot url={DEMO_BRAND.video.tvIntroVideoUrl} sourceType={DEMO_BRAND.video.tvIntroVideoSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="Intro video" />
-        <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-6">
-          <div className="rounded-2xl bg-white p-4 shadow-2xl"><QRCodeSVG value={joinUrl} size={220} bgColor="#ffffff" fgColor="#0f172a" level="M" /></div>
-          <p className="text-3xl font-bold">Scan to join</p>
-          <p className="text-xl text-[var(--ppn-muted)]">No app · code <span className="font-mono font-bold text-[var(--ppn-text)]">{token}</span></p>
-        </div>
+        <QrCard size={220} />
       </div>
       <div className="mt-8 w-full max-w-6xl text-left"><AiAnnouncementSlot scriptKey="eventIntro" size="tv" /></div>
-    </TvShell>
-  );
+    </>
+  ));
 }

@@ -64,15 +64,17 @@ export function HostShell({ venue, event, status, children }: { venue?: string; 
 }
 
 // ── TV / display (large-screen): brewery banner → immersive content → lower-third ──
-export function TvShell({ children }: { children: ReactNode }) {
+// `focus` strips the brewery banner + sponsor strip for clean gameplay states (active question / qintro /
+// non-sponsored reveal) so the question is the only thing on the big screen.
+export function TvShell({ children, focus = false }: { children: ReactNode; focus?: boolean }) {
   return (
     <div
       className="flex min-h-screen flex-col text-[var(--ppn-text)]"
       style={{ background: "radial-gradient(120% 80% at 100% 0%, color-mix(in srgb, var(--ppn-brand-dark) 30%, transparent), transparent 55%), var(--ppn-bg)" }}
     >
-      <BrandBanner size="tv" />
+      {!focus && <BrandBanner size="tv" />}
       <main className="flex flex-1 flex-col items-center justify-center px-10 py-6 text-center">{children}</main>
-      <SponsorStrip size="tv" />
+      {!focus && <SponsorStrip size="tv" />}
     </div>
   );
 }
