@@ -54,6 +54,16 @@ const LANES: Lane[] = [
   },
 ];
 
+// Compact read-only preview of the active demo across key surfaces — each links to the real route (no iframe,
+// no runtime preview engine, no generated graphics; the brand chip uses the active preset's own colour/initials).
+const PREVIEW_SURFACES: { to: string; label: string; blurb: string; icon: string; newTab?: boolean }[] = [
+  { to: "/tv/DEMO", label: "TV display / audience screen", blurb: "The room screen guests see", icon: "TV", newTab: true },
+  { to: "/play/DEMO", label: "Player phone", blurb: "What a guest sees on their phone", icon: "PH", newTab: true },
+  { to: "/presentation", label: "Client presentation", blurb: "The guided buyer showcase", icon: "PR" },
+  { to: "/report", label: "Report", blurb: "The seeded pilot report", icon: "RP" },
+  { to: "/kpi", label: "KPI summary", blurb: "The engagement projection", icon: "KP" },
+];
+
 // Available for depth, but NOT core guided-demo steps.
 const APPENDIX: { to: string; label: string; role: string }[] = [
   { to: "/rollout", label: "Rollout", role: "Supporting / appendix" },
@@ -123,7 +133,7 @@ export default function Operator() {
             <Link to="/config#brand-media" className={surfaceBtn} style={{ background: "var(--ppn-brand)" }}>Open brand &amp; media setup →</Link>
             <Link to="/config#demo-numbers" className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-sm font-semibold">Demo numbers →</Link>
             <Link to="/config#session" className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-sm font-semibold">Reset demo session →</Link>
-            <Link to="/setup" className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-sm font-semibold">Where each asset appears (reference) →</Link>
+            <Link to="/setup#where-assets-appear" className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-sm font-semibold">Where each asset appears (reference) →</Link>
           </div>
           {anyOverrideActive() ? (
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -131,6 +141,31 @@ export default function Operator() {
               <button onClick={() => { clearClientOverrides(); window.location.reload(); }} className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-xs font-semibold">Clear client overrides</button>
             </div>
           ) : <p className="mt-2 text-xs text-[var(--ppn-muted)]">No client overrides — showing preset defaults. Switching the active preset in detailed config asks before carrying overrides over.</p>}
+        </div>
+
+        {/* A0b. Preview active demo — compact read-only surface previews that link to the full routes */}
+        <div className="mt-4 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
+          <p className="text-sm font-semibold">Preview active demo</p>
+          <p className="mt-1 text-xs text-[var(--ppn-muted)]">What {DEMO_BRAND.sponsorName} looks like on the key surfaces — open any to see the real page (read-only, the live demo's own assets).</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {PREVIEW_SURFACES.map((s) => {
+              const inner = (
+                <>
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[10px] font-black" style={{ background: DEMO_BRAND.colours.primary, color: DEMO_BRAND.colours.onBrand }}>{s.icon}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{s.label}</p>
+                    <p className="truncate text-[11px] text-[var(--ppn-muted)]">{s.blurb}</p>
+                  </div>
+                  <span className="shrink-0 text-[var(--ppn-brand)]">{s.newTab ? "↗" : "→"}</span>
+                </>
+              );
+              const cls = "flex items-center gap-2 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-2.5 hover:border-[var(--ppn-brand)]";
+              return s.newTab
+                ? <a key={s.to} href={s.to} target="_blank" rel="noreferrer" className={cls}>{inner}</a>
+                : <Link key={s.to} to={s.to} className={cls}>{inner}</Link>;
+            })}
+          </div>
+          <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Asset reference: <Link to="/setup#minimum-pack" className="text-[var(--ppn-brand)]">minimum pack</Link> · <Link to="/setup#asset-slots" className="text-[var(--ppn-brand)]">asset slots</Link> · <Link to="/setup#where-assets-appear" className="text-[var(--ppn-brand)]">where assets appear</Link></p>
         </div>
 
         {/* A1. Available demo presets — the POC ships many branded demos, not one hardcoded Northgate */}

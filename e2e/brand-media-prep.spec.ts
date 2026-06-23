@@ -58,7 +58,7 @@ test("/setup reads as an asset reference / slot guide pointing back to /config",
   await expect(page.getByRole("heading", { name: /Asset reference \/ slot guide/i })).toBeVisible();
   await expect(page.getByText(/slot guide only/i)).toBeVisible();
   await expect(page.getByRole("link", { name: /brand & media setup/i }).first()).toBeVisible();
-  await expect(page.locator('a[href="/config"]').first()).toBeVisible();
+  await expect(page.locator('a[href^="/config"]').first()).toBeVisible();
 });
 
 // ── Guardrails: no misleading / out-of-scope wording introduced on /operator ──

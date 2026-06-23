@@ -34,7 +34,9 @@ test("/tv/DEMO welcome shows no host-script card and no fake Brewery-video place
 
 // ── 3. Public TV welcome still shows the polished startup + QR/join vision ──
 test("/tv/DEMO welcome still shows an audience-safe startup + QR/join", async ({ page }) => {
-  await page.goto("/tv/DEMO");
+  // Pin the welcome state: with a live local-Supabase session the loop can resolve to tv_off mid-test (race),
+  // so assert the welcome surface deterministically via the presenter ?state override (disables the live query).
+  await page.goto("/tv/DEMO?state=welcome");
   await expect(page.getByText("Scan to join", { exact: true })).toBeVisible();
   await expect(page.getByText(/Tonight.s quiz starts soon/i).first()).toBeVisible();
   // Join code is shown as a no-app fallback; a QR <svg> is rendered.
@@ -57,9 +59,9 @@ test("an unlocked operator still sees the Presenter pill on /tv", async ({ page 
 });
 
 // ── 5. Host-script / narration material is retained where it belongs (not on public TV) ──
-test("/setup retains the host/AI script material (not leaked onto /tv)", async ({ page }) => {
+test("/setup retains the host-script reference material (not leaked onto /tv)", async ({ page }) => {
   await page.goto("/setup");
-  await expect(page.getByText(/AI host scripts/i)).toBeVisible();
+  await expect(page.getByText(/Host scripts — reference text only/i)).toBeVisible();
 });
 
 // ── 6. Existing TV client-safety invariants still hold (no sample video embed) ──
