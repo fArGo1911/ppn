@@ -1,10 +1,11 @@
 # PPN POC — Beta Red-Team Audit (Harsh Persona Questions)
 
-- **Date:** 2026-06-23
-- **HEAD audited:** `fc6c731` (PPN, `fArGo1911/ppn`, working tree clean)
-- **Commands run:** `npm run build` → exit 0; `npm run test:e2e` → **63 passed**; source audit (gate, moderation, join, runtime, asset upload); reviewed `COMPREHENSIVE_POC_BETA_AUDIT.md`.
+- **Date:** 2026-06-23 (re-verified)
+- **HEAD audited:** `8b02516` (PPN, `fArGo1911/ppn`, working tree clean). App code is **unchanged** vs the prior red-team HEAD `fc6c731` — the only intervening commit is the docs commit — so the source claims still hold.
+- **Commands run:** `npm run build` → exit 0; `npm run test:e2e` → **63 passed**; source re-audit at HEAD of the gate (`operator.ts:11`), moderation (`moderation.ts`), TV welcome (`Tv.tsx:260-269`), video fallback (`VideoSlot.tsx:49`), presenter pill (`PresenterTools.tsx:46-65`), client video default (`clientFacingDemo.ts:103-111`); reviewed `COMPREHENSIVE_POC_BETA_AUDIT.md`.
 - **Scope:** red-team / harsh-question audit only — no app changes.
 - **Method:** for each question — can the POC answer it *today*, with *evidence*, **Yes / Partly / No**, severity, action.
+- **Full per-question matrix (one row per question, with a "why they ask" column, personas not collapsed):** see [`POC_BETA_RED_TEAM_MATRIX.md`](POC_BETA_RED_TEAM_MATRIX.md).
 
 ---
 
@@ -53,8 +54,34 @@ Screen Mode, venue self-service, production auth/RLS, real analytics, hosted dep
 
 ---
 
-## 2. Persona question matrix
+## 2. Persona grade table (harsh)
 
+> Grade A–F / score 0–5 from the **sceptic's** seat (unsupervised, technically/commercially probed) — *not* the operator-narrated best case. "Satisfy controlled POC?" assumes a narrated demo with the 3 P1 fixes applied.
+
+| # | Persona | Grade | Score /5 | Satisfy controlled POC? | Top risk | Must-fix before demo |
+|---|---|---|---|---|---|---|
+| 1 | Brewery CMO / Marketing Director | **B−** | 3 | Partly | KPIs are a *projection*, not measured | Brand divergence + TV welcome |
+| 2 | Brewery sales / trade marketing | **C+** | 3 | Partly | Reads as a manual agency service at scale | None blocking (narrate scale) |
+| 3 | Pub / venue manager | **B−** | 3 | Partly | Needs a host; phones can't reach localhost | LAN/host join path (if guest phones) |
+| 4 | Quiz host | **B−** | 3 | Partly | Host script leaks onto the public TV | TV welcome host-script (P1-A) |
+| 5 | Player / team member | **B−** | 3 | Partly | "Presenter" pill + localhost join | Pill/audience + LAN join |
+| 6 | TV / audience viewer | **C** | 2 | **No (welcome)** | Welcome looks like an admin page | **TV welcome cleanup (P1-A)** |
+| 7 | Brand / content operator | **C+** | 3 | Partly | Preview-only slots; no real media rounds | Know live-vs-preview; don't claim asset rounds |
+| 8 | PPN operator / presenter | **B−** | 3 | Partly | 5173/Kickoff + Supabase + brand mismatch | Pre-flight + 1-page runbook |
+| 9 | Technical operator / support | **C+** | 3 | Partly | localhost + single-Supabase SPOF | LAN/tunnel + pre-flight |
+| 10 | Legal / compliance / brand safety | **B−** | 3 | Partly | No privacy notice for player names | Privacy line (P1 for real beta) |
+| 11 | Finance / commercial | **D** | 1 | No | No business model anywhere in app | None — Parked (strategy) |
+| 12 | Investor / sceptical founder | **C** | 2 | Partly (honesty only) | No moat; network is a concept | None — Parked (strategy) |
+| 13 | Competitor / substitution | **C+** | 3 | Partly | Rivals already do hosted + real media | Be honest about the gaps |
+| 14 | Abuse / failure-mode attacker | **C+** | 3 | Partly | No rate limits; gate is `"demo"` | Don't claim "secure" |
+
+**Overall controlled-POC grade: B− (3.5)** narrated with the P1 fixes; sceptic-average ≈ 2.6 unsupervised.
+
+---
+
+## 3. Persona question matrix
+
+> Condensed view (full version with a dedicated "why they ask" column is in [`POC_BETA_RED_TEAM_MATRIX.md`](POC_BETA_RED_TEAM_MATRIX.md)).
 > Legend — **A?** = answerable convincingly today (Y / Partly / No). **Sev** = severity if unanswered. **Fix?** = must fix before a *controlled* POC beta.
 
 ### 1. Brewery CMO / Marketing Director
@@ -208,7 +235,7 @@ Screen Mode, venue self-service, production auth/RLS, real analytics, hosted dep
 
 ---
 
-## 3. "Cannot answer convincingly today" (No / weak Partly)
+## 4. "Cannot answer convincingly today" (No / weak Partly)
 - Business model, pricing, unit economics, cost-to-run-10-pubs, margins, ROI proof (finance/CMO/investor).
 - Moat / why-not-Kahoot-defensibly / network-is-real (investor/competitor).
 - Real multi-venue scale and "not a manual agency service" (sales/finance).
@@ -217,7 +244,7 @@ Screen Mode, venue self-service, production auth/RLS, real analytics, hosted dep
 - "Run without a host" (pub manager — that's Ambient, parked).
 - "Is it secure?" (gate is demo-only).
 
-## 4. "Can answer well today" (with evidence)
+## 5. "Can answer well today" (with evidence)
 - QR → join → team → answer → reveal → scoreboard (functional core; `/host`,`/play`,`/tv` + Supabase).
 - Venue content tailoring + credible proposed-quiz preview (8 categories; `/operator/setup-wizard`).
 - Honest engagement projection, no measured-sales claims (`/kpi`,`/report`).
@@ -226,7 +253,26 @@ Screen Mode, venue self-service, production auth/RLS, real analytics, hosted dep
 - Team-name moderation + TV-safe display.
 - Operator honesty (staged-plan preview-only, mismatch warning, reset/seed recovery).
 
-## 5. "Do NOT claim" in a demo
+## 6. "Can answer ONLY with narration / a caveat" (critical for a controlled POC)
+
+These are the questions the POC can survive **only** if the operator narrates the caveat out loud — left unspoken or technically probed, they slide into "No":
+
+- **"Is the tailored quiz live?"** → "This is the *proposed* quiz the content mix produces; the live event runs the seeded demo." (Content mix is a plan, not runtime.)
+- **"Are these real numbers?"** → "Illustrative seeded projection until a pilot; we don't measure bar sales/ROI." (`/kpi`,`/report`.)
+- **"Is my brand everywhere?"** → "Client-facing surfaces use your brand; the *live* host/TV run a matching preset-as-client." (Brand divergence.)
+- **"Can guests just scan and join?"** → "In this controlled setup, yes; a real multi-phone night needs a LAN IP / tunnel / hosting — not `localhost`."
+- **"Will it run if something dips?"** → "The live loop needs the local Supabase up + session seeded; we pre-flight that." (SPOF.)
+- **"Are these real picture/video rounds?"** → "They're *labelled/previewed*; real clips drop in when an asset URL is set." (No real media rounds.)
+- **"Can it scale to 100 pubs?"** → "The rollout is a staged *plan*; today it's one venue, operator-prepared." (Conceptual scale.)
+- **"Can it run with no host?"** → "Not today — a staff host runs it; the no-host Ambient mode is parked."
+- **"Is it secure?"** → "It's a controlled POC; the operator gate is a demo lock, not production auth."
+- **"Late joiners / pauses / tie-breaks?"** → host can cope, but these are edge affordances, not polished flows.
+
+If the audience is **unsupervised or hostile**, every line above degrades to a "Cannot answer today" (§4).
+
+---
+
+## 7. "Do NOT claim" in a demo
 - ❌ "We **measure** footfall / bar sales / ROI." (It's a projection.)
 - ❌ "The **tailored quiz is live** / the content mix is running the event." (It's a *plan*; the live event is the seeded quiz.)
 - ❌ "Runs across **100 pubs** today" / "a live **network**." (Conceptual.)
@@ -236,7 +282,7 @@ Screen Mode, venue self-service, production auth/RLS, real analytics, hosted dep
 - ❌ "Guests just **scan and join** on their phones." (Needs LAN/hosting; not on `localhost`.)
 - ❌ "Your brand flows everywhere automatically." (Live host/TV use the seeded preset/session.)
 
-## 6. SAFE claims
+## 8. SAFE claims
 - ✅ "Scan a QR, join a team, play on your phone — **no app, no login**." (works)
 - ✅ "The quiz **content profile can be tuned to the venue** — here's the proposed quiz it produces." (preview)
 - ✅ "The brewery gets **branded exposure across the night and an engagement report** — we don't claim measured bar sales."
@@ -245,20 +291,20 @@ Screen Mode, venue self-service, production auth/RLS, real analytics, hosted dep
 - ✅ "This is a **controlled POC**; a live pilot replaces these assumptions with real data."
 - ✅ "Each brewery gets **its own colours/brand**; the client-facing surfaces never show another brewery."
 
-## 7. Must-fix before showing anyone (genuinely necessary)
+## 9. Must-fix before showing anyone (genuinely necessary)
 - **P1 — TV welcome/intro cleanup:** hide the host-script card + suppress the empty "Brewery video" panel on the public TV; hide the "Presenter" pill on `/tv` and `/play` (or auto-audience).
 - **P1 — Multi-device join path:** if any real guest phone joins, serve PPN on a **LAN IP / tunnel / host** (not `localhost`), or restrict the demo to operator-driven single-machine.
 - **P1 — Operator pre-flight (process, not code):** confirm PPN (not Kickoff) on `5173`, Supabase up + session seeded, present a **preset-as-client**, enable audience mode on guest devices.
 
-## 8. Nice-to-fix polish (P2)
+## 10. Nice-to-fix polish (P2)
 - `/operator` + `/config` density; host pause/tie-break/late-join affordances; privacy-notice text for player names (becomes P1 for real beta); `paused` status surfaced in host UI.
 
-## 9. Parked future work
+## 11. Parked future work
 Phase 10B runtime apply; content approval workflow / CMS / quiz authoring; real picture/video/audio assets; AI
 generation; Ambient Venue Screen Mode (no-host); venue self-service; production auth/RLS; rate-limiting/abuse
 hardening; hosted deploy + cloud multi-device; real analytics; business-model/pricing build.
 
-## 10. Recommended next 1–3 slices (lean, POC-focused)
+## 12. Recommended next 1–3 slices (lean, POC-focused)
 1. **TV/audience-surface cleanup (P1)** — suppress host-script + empty-video on the public TV welcome; hide the Presenter pill on `/tv`+`/play` (or auto-audience). Highest-value credibility fix; small and safe.
 2. **Operator demo runbook + pre-flight panel** — a 1-page in-repo demo script **and** an `/operator` "Demo ready?" checklist (PPN-on-5173? Supabase up? session seeded? brief client = active preset? audience mode on guest devices? join URL is a LAN IP not localhost?). De-risks the room.
 3. *(Only if a real guest-phone demo is needed)* **LAN/tunnel join doc** — document serving PPN on a LAN IP / quick tunnel so phones can scan-and-join. (Not Phase 10B.)
