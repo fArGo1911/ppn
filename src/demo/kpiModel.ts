@@ -107,3 +107,26 @@ export function perRound(s: KpiSeed, teamsCreated: number): RoundRow[] {
 }
 
 export const pct = (n: number) => `${Math.round(n * 100)}%`;
+
+// ── Rollout stage metrics — derived from the SAME KPI seed so a pilot/regional/wider plan reconciles ──
+export interface StageMetrics {
+  events: number;
+  players: number;
+  teams: number;
+  sponsoredTeams: number;
+  completed: number;
+  reach: number;
+}
+export function deriveStage(s: KpiSeed, venues: number): StageMetrics {
+  const events = Math.round(venues * s.avgEventsPerVenue);
+  const players = Math.round(events * s.avgPlayersPerEvent);
+  const teams = Math.round(players / s.avgPlayersPerTeam);
+  return {
+    events,
+    players,
+    teams,
+    sponsoredTeams: Math.round(teams * s.sponsoredAnswerRate),
+    completed: Math.round(players * s.completionRate),
+    reach: Math.round(players * s.campaignReachMultiplier),
+  };
+}
