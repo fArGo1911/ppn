@@ -24,6 +24,17 @@ test("/operator shows an Active demo and an Available demo presets grid (not one
   await expect(page.getByText(/Adlerbräu München/).first()).toBeVisible();
 });
 
+// ── Copy polish: neutral heading + no visible "scenario" wording ──
+test("/operator has a neutral heading (not one Northgate demo) and no visible 'scenario' wording", async ({ page }) => {
+  await unlockOperator(page);
+  await page.goto("/operator");
+  await expect(page.getByRole("heading", { level: 1 })).not.toContainText("Northgate");
+  await expect(page.getByRole("heading", { name: /branded client demo/i })).toBeVisible();
+  await expect(page.getByText(/scenario/i)).toHaveCount(0);
+  // The active selected demo is still clearly Northgate (inside the Active demo card).
+  await expect(page.getByText(/Northgate Brewing Co\./).first()).toBeVisible();
+});
+
 // ── Custom client demo: concept-only, not a built workflow ──
 test("/operator shows a concept-only Custom client demo card", async ({ page }) => {
   await unlockOperator(page);

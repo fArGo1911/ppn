@@ -90,7 +90,7 @@ export default function Operator() {
     <DemoShell>
       <div className="mx-auto max-w-4xl px-5 py-8">
         <p className="text-sm uppercase tracking-widest" style={{ color: "var(--ppn-brand)" }}>Operator · demo control centre</p>
-        <h1 className="mt-2 text-3xl font-extrabold">Run a {DEMO_BRAND.sponsorName} demo</h1>
+        <h1 className="mt-2 text-3xl font-extrabold">Run a branded client demo</h1>
         <p className="mt-1 text-[var(--ppn-muted)]">Start here: design the demo, preview the client tour, then run the live demo. Gated operator hub — not shown to clients.</p>
 
         {/* A. Active demo — the main status card (the selected branded demo + key facts + deep links) */}
@@ -186,7 +186,7 @@ export default function Operator() {
               ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-success) 18%, transparent)", color: "var(--ppn-success)" }}>Brief saved</span>
               : <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>No brief yet</span>}
           </div>
-          <p className="mt-1 text-xs text-[var(--ppn-muted)]">Configure the client, outcome, scale and scenario before adding graphics. Internal setup — not shown to the client.</p>
+          <p className="mt-1 text-xs text-[var(--ppn-muted)]">Configure the client, outcome, campaign assumptions and demo numbers before adding graphics. Internal setup — not shown to the client.</p>
 
           {brief && briefKpi ? (
             <>
@@ -225,7 +225,7 @@ export default function Operator() {
             </>
           ) : (
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="text-xs" style={{ color: "var(--ppn-warning)" }}>⚠ No demo brief yet — define the client and scenario before the demo.</span>
+              <span className="text-xs" style={{ color: "var(--ppn-warning)" }}>⚠ No demo brief yet — define the client demo brief before the demo.</span>
               <Link to="/operator/setup-wizard" className={surfaceBtn} style={{ background: "var(--ppn-brand)" }}>Start setup wizard</Link>
             </div>
           )}
