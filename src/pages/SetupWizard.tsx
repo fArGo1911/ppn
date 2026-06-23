@@ -195,9 +195,9 @@ export default function SetupWizard() {
   return (
     <DemoShell>
       <div className="mx-auto max-w-3xl px-5 py-8">
-        <p className="text-sm uppercase tracking-widest" style={{ color: "var(--ppn-brand)" }}>Operator · internal setup</p>
-        <h1 className="mt-2 text-3xl font-extrabold">Demo setup wizard</h1>
-        <p className="mt-1 text-[var(--ppn-muted)]">Prepare a client demo before anyone sees it — client, outcome, scale and scenario. Add graphics last. Internal only; never shown to the client.</p>
+        <p className="text-sm uppercase tracking-widest" style={{ color: "var(--ppn-brand)" }}>Operator · demo brief</p>
+        <h1 className="mt-2 text-3xl font-extrabold">Demo brief &amp; content mix</h1>
+        <p className="mt-1 text-[var(--ppn-muted)]">Optional helper to capture the client / demo brief — client, outcome, event goal &amp; tone, scale, content-mix profile and quiz direction. This does not handle media uploads, brand/media config or session controls (those live in detailed config). Internal only; never shown to the client.</p>
 
         {/* Wrong-client protection — a saved brief is loaded */}
         {hadExisting && !briefDismissed && (

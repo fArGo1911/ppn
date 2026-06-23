@@ -26,6 +26,14 @@ export interface AssetPack {
   tvIntroVideoUrl?: string;
   sponsorBumperVideoUrl?: string;
   closingVideoUrl?: string;
+  // audio cue files (MP3/etc.) — operator-supplied playback only; mapped onto brand.audio so host/TV cues use them.
+  eventIntroAudioUrl?: string;
+  roundIntroAudioUrl?: string;
+  sponsoredIntroAudioUrl?: string;
+  questionReadoutAudioUrl?: string;
+  answerRevealAudioUrl?: string;
+  winnerAudioUrl?: string;
+  sponsorMessageAudioUrl?: string;
 }
 
 const KEY = "ppn_asset_pack";
@@ -74,6 +82,17 @@ export function applyAssetPackToBrand(brand: DemoBrand): DemoBrand {
       tvIntroVideoUrl: useOpt(a.tvIntroVideoUrl, brand.video.tvIntroVideoUrl),
       sponsorBumperVideoUrl: useOpt(a.sponsorBumperVideoUrl, brand.video.sponsorBumperVideoUrl),
       closingVideoUrl: useOpt(a.closingVideoUrl, brand.video.closingVideoUrl),
+    },
+    // Operator-uploaded cue audio overrides the fixed public/demo/audio path; host/TV AudioCue then plays it.
+    audio: {
+      ...brand.audio,
+      aiEventIntroAudioUrl: useOpt(a.eventIntroAudioUrl, brand.audio.aiEventIntroAudioUrl),
+      aiRoundIntroAudioUrl: useOpt(a.roundIntroAudioUrl, brand.audio.aiRoundIntroAudioUrl),
+      aiSponsoredRoundIntroAudioUrl: useOpt(a.sponsoredIntroAudioUrl, brand.audio.aiSponsoredRoundIntroAudioUrl),
+      aiQuestionReadoutAudioUrl: useOpt(a.questionReadoutAudioUrl, brand.audio.aiQuestionReadoutAudioUrl),
+      aiAnswerRevealAudioUrl: useOpt(a.answerRevealAudioUrl, brand.audio.aiAnswerRevealAudioUrl),
+      aiWinnerAnnouncementAudioUrl: useOpt(a.winnerAudioUrl, brand.audio.aiWinnerAnnouncementAudioUrl),
+      sponsorAudioMessageUrl: useOpt(a.sponsorMessageAudioUrl, brand.audio.sponsorAudioMessageUrl),
     },
   };
 }

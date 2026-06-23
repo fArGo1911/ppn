@@ -84,6 +84,10 @@ const TYPE_TO_FIELD: Partial<Record<AssetType, keyof AssetPack>> = {
   logo: "logoUrl", hero: "heroUrl", sponsor_slide: "sponsorSlideUrl", phone_card: "phoneCardUrl",
   lower_third: "lowerThirdUrl", venue_image: "venueUrl",
   intro_video: "tvIntroVideoUrl", sponsor_bumper_video: "sponsorBumperVideoUrl", closing_video: "closingVideoUrl",
+  // audio cues — operator-uploaded MP3/etc. (playback only, no generation)
+  event_intro_audio: "eventIntroAudioUrl", round_intro_audio: "roundIntroAudioUrl",
+  sponsored_round_intro_audio: "sponsoredIntroAudioUrl", question_readout_audio: "questionReadoutAudioUrl",
+  answer_reveal_audio: "answerRevealAudioUrl", winner_audio: "winnerAudioUrl", sponsor_audio_message: "sponsorMessageAudioUrl",
 };
 
 /** Build an S9-shaped override (copy + image/video paths) from a DB pack + its assets. Latest ACTIVE per type wins. */

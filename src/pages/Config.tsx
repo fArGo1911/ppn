@@ -64,6 +64,17 @@ const MEDIA_SLOTS: MediaSlot[] = [
   { group: "Optional", field: "sponsorBumperVideoUrl", type: "sponsor_bumper_video", label: "Sponsor bumper video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 · WebM", accept: "video/*", appears: "TV sponsor bumper", kind: "video", media: "video", fit: "cover", live: "live" },
   { group: "Optional", field: "closingVideoUrl", type: "closing_video", label: "Closing video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 · WebM", accept: "video/*", appears: "TV closing", kind: "video", media: "video", fit: "cover", live: "live" },
 ];
+// Script + audio cue slots. Each maps to an AssetPack audio field + AssetType (upload) + a brand.audio field that
+// host/TV actually trigger (live) — or no live trigger yet (stored-only). Operator supplies MP3s; NO generation.
+interface AudioCueDef { group: "Core" | "Optional"; key: string; label: string; scriptKey: "eventIntro" | "roundIntro" | "sponsoredIntro" | "questionReadout" | "answerReveal" | "winner"; field: keyof AssetPack; type: AssetType; audioField: string; where: string; live: boolean }
+const AUDIO_CUES: AudioCueDef[] = [
+  { group: "Core", key: "intro", label: "Intro / welcome", scriptKey: "eventIntro", field: "eventIntroAudioUrl", type: "event_intro_audio", audioField: "aiEventIntroAudioUrl", where: "Host · intro (Replay / Preview intro)", live: true },
+  { group: "Core", key: "readout", label: "Question readout / question cue", scriptKey: "questionReadout", field: "questionReadoutAudioUrl", type: "question_readout_audio", audioField: "aiQuestionReadoutAudioUrl", where: "Host · question (per-question files take priority)", live: false },
+  { group: "Core", key: "winner", label: "Winner announcement", scriptKey: "winner", field: "winnerAudioUrl", type: "winner_audio", audioField: "aiWinnerAnnouncementAudioUrl", where: "Host · end (Play winner)", live: true },
+  { group: "Core", key: "sponsor", label: "Sponsored-round / sponsor message", scriptKey: "sponsoredIntro", field: "sponsorMessageAudioUrl", type: "sponsor_audio_message", audioField: "sponsorAudioMessageUrl", where: "Host · sponsored question", live: true },
+  { group: "Optional", key: "round", label: "Round intro", scriptKey: "roundIntro", field: "roundIntroAudioUrl", type: "round_intro_audio", audioField: "aiRoundIntroAudioUrl", where: "reference (no host trigger yet)", live: false },
+  { group: "Optional", key: "reveal", label: "Answer reveal", scriptKey: "answerReveal", field: "answerRevealAudioUrl", type: "answer_reveal_audio", audioField: "aiAnswerRevealAudioUrl", where: "Host · reveal (per-question files take priority)", live: false },
+];
 const mediaCapabilityLabel = (m: SlotMedia): string =>
   m === "video" ? "video (MP4/WebM) · host presses play · muted, no autoplay"
   : m === "image+video" ? "image / GIF / video — video renders on the surface (cover, muted, looping)"
@@ -203,6 +214,28 @@ export default function Config() {
   const logoSlot = MEDIA_SLOTS.find((s) => s.field === "logoUrl")!;
   const heroSlot = MEDIA_SLOTS.find((s) => s.field === "heroUrl")!;
   const introVidSlot = MEDIA_SLOTS.find((s) => s.field === "tvIntroVideoUrl")!;
+  // ── Audio cue state (uploaded → preset fixed file → missing) + upload (operator-supplied MP3, no generation) ──
+  const cueUrl = (c: AudioCueDef): string | undefined =>
+    (pack[c.field] as string | undefined)?.trim() || (dbAssetByType(c.type) ? getAssetUrl(dbAssetByType(c.type)!) : (active.audio as unknown as Record<string, string | undefined>)[c.audioField]);
+  const cueStatus = (c: AudioCueDef): "uploaded" | "preset" | "missing" => {
+    if ((pack[c.field] as string | undefined)?.trim() || dbAssetByType(c.type)) return "uploaded";
+    return (active.audio as unknown as Record<string, string | undefined>)[c.audioField] ? "preset" : "missing";
+  };
+  const cueApplied = (c: AudioCueDef): boolean => {
+    const app = (appliedOverride[c.field] as string | undefined)?.trim();
+    const cur = (pack[c.field] as string | undefined)?.trim() || (dbAssetByType(c.type) ? getAssetUrl(dbAssetByType(c.type)!) : undefined);
+    return !!cur && !!app && cur === app;
+  };
+  const uploadCue = async (c: AudioCueDef, file: File) => {
+    let packId = activePack?.id;
+    if (!packId) { const created = await createAssetPack({ label: `${active.sponsorName} custom assets`, status: "active" }); packId = created.id; setSelPackId(packId); }
+    const row = await uploadAssetFile(packId, c.type, file);
+    updatePack(c.field, getAssetUrl(row));
+  };
+  const clearCue = (c: AudioCueDef) => { updatePack(c.field, ""); const db = dbAssetByType(c.type); if (db) runA(() => updateAssetStatus(db.id, "archived")); };
+  const liveCuesReady = AUDIO_CUES.filter((c) => c.live && cueStatus(c) === "uploaded").length;
+  const liveCuesTotal = AUDIO_CUES.filter((c) => c.live).length;
+
   const previewLogoUrl = slotState(logoSlot).url;
   const previewHeroUrl = slotState(heroSlot).url;
   const logoStatus = slotState(logoSlot).status;
@@ -290,9 +323,9 @@ export default function Config() {
             <p className="mt-1 text-xs text-[var(--ppn-muted)]"><span className="font-semibold text-[var(--ppn-text)]">CMS-lite media asset manager for the POC.</span> Upload one file per slot, then apply to the demo and open a surface to see it in place. Manual URLs are an advanced fallback. Spec / sizes: <Link to="/setup#asset-slots" className="text-[var(--ppn-brand)]">asset reference / slot guide</Link>.</p>
             {/* Concise dynamic vs static vs not-built distinction */}
             <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">
-              <span className="font-semibold" style={{ color: "var(--ppn-success)" }}>Dynamic:</span> uploaded slot assets, identity/offer copy, colours, demo numbers ·
+              <span className="font-semibold" style={{ color: "var(--ppn-success)" }}>Dynamic:</span> uploaded slot media (image / GIF / video) + MP3 audio cues where wired, identity/offer copy, colours, demo numbers ·
               <span className="font-semibold text-[var(--ppn-text)]"> Static:</span> layout, game flow, scoring, routes, placement rules ·
-              <span className="font-semibold" style={{ color: "var(--ppn-warning)" }}> Not built / not wired:</span> MP3/audio in the asset set, picture/video question media, rollout/network image, approval workflow, venue self-service, full media library, auto-cropping/editing.
+              <span className="font-semibold" style={{ color: "var(--ppn-warning)" }}> Not built / not wired:</span> picture/video question media, rollout/network image, some audio cues (pause/closing/how-to), approval workflow, venue self-service, full media library, auto-cropping/editing.
             </p>
           </div>
 
@@ -467,14 +500,51 @@ export default function Config() {
             ))}
           </Card>
 
-          {/* Audio cues — truthful: uploadable to storage, but no override field + surfaces play fixed files → stored-only */}
-          <div className="rounded-xl border border-dashed border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3">
+          {/* Script & audio cue assets — operator uploads MP3s per cue; live cues are host-triggered, others stored-only */}
+          <Card title="Script &amp; audio cue assets">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-semibold">Audio cues</p>
-              <span className="rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase" style={slotTone("missing")}>stored-only · not wired</span>
+              <p className="text-xs text-[var(--ppn-muted)]">Upload an MP3 per cue (operator-supplied — <span className="font-semibold text-[var(--ppn-text)]">no AI voice, no generation</span>). Live cues are played from the host console; stored-only cues upload + preview here but aren't triggered yet. Scripts are reference copy.</p>
+              <span className="rounded-full px-2.5 py-1 text-xs font-semibold" style={slotTone(liveCuesReady >= liveCuesTotal ? "uploaded" : "missing")}>{liveCuesReady}/{liveCuesTotal} live cues ready</span>
             </div>
-            <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">Audio cues (event intro · round intro · sponsored-round intro · question readout · answer reveal · pause · winner · closing) are <span className="font-semibold text-[var(--ppn-text)]">not yet wired</span> through this manager: the demo override carries no audio fields and host/TV play fixed files under <span className="font-mono">public/demo/audio/…</span>. Files can be stored, but uploaded cue audio is not applied to surfaces. No AI voice — the operator supplies the files.</p>
-          </div>
+            {(["Core", "Optional"] as const).map((g) => (
+              <div key={g} className="mt-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-muted)]">{g} cues</p>
+                <div className="mt-2 grid gap-2.5 sm:grid-cols-2">
+                  {AUDIO_CUES.filter((c) => c.group === g).map((c) => {
+                    const st = cueStatus(c); const url = cueUrl(c);
+                    return (
+                      <div key={c.key} className="flex flex-col rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-sm font-semibold">{c.label}</p>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <span className="rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase" style={slotTone(st)}>{st}</span>
+                            <span className="rounded-full px-2 py-0.5 text-[8px] font-semibold uppercase" style={slotTone(c.live ? "uploaded" : "preview")}>{c.live ? "live (host)" : "stored-only"}</span>
+                          </div>
+                        </div>
+                        <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">Where: {c.where}</p>
+                        {(st === "uploaded" || st === "manual path" as string) && <p className="text-[9px] font-semibold uppercase" style={{ color: cueApplied(c) ? "var(--ppn-success)" : "var(--ppn-warning)" }}>{cueApplied(c) ? "● applied" : "● uploaded · not applied"}</p>}
+                        {url && <audio controls preload="none" src={url} className="mt-2 h-8 w-full" />}
+                        <details className="mt-1.5">
+                          <summary className="cursor-pointer text-[10px] text-[var(--ppn-muted)]">Script (reference copy)</summary>
+                          <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">“{active.ai[c.scriptKey]}”</p>
+                        </details>
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          <label className="cursor-pointer" title={packsQ.isError ? "Storage unavailable" : "Upload an MP3 for this cue"}>
+                            <span className="rounded-lg px-3 py-1.5 text-[11px] font-semibold text-[var(--ppn-on-brand)]" style={{ background: packsQ.isError ? "var(--ppn-border)" : "var(--ppn-brand)", opacity: packsQ.isError ? 0.6 : 1 }}>🔊 {st === "uploaded" ? "Replace MP3" : "Upload MP3"}</span>
+                            <input type="file" accept="audio/*" disabled={assetBusy || packsQ.isError}
+                              onChange={(e) => { const f = e.target.files?.[0]; if (f) runA(() => uploadCue(c, f)); e.currentTarget.value = ""; }}
+                              className="hidden" />
+                          </label>
+                          <button onClick={() => clearCue(c)} disabled={st !== "uploaded"} className="text-[10px] font-semibold text-[var(--ppn-muted)] hover:text-[var(--ppn-text)] disabled:opacity-40">Clear</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Accepted: MP3 (and any browser-playable audio: WAV/M4A/OGG). After uploading, <span className="font-semibold text-[var(--ppn-text)]">Apply</span> — host/TV use the uploaded cue first, falling back to the fixed <span className="font-mono">public/demo/audio/…</span> file. Pause/intermission, how-to-play and closing CTA scripts have no host cue trigger yet (not wired).</p>
+          </Card>
 
           {/* Brand identity & offer copy (a required "slot") */}
           <Card title="Brand identity &amp; offer copy">

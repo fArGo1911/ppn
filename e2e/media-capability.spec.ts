@@ -36,13 +36,21 @@ test("/config#brand-media classifies hero/venue as image+video and image-only sl
   expect(heroAccept).toBeGreaterThanOrEqual(2); // hero + venue
 });
 
-// ── Audio is honestly stored-only / not wired (no override field; surfaces play fixed files) ──
-test("/config#brand-media audio cues are stored-only / not wired (truthful, no false claim)", async ({ page }) => {
+// ── Script & audio cue assets — uploadable MP3 per cue; core cues live (host), others stored-only ──
+test("/config#brand-media has a Script & audio cue section with core cues + live/stored status", async ({ page }) => {
   await unlockOperator(page);
   await page.goto("/config#brand-media");
-  await expect(page.getByText("Audio cues", { exact: true })).toBeVisible();
-  await expect(page.getByText(/stored-only · not wired/i).first()).toBeVisible();
-  await expect(page.getByText(/not yet wired/i)).toBeVisible();
+  await expect(page.getByText(/Script & audio cue assets/i)).toBeVisible();
+  for (const cue of ["Intro / welcome", "Question readout / question cue", "Winner announcement"]) {
+    await expect(page.getByText(cue, { exact: true })).toBeVisible();
+  }
+  // Per-cue MP3 upload control + accepted types + a live/stored classification.
+  await expect(page.locator('input[type="file"][accept="audio/*"]')).not.toHaveCount(0);
+  await expect(page.getByText(/Accepted: MP3/i)).toBeVisible();
+  await expect(page.getByText("live (host)", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("stored-only", { exact: true }).first()).toBeVisible();
+  // No AI/generation claim.
+  await expect(page.getByText(/no AI voice, no generation/i)).toBeVisible();
 });
 
 // ── /setup: slim reference, video live, statuses distinguished ──

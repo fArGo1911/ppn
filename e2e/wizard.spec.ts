@@ -34,7 +34,7 @@ test("wizard opens and walks all steps; assets/readiness is last", async ({ page
   await expect(page).toHaveURL(/\/operator\/setup-wizard$/);
 
   // Clearly internal setup — not a client presentation flow.
-  await expect(page.getByRole("heading", { name: /Demo setup wizard/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Demo brief & content mix/i })).toBeVisible();
   await expect(page.getByText(/Internal only; never shown to the client/i)).toBeVisible();
 
   // Step 1 — Client basics

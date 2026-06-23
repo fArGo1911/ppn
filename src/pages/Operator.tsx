@@ -27,7 +27,7 @@ const LANES: Lane[] = [
   {
     n: "1", title: "Design demo", blurb: "Prepare the client demo before anyone sees it.",
     actions: [
-      { to: "/operator/setup-wizard", label: "Demo setup wizard", note: "Start here — the demo brief: client, outcome, scale and content mix.", role: "Operator-only", primary: true },
+      { to: "/operator/setup-wizard", label: "Demo brief & content mix", note: "Optional helper — define the client / demo brief, event goal & tone, content-mix profile and quiz direction. Not where media uploads, config or session live.", role: "Operator-only" },
       { to: "/config#brand-media", label: "Detailed config / brand & media setup", note: "Where you prepare the brewery logo, colours, offer/sponsor assets and screen media. The actual prep page.", role: "Operator-only", primary: true },
       { to: "/config#demo-numbers", label: "Campaign assumptions / demo numbers", note: "The venue-mix numbers that feed the KPI, report and rollout pages.", role: "Operator-only" },
       { to: "/operator/setup-wizard", label: "Content mix", note: "Choose the quiz content profile — the proposed-quiz preview.", role: "Operator-only" },
