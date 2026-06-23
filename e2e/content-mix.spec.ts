@@ -134,3 +134,16 @@ test("/presentation shows a client-safe content profile", async ({ page }) => {
   // No internal slider/percentage exposure on the client page.
   await expect(page.getByTestId("mix-total")).toHaveCount(0);
 });
+
+// ── Report + run-sheet surface a client-safe content profile (no sliders, honest "can be tailored") ──
+test("/report and /run-sheet show a client-safe content profile", async ({ page }) => {
+  await page.goto("/report");
+  await expect(page.getByText(/Content profile:/i)).toBeVisible();
+  await expect(page.getByText(/final questions can be tailored per venue before launch/i)).toBeVisible();
+  await expect(page.getByTestId("mix-total")).toHaveCount(0);
+
+  await page.goto("/run-sheet");
+  await expect(page.getByText(/Tonight's content profile/i)).toBeVisible();
+  await expect(page.getByText(/final questions can be tailored before the event/i)).toBeVisible();
+  await expect(page.getByTestId("mix-total")).toHaveCount(0);
+});

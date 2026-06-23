@@ -5,11 +5,19 @@
  */
 import { DemoShell } from "../components/shells";
 import { clientFacingIdentity } from "../lib/clientFacingDemo";
+import { getDemoBrief } from "../lib/demoBrief";
+import { resolveContentMix, topCategories, presetById, matchPresetId } from "../lib/contentMix";
 import { SETUP_MODE_INFO } from "../demo/kpiModel";
 
 export default function RunSheet() {
   const brand = "var(--ppn-brand)";
   const ci = clientFacingIdentity();
+  const brief = getDemoBrief();
+  const cmix = resolveContentMix(brief);
+  const cmixName = presetById(brief?.contentMixPreset)?.label ?? presetById(matchPresetId(cmix))?.label ?? "Venue-tuned";
+  const cmixTop = topCategories(cmix, 3)
+    .map((c) => c.label.replace(" / football", "").replace(" / venue", "").replace(" / culture", "").replace(" round", "").toLowerCase())
+    .join(", ");
   const Section = ({ title }: { title: string }) => <h2 className="mt-8 text-sm font-semibold uppercase tracking-wider text-[var(--ppn-muted)]">{title}</h2>;
   const List = ({ items }: { items: string[] }) => (
     <ul className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -29,6 +37,11 @@ export default function RunSheet() {
         <p className="text-sm uppercase tracking-widest" style={{ color: brand }}>Venue &amp; host handoff</p>
         <h1 className="mt-2 text-3xl font-extrabold">Run sheet — {ci.eventName}</h1>
         <p className="mt-1 text-[var(--ppn-muted)]">A simple sheet to run the night. {ci.broughtBy}. Demo handoff — not pub onboarding.</p>
+
+        <div className="mt-3 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3 text-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ppn-muted)]">Tonight's content profile</p>
+          <p className="mt-1"><span className="font-semibold">{cmixName}</span> — venue-tuned, weighted towards {cmixTop}. A proposed question mix; final questions can be tailored before the event.</p>
+        </div>
 
         <Section title="What the venue needs" />
         <List items={["Acceptable Wi-Fi or mobile signal for guests", "A TV / projector (optional — phones work without one)", "An audio route / speaker (optional)", "QR codes placed on tables", "Sponsor product stocked", "A member of staff to host or support"]} />

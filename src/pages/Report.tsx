@@ -6,7 +6,14 @@
 import { DemoShell } from "../components/shells";
 import { activeMarket } from "../demo/markets";
 import { clientFacingIdentity } from "../lib/clientFacingDemo";
+import { getDemoBrief } from "../lib/demoBrief";
+import { resolveContentMix, topCategories } from "../lib/contentMix";
 import { deriveKpi, getEffectiveKpiSeed, getEffectiveVenueMix, deriveVenueMix, pct } from "../demo/kpiModel";
+
+const contentTop = (n = 3) =>
+  topCategories(resolveContentMix(getDemoBrief()), n)
+    .map((c) => c.label.replace(" / football", "").replace(" / venue", "").replace(" / culture", "").replace(" round", "").toLowerCase())
+    .join(", ");
 
 export default function Report() {
   const m = activeMarket();
@@ -56,6 +63,7 @@ export default function Report() {
             <p className="mt-1">{mixD ? mixD.setupMix.map((su) => `${su.pctVenues}% ${su.label}`).join(" · ") : "TV + audio where available, with audio-only and manual live fallbacks"}</p>
           </div>
         </div>
+        <p className="mt-2 text-xs text-[var(--ppn-muted)]">Content profile: <span className="text-[var(--ppn-text)]">venue-tuned — weighted towards {contentTop()}</span>. A proposed question mix; final questions can be tailored per venue before launch.</p>
 
         <Section title="Participation" />
         <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
