@@ -168,8 +168,16 @@ export default function Config() {
     <DemoShell>
       <div className="mx-auto max-w-3xl px-5 py-10">
         <p className="text-sm uppercase tracking-widest" style={{ color: active.primary }}>Presenter · operator prep room</p>
-        <h1 className="mt-2 text-3xl font-extrabold">Demo setup</h1>
+        <h1 className="mt-2 text-3xl font-extrabold">Detailed config · brand &amp; media setup</h1>
         <p className="mt-2 text-[var(--ppn-muted)]">Prepare a run before a brewery sees it. Hidden from the buyer journey.</p>
+
+        {/* Jump nav — the page has three jobs; this makes brand/media prep easy to find. */}
+        <nav aria-label="Config sections" className="mt-4 flex flex-wrap gap-2 text-xs">
+          <a href="#brand-media" className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1.5 font-semibold hover:text-[var(--ppn-brand)]">🎨 Brand &amp; media setup</a>
+          <a href="#demo-numbers" className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1.5 font-semibold hover:text-[var(--ppn-brand)]">📊 Campaign assumptions / demo numbers</a>
+          <a href="#session" className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1.5 font-semibold hover:text-[var(--ppn-brand)]">▶ Session &amp; run</a>
+        </nav>
+        <p className="mt-2 text-xs text-[var(--ppn-muted)]">Brand &amp; media is where you set the brewery logo, colours, offer/sponsor assets and screen visuals. The <Link to="/setup" className="text-[var(--ppn-brand)]">asset reference / slot guide</Link> is reference only — it shows which asset appears on which screen.</p>
 
         <div className="mt-6 space-y-4">
           <Card title="Run the demo">
@@ -185,7 +193,7 @@ export default function Config() {
           <Card title="Current demo">
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="rounded-full px-2 py-1 font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>{active.sponsorName} · {active.market}</span>
-              {([["Client assets", overrideStatus().asset], ["Theme", overrideStatus().theme], ["Scenario", overrideStatus().scenario]] as [string, boolean][]).map(([label, on]) => (
+              {([["Client assets", overrideStatus().asset], ["Brand colours", overrideStatus().theme], ["Demo numbers", overrideStatus().scenario]] as [string, boolean][]).map(([label, on]) => (
                 <span key={label} className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-2.5 py-1">{label}: <span className="font-semibold" style={{ color: on ? "var(--ppn-warning)" : "var(--ppn-muted)" }}>{on ? "custom" : "default"}</span></span>
               ))}
               <span className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-2.5 py-1">Storage upload: <span className="font-semibold">{packsQ.isError ? "unavailable" : packsQ.isSuccess ? "available" : "checking…"}</span></span>
@@ -194,6 +202,11 @@ export default function Config() {
               ? <div className="mt-3 flex flex-wrap items-center gap-2"><span className="text-xs" style={{ color: "var(--ppn-warning)" }}>⚠ Custom client overrides are active — clear them before prepping a different brewery.</span><button onClick={() => { clearClientOverrides(); window.location.reload(); }} className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-xs font-semibold">Clear client overrides</button></div>
               : <p className="mt-2 text-xs text-[var(--ppn-muted)]">Showing preset defaults — no custom client branding applied. Switching brewery below will ask before carrying any overrides over.</p>}
           </Card>
+
+          <div id="brand-media" className="scroll-mt-4 pt-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--ppn-brand)" }}>Brand &amp; media setup</h2>
+            <p className="mt-1 text-xs text-[var(--ppn-muted)]">Everything the client sees: brewery / client identity, logo &amp; brand colours, offer / sponsor copy, and the TV/audience + player-facing visuals. Set it here — paste paths (Quick manual paths) or upload files (Upload asset pack).</p>
+          </div>
 
           <Card title="Brewery preset · market">
             <div className="space-y-2">
@@ -222,7 +235,7 @@ export default function Config() {
             </div>
             <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">Drop files under <span className="font-mono">public/demo/assets/&lt;preset&gt;/</span> and paste the paths. See <Link to="/setup" className="text-[var(--ppn-brand)]">Brand assets</Link> for where each one appears.</p>
 
-            <p className="mt-3 text-xs font-semibold text-[var(--ppn-muted)]">Copy</p>
+            <p className="mt-3 text-xs font-semibold text-[var(--ppn-muted)]">Brewery / client identity + offer copy</p>
             <div className="mt-1 grid gap-2 sm:grid-cols-2">
               {ASSET_COPY.map((f) => (
                 <label key={f.key} className="text-xs text-[var(--ppn-muted)]">{f.label}
@@ -231,7 +244,7 @@ export default function Config() {
                 </label>
               ))}
             </div>
-            <p className="mt-3 text-xs font-semibold text-[var(--ppn-muted)]">Image / video paths</p>
+            <p className="mt-3 text-xs font-semibold text-[var(--ppn-muted)]">Logo, brand &amp; screen visuals — image / video paths (TV/audience + player-facing)</p>
             <div className="mt-1 grid gap-2 sm:grid-cols-3">
               {ASSET_MEDIA.map((f) => (
                 <label key={f.key} className="text-xs text-[var(--ppn-muted)]">{f.label}
@@ -328,13 +341,13 @@ export default function Config() {
           <Card title="Where assets appear">
             <div className="space-y-1.5 text-xs">
               {([
-                ["Logo", "Brewery banner / header on player + TV", "live"],
-                ["Hero image", "Landing + player splash", "live"],
-                ["Sponsor slide", "TV sponsor slideshow", "live"],
-                ["Phone card", "Brand-assets preview only — not in live gameplay yet", "preview"],
-                ["Lower third", "Brand-assets preview only — not in live gameplay yet", "preview"],
-                ["Venue image", "Brand-assets preview only — not in live gameplay yet", "preview"],
-                ["Videos", "TV intro / sponsor-bumper / closing slots where wired", "where wired"],
+                ["Logo", "Used on TV/audience screen + player phone (brewery banner / header)", "live"],
+                ["Hero image", "Used on client preview + player phone (landing / splash)", "live"],
+                ["Sponsor slide", "Used on TV/audience screen (sponsor slideshow)", "live"],
+                ["Phone card", "Used on client preview only — not in live player gameplay yet", "preview"],
+                ["Lower third", "Used on client preview only — not in live TV gameplay yet", "preview"],
+                ["Venue image", "Used on client preview only — not in live gameplay yet", "preview"],
+                ["Videos", "Used on TV/audience screen (intro / sponsor-bumper / closing) where a real URL is set", "where wired"],
                 ["Audio (MP3)", "Script pack ready; MP3s not added — host/TV use the on-screen script", "not yet"],
               ] as [string, string, string][]).map(([a, where, tag]) => (
                 <div key={a} className="flex items-center justify-between gap-2 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2.5 py-1.5">
@@ -402,11 +415,16 @@ export default function Config() {
             </div>
           </Card>
 
-          <Card title="Demo scenario assumptions (operator only)">
+          <div id="demo-numbers" className="scroll-mt-4 pt-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--ppn-brand)" }}>Campaign assumptions / demo numbers</h2>
+            <p className="mt-1 text-xs text-[var(--ppn-muted)]">The venue-mix numbers that feed the KPI and rollout pages. Operator-only — never shown to the buyer.</p>
+          </div>
+
+          <Card title="Campaign assumptions / demo numbers (operator only)">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-[var(--ppn-muted)]">Prepare a believable scenario — /kpi and /rollout derive from these. Internal only.</p>
+              <p className="text-xs text-[var(--ppn-muted)]">Prepare believable demo numbers — /kpi and /rollout derive from these. Internal only.</p>
               {hasScenarioOver
-                ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>Custom scenario active</span>
+                ? <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "color-mix(in srgb, var(--ppn-warning) 22%, transparent)", color: "var(--ppn-warning)" }}>Custom demo numbers active</span>
                 : <span className="text-[10px] text-[var(--ppn-muted)]">market defaults</span>}
             </div>
 
@@ -486,6 +504,11 @@ export default function Config() {
             ) : <p className="mt-2 text-xs" style={{ color: "var(--ppn-success)" }}>✓ Scenario looks realistic.</p>}
           </Card>
 
+          <div id="session" className="scroll-mt-4 pt-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--ppn-brand)" }}>Session &amp; run</h2>
+            <p className="mt-1 text-xs text-[var(--ppn-muted)]">Output mode, the live demo session (reset / demo teams) and presentation mode.</p>
+          </div>
+
           <Card title="Setup mode (output)">
             {!st ? <p className="text-sm text-[var(--ppn-muted)]">Loading session…</p> : (
               <div className="grid gap-2 sm:grid-cols-3">
@@ -514,12 +537,12 @@ export default function Config() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button disabled={busy || !sid} onClick={() => run(() => resetDemo(sid!))} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--ppn-on-brand)] disabled:opacity-50" style={{ background: "var(--ppn-brand)" }}>↺ Reset demo (clean lobby)</button>
-              <button disabled={busy || !sid} onClick={() => run(async () => { await clearTeams(sid!); await seedDemoTeams(sid!, specs); })} className="rounded-xl border border-[var(--ppn-border)] px-4 py-2.5 text-sm font-semibold disabled:opacity-50">＋ Seed {seedSize} demo teams</button>
+              <button disabled={busy || !sid} onClick={() => run(async () => { await clearTeams(sid!); await seedDemoTeams(sid!, specs); })} className="rounded-xl border border-[var(--ppn-border)] px-4 py-2.5 text-sm font-semibold disabled:opacity-50">＋ Add {seedSize} demo teams</button>
               <button disabled={busy || !sid} onClick={() => run(() => clearTeams(sid!))} className="rounded-xl border border-[var(--ppn-border)] px-4 py-2.5 text-sm font-semibold disabled:opacity-50">✕ Clear teams</button>
             </div>
             <p className="mt-2 text-xs text-[var(--ppn-muted)]">
               {teamsQ.data ? `${teamsQ.data.length} team${teamsQ.data.length === 1 ? "" : "s"} in session · ` : ""}
-              Seeds {seedSize} {market.label} teams (local demo only). Live session normally shows a few sample teams; KPI/rollout numbers are campaign-level totals across many events, not this session.
+              Adds {seedSize} {market.label} demo teams (local demo only). Live session normally shows a few sample teams; KPI/rollout numbers are campaign-level totals across many events, not this session.
             </p>
           </Card>
 

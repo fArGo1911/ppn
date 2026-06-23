@@ -27,8 +27,8 @@ const LANES: Lane[] = [
   {
     n: "1", title: "Design demo", blurb: "Prepare the client demo before anyone sees it.",
     actions: [
-      { to: "/operator/setup-wizard", label: "Demo setup wizard", note: "Start here — client, outcome, scale and content mix.", role: "Operator-only", primary: true },
-      { to: "/config", label: "Detailed config / brand & media setup", note: "Brewery preset, uploaded or selected assets, theme.", role: "Operator-only" },
+      { to: "/operator/setup-wizard", label: "Demo setup wizard", note: "Start here — the demo brief: client, outcome, scale and content mix.", role: "Operator-only", primary: true },
+      { to: "/config", label: "Detailed config / brand & media setup", note: "Where you prepare the brewery logo, colours, offer/sponsor assets and screen media. The actual prep page.", role: "Operator-only", primary: true },
       { to: "/config", label: "Campaign assumptions / demo numbers", note: "The venue-mix numbers that feed the KPI, report and rollout pages.", role: "Operator-only" },
       { to: "/operator/setup-wizard", label: "Content mix", note: "Choose the quiz content profile — the proposed-quiz preview.", role: "Operator-only" },
     ],
@@ -49,7 +49,7 @@ const LANES: Lane[] = [
       { href: "/host", label: "Host console", note: "Start the live demo from here (start intro / start game), reveal, next, recover.", role: "Operator-only", primary: true },
       { href: "/tv/DEMO", label: "TV display", note: "Full-screen on the TV / projector.", role: "TV / audience" },
       { href: "/play/DEMO", label: "Player phone", note: "A guest joins and plays.", role: "Guest / player" },
-      { to: "/config", label: "Reset / seed demo", note: "Clean the session and seed demo teams in detailed config.", role: "Operator-only" },
+      { to: "/config", label: "Reset demo session", note: "Clean the session and add demo teams in detailed config.", role: "Operator-only" },
     ],
   },
 ];
@@ -108,7 +108,7 @@ export default function Operator() {
             <Chip label="Brewery:" on onText={`${DEMO_BRAND.sponsorName} (${m.market})`} />
             <Chip label="Custom assets" on={ov.asset} />
             <Chip label="Theme override" on={ov.theme} />
-            <Chip label="Scenario override" on={ov.scenario} />
+            <Chip label="Demo numbers override" on={ov.scenario} />
             <Chip label="Session:" on={false} offText={stateQ.data ? stateQ.data.phase : (sessQ.isLoading ? "…" : "—")} />
             <Chip label="Teams:" on={false} offText={teamsQ.data ? String(teamsQ.data.length) : "—"} />
             <Chip label="Storage assets:" on={healthQ.isError} onText="unavailable" offText={healthQ.isSuccess ? "available" : "checking…"} />
@@ -196,6 +196,22 @@ export default function Operator() {
           ) : (
             <p className="mt-1 text-xs text-[var(--ppn-muted)]">No custom quiz plan prepared. Prepare one in the setup wizard's Quiz content mix → Review step. Runtime apply requires a DB-backed replacement step (Phase 10B).</p>
           )}
+        </div>
+
+        {/* A2d. Active demo branding — read-only summary (existing override state). Points to the real prep page
+            (/config) vs the reference-only slot guide (/setup) so the operator never has to infer either. */}
+        <div className="mt-4 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-4">
+          <p className="text-sm font-semibold">Active demo branding</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Chip label="Active brand preset:" on onText={`${DEMO_BRAND.sponsorName} · ${m.market}`} />
+            <Chip label="Custom assets" on={ov.asset} />
+            <Chip label="Brand colours" on={ov.theme} onText="custom" offText="preset" />
+          </div>
+          <p className="mt-2 text-xs text-[var(--ppn-muted)]">Prepare the brewery logo, colours, offer/sponsor assets and screen media in <span className="font-semibold text-[var(--ppn-text)]">Detailed config / brand & media setup</span>. The asset reference is a slot guide only — it shows which asset appears on which screen, but you set and upload assets in detailed config.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link to="/config" className="rounded-lg px-3 py-1.5 text-sm font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>Open brand &amp; media setup →</Link>
+            <Link to="/setup" className="rounded-lg border border-[var(--ppn-border)] px-3 py-1.5 text-sm font-semibold">Where each asset appears (reference) →</Link>
+          </div>
         </div>
 
         {/* B. The three demo lanes — the operator's real job, in order */}

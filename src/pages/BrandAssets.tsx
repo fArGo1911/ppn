@@ -42,11 +42,16 @@ export default function BrandAssets() {
   return (
     <DemoShell>
       <div className="mx-auto max-w-5xl px-5 py-8">
-        <p className="text-sm uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>Operator · asset prep</p>
-        <h1 className="mt-2 text-3xl font-extrabold">Prepare a brewery demo — asset checklist</h1>
+        <p className="text-sm uppercase tracking-widest" style={{ color: DEMO_BRAND.primary }}>Operator · asset reference</p>
+        <h1 className="mt-2 text-3xl font-extrabold">Asset reference / slot guide</h1>
         <p className="mt-2 max-w-2xl text-[var(--ppn-muted)]">
-          What to gather before a brewery demo, and where each asset appears. Set the client's brand in detailed config — paste paths (Quick manual paths) or upload files (Upload asset pack).
+          A reference for what brewery assets to gather, their sizes, and which screen each one appears on. This page does not set or upload anything — it is a slot guide only.
         </p>
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 bg-[var(--ppn-surface)] p-3 text-sm" style={{ borderColor: "color-mix(in srgb, var(--ppn-brand) 30%, var(--ppn-border))" }}>
+          <p className="text-[var(--ppn-muted)]">To actually set the brand or upload assets, use <span className="font-semibold text-[var(--ppn-text)]">Detailed config / brand &amp; media setup</span>.</p>
+          <a href="/config" className="shrink-0 rounded-lg px-3 py-1.5 font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>Open brand &amp; media setup →</a>
+        </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3 text-xs">
           <span className="rounded-full px-2 py-1 font-semibold text-[var(--ppn-on-brand)]" style={{ background: "var(--ppn-brand)" }}>{DEMO_BRAND.sponsorName} · {DEMO_BRAND.market}</span>
