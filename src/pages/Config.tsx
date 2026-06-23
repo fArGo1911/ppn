@@ -62,15 +62,6 @@ const MEDIA_SLOTS: MediaSlot[] = [
   { group: "Optional", field: "sponsorBumperVideoUrl", type: "sponsor_bumper_video", label: "Sponsor bumper video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 · WebM", accept: "video/*", appears: "TV sponsor bumper", kind: "video", live: "live" },
   { group: "Optional", field: "closingVideoUrl", type: "closing_video", label: "Closing video", size: "16:9 short clip", aspect: "16/9", fileType: "MP4 · WebM", accept: "video/*", appears: "TV closing", kind: "video", live: "live" },
 ];
-// Read-only preview surfaces (link to the real route; no iframe, no preview engine, no generated graphics).
-const PREVIEW_SURFACES: { to: string; label: string; icon: string }[] = [
-  { to: "/tv/DEMO", label: "TV / audience display", icon: "TV" },
-  { to: "/play/DEMO", label: "Player phone", icon: "PH" },
-  { to: "/presentation", label: "Client presentation", icon: "PR" },
-  { to: "/report", label: "Report", icon: "RP" },
-  { to: "/kpi", label: "KPI summary", icon: "KP" },
-];
-
 // Hash-controlled in-page section tabs: only the active section's work area renders, so /config#brand-media,
 // /config#demo-numbers and /config#session each show a clearly DIFFERENT working section (not just a scroll).
 const SECTIONS = [
@@ -202,7 +193,17 @@ export default function Config() {
     return { status: "missing", applied: false };
   };
   const clearSlot = (s: MediaSlot) => { updatePack(s.field, ""); const db = dbAssetByType(s.type); if (db) runA(() => updateAssetStatus(db.id, "archived")); };
-  const previewLogoUrl = slotState(MEDIA_SLOTS.find((s) => s.field === "logoUrl")!).url; // current brand logo for the preview cards
+  // Effective asset state for the visual preview cards (uploaded → manual → preset → missing).
+  const logoSlot = MEDIA_SLOTS.find((s) => s.field === "logoUrl")!;
+  const heroSlot = MEDIA_SLOTS.find((s) => s.field === "heroUrl")!;
+  const introVidSlot = MEDIA_SLOTS.find((s) => s.field === "tvIntroVideoUrl")!;
+  const previewLogoUrl = slotState(logoSlot).url;
+  const previewHeroUrl = slotState(heroSlot).url;
+  const logoStatus = slotState(logoSlot).status;
+  const heroStatus = slotState(heroSlot).status;
+  const introVidStatus = slotState(introVidSlot).status;
+  const effSponsor = (pack.sponsorName as string | undefined)?.trim() || active.sponsorName;
+  const effCampaign = (pack.campaignName as string | undefined)?.trim() || active.campaignName;
   const requiredReady = MEDIA_SLOTS.filter((s) => s.group === "Required" && slotState(s).status !== "missing").length + 2; // + identity copy + brand colours (always preset)
   const slotTone = (st: string): React.CSSProperties =>
     st === "uploaded" ? { background: "color-mix(in srgb, var(--ppn-success) 18%, transparent)", color: "var(--ppn-success)" }
@@ -286,7 +287,7 @@ export default function Config() {
             <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">
               <span className="font-semibold" style={{ color: "var(--ppn-success)" }}>Dynamic:</span> uploaded slot assets, identity/offer copy, colours, demo numbers ·
               <span className="font-semibold text-[var(--ppn-text)]"> Static:</span> layout, game flow, scoring, routes, placement rules ·
-              <span className="font-semibold" style={{ color: "var(--ppn-warning)" }}> Not built:</span> MP3/audio in the asset set, approval workflow, venue self-service, full media library, auto-cropping/editing.
+              <span className="font-semibold" style={{ color: "var(--ppn-warning)" }}> Not built / not wired:</span> MP3/audio in the asset set, picture/video question media, rollout/network image, approval workflow, venue self-service, full media library, auto-cropping/editing.
             </p>
           </div>
 
@@ -346,22 +347,54 @@ export default function Config() {
             {assetErr && <p className="mt-2 text-xs text-red-400">{assetErr}</p>}
           </div>
 
-          {/* Preview active demo — placed high so the operator sees what they're preparing while uploading.
-              Read-only surface links (no iframe / no preview engine); the chip shows the current logo state. */}
+          {/* Preview active demo — compact VISUAL mini-mocks built from the current effective assets (uploaded →
+              preset → neutral structural placeholder). No iframe / no preview engine / no generated artwork. */}
           <Card title="Preview active demo">
-            <p className="text-xs text-[var(--ppn-muted)]">What the active demo looks like with the current asset state — open any surface (read-only). Apply changes to see uploads live.</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {PREVIEW_SURFACES.map((s) => (
-                <a key={s.to} href={s.to} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-2.5 hover:border-[var(--ppn-brand)]">
-                  {previewLogoUrl
-                    ? <img src={previewLogoUrl} alt="current logo" className="h-9 w-9 shrink-0 rounded-lg border border-[var(--ppn-border)] object-contain" style={{ background: "var(--ppn-surface)" }} />
-                    : <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[10px] font-black" style={{ background: active.colours.primary, color: active.colours.onBrand }}>{s.icon}</span>}
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{s.label}</span>
-                  <span className="shrink-0 text-[var(--ppn-brand)]">↗</span>
-                </a>
-              ))}
-            </div>
-            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Chips show the current logo (uploaded → preset → neutral initials) — no generated or decorative images. Apply first to see uploads on the live surfaces.</p>
+            <p className="text-xs text-[var(--ppn-muted)]">A visual preview built from your current assets (uploaded → preset → neutral placeholder). Open any surface to see the real page; apply changes to push uploads live.</p>
+            {(() => {
+              const Logo = ({ size = "h-7 w-7" }: { size?: string }) => previewLogoUrl
+                ? <img src={previewLogoUrl} alt="logo" className={`${size} shrink-0 rounded border border-[var(--ppn-border)] object-contain`} style={{ background: "var(--ppn-surface)" }} />
+                : <span className={`grid ${size} shrink-0 place-items-center rounded text-[9px] font-black`} style={{ background: active.colours.primary, color: active.colours.onBrand }}>{brandInitials(effSponsor)}</span>;
+              const Tag = ({ s }: { s: string }) => <span className="rounded-full px-1.5 py-0.5 text-[8px] font-semibold uppercase" style={slotTone(s)}>{s}</span>;
+              return (
+                <div data-testid="preview-active-demo" className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {/* TV / audience — 16:9 mock: hero (cover) + logo banner + sponsor + intro-video state */}
+                  <a href="/tv/DEMO" target="_blank" rel="noreferrer" className="group rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-2 hover:border-[var(--ppn-brand)]">
+                    <div className="relative overflow-hidden rounded" style={{ aspectRatio: "16/9", background: "var(--ppn-surface)" }}>
+                      {previewHeroUrl && <img src={previewHeroUrl} alt="hero" className="absolute inset-0 h-full w-full object-cover opacity-90" />}
+                      <div className="absolute left-1.5 top-1.5 flex items-center gap-1.5"><Logo size="h-6 w-6" /><span className="truncate rounded bg-black/40 px-1.5 py-0.5 text-[9px] font-semibold text-white">{effSponsor}</span></div>
+                      <div className="absolute bottom-1.5 left-1.5 rounded bg-black/40 px-1.5 py-0.5 text-[8px] text-white">Scan to join</div>
+                    </div>
+                    <p className="mt-1 flex flex-wrap items-center gap-1 text-[10px] font-semibold">TV / audience display <span className="text-[var(--ppn-brand)]">↗</span></p>
+                    <p className="mt-0.5 flex flex-wrap gap-1 text-[9px] text-[var(--ppn-muted)]">logo <Tag s={logoStatus} /> hero <Tag s={heroStatus} /> intro video <Tag s={introVidStatus} /></p>
+                  </a>
+                  {/* Player phone — header (logo + sponsor) + hero strip */}
+                  <a href="/play/DEMO" target="_blank" rel="noreferrer" className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-2 hover:border-[var(--ppn-brand)]">
+                    <div className="overflow-hidden rounded border border-[var(--ppn-border)]">
+                      <div className="flex items-center gap-1.5 p-1.5" style={{ background: "var(--ppn-surface)" }}><Logo size="h-6 w-6" /><span className="truncate text-[10px] font-semibold">{effSponsor}</span></div>
+                      <div className="h-12" style={{ background: previewHeroUrl ? `center/cover url(${previewHeroUrl})` : "var(--ppn-surface)" }} />
+                    </div>
+                    <p className="mt-1 flex items-center gap-1 text-[10px] font-semibold">Player phone <span className="text-[var(--ppn-brand)]">↗</span></p>
+                    <p className="mt-0.5 flex flex-wrap gap-1 text-[9px] text-[var(--ppn-muted)]">logo <Tag s={logoStatus} /> hero <Tag s={heroStatus} /></p>
+                  </a>
+                  {/* Client presentation — logo + campaign header */}
+                  <a href="/presentation" target="_blank" rel="noreferrer" className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-2 hover:border-[var(--ppn-brand)]">
+                    <div className="flex items-center gap-1.5 rounded border border-[var(--ppn-border)] p-2" style={{ background: "var(--ppn-surface)" }}><Logo /><div className="min-w-0"><p className="truncate text-[10px] font-semibold">{effSponsor}</p><p className="truncate text-[9px] text-[var(--ppn-muted)]">{effCampaign}</p></div></div>
+                    <p className="mt-1 flex items-center gap-1 text-[10px] font-semibold">Client presentation <span className="text-[var(--ppn-brand)]">↗</span></p>
+                    <p className="mt-0.5 flex flex-wrap gap-1 text-[9px] text-[var(--ppn-muted)]">logo <Tag s={logoStatus} /> hero <Tag s={heroStatus} /></p>
+                  </a>
+                  {/* Report + KPI — header badge (logo + sponsor) */}
+                  {[{ to: "/report", label: "Report" }, { to: "/kpi", label: "KPI summary" }].map((r) => (
+                    <a key={r.to} href={r.to} target="_blank" rel="noreferrer" className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-2 hover:border-[var(--ppn-brand)]">
+                      <div className="flex items-center gap-1.5 rounded border border-[var(--ppn-border)] p-2" style={{ background: "var(--ppn-surface)" }}><Logo size="h-6 w-6" /><span className="truncate text-[10px] font-semibold">{effSponsor}</span></div>
+                      <p className="mt-1 flex items-center gap-1 text-[10px] font-semibold">{r.label} <span className="text-[var(--ppn-brand)]">↗</span></p>
+                      <p className="mt-0.5 flex flex-wrap gap-1 text-[9px] text-[var(--ppn-muted)]">logo <Tag s={logoStatus} /></p>
+                    </a>
+                  ))}
+                </div>
+              );
+            })()}
+            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Structural mock from real assets only — neutral placeholders where missing, no generated/decorative images. Apply first to see uploads on the live surfaces.</p>
           </Card>
 
           {/* Upload by slot — the primary workflow */}
@@ -388,13 +421,16 @@ export default function Config() {
                         <div className="mt-2 flex items-center gap-2">
                           {ss.url && s.kind === "image"
                             ? <img src={ss.url} alt={s.label} onLoad={(e) => { const t = e.currentTarget; if (t.naturalWidth) setDims((d) => ({ ...d, [s.field]: { w: t.naturalWidth, h: t.naturalHeight } })); }} className="h-10 w-14 shrink-0 rounded border border-[var(--ppn-border)]" style={{ background: "var(--ppn-surface)", objectFit: slotFit(s) }} />
-                            : <span className="grid h-10 w-14 shrink-0 place-items-center rounded border border-dashed border-[var(--ppn-border)] text-[8px] text-[var(--ppn-muted)]" aria-hidden>{ss.url ? "video set" : "no file"}</span>}
+                            : ss.url && s.kind === "video"
+                            ? <video src={ss.url} muted playsInline preload="metadata" className="h-10 w-14 shrink-0 rounded border border-[var(--ppn-border)] object-cover" style={{ background: "var(--ppn-surface)" }} />
+                            : <span className="grid h-10 w-14 shrink-0 place-items-center rounded border border-dashed border-[var(--ppn-border)] text-[8px] text-[var(--ppn-muted)]" aria-hidden>no file</span>}
                           <div className="min-w-0 text-[10px] text-[var(--ppn-muted)]">
                             <p>{s.size} · {s.aspect}</p>
                             <p className="truncate">Files: {s.fileType}</p>
                           </div>
                         </div>
                         <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">Appears: {s.appears}</p>
+                        <p className="text-[10px] text-[var(--ppn-muted)]">Media: {s.kind === "video" ? "video (MP4/WebM) · host presses play · muted, no autoplay" : "image / GIF (no video on this slot)"}</p>
                         <p className="text-[10px] text-[var(--ppn-muted)]">Fit: {slotFitLabel(s)}</p>
                         {s.kind === "image" && (dims[s.field]
                           ? (() => { const d = dims[s.field]; const st = aspectStatus(s, d.w, d.h); return <p className="text-[10px] font-medium" style={{ color: slotTone(st.tone).color }}>Uploaded {d.w}×{d.h} · {st.label}</p>; })()

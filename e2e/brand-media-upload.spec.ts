@@ -51,7 +51,7 @@ test("/config#brand-media is a CMS-lite media asset manager with dynamic/static/
   await expect(page.getByRole("heading", { name: /Media asset manager/i })).toBeVisible();
   await expect(page.getByText(/Dynamic:/).first()).toBeVisible();
   await expect(page.getByText(/Static:/).first()).toBeVisible();
-  await expect(page.getByText(/Not built:/).first()).toBeVisible();
+  await expect(page.getByText(/Not built/).first()).toBeVisible();
   // Per-slot liveness badge, a primary upload/replace action, and a demoted advanced-fallback manual field.
   await expect(page.getByText("live", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("preview-only", { exact: true }).first()).toBeVisible();

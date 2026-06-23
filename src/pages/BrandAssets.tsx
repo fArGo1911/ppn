@@ -7,12 +7,9 @@
  */
 import type { ReactNode } from "react";
 import { DemoShell } from "../components/shells";
-import { Carousel } from "../components/Carousel";
-import { VideoSlot } from "../components/VideoSlot";
 import { DEMO_BRAND } from "../demo/brand";
 import { anyOverrideActive, overrideStatus, clearClientOverrides } from "../lib/demoStatus";
-import { IMAGE_SLOTS, TEXT_SLOTS, AI_SLOTS, VIDEO_SLOTS, ZONE_MAP, ASSET_USAGE, TRANSPARENCY } from "../demo/brandAssets";
-import { MEDIA_ZONES, CAROUSEL_GUIDANCE, COPY_SLOTS, preEventSlides, VIDEO_GUIDANCE, VIDEO_RULES } from "../demo/media";
+import { IMAGE_SLOTS, AI_SLOTS, ZONE_MAP } from "../demo/brandAssets";
 
 const CONFIG_HREF = "/config#brand-media";
 
@@ -64,14 +61,7 @@ const SURFACE_MAP: { surface: string; assets: string[] }[] = [
   { surface: "Rollout / supporting material", assets: ["Rollout / network graphic"] },
 ];
 
-const AUDIO_FILES = [
-  "event-intro.mp3", "round-intro.mp3", "sponsored-round-intro.mp3", "question-readout.mp3", "answer-reveal.mp3",
-  "winner.mp3", "question-chime.mp3", "sponsor-message.mp3", "question-01.mp3 … question-10.mp3", "reveal-01.mp3 … reveal-10.mp3",
-];
-
 export default function BrandAssets() {
-  const img = DEMO_BRAND.images;
-  const suppliedCount = Object.values(img).filter(Boolean).length;
   const fileType = (key: string) => (key === "questionMedia" ? "Image (PNG/JPG) or short 16:9 MP4 URL" : "PNG / SVG / JPG (transparent where possible)");
   return (
     <DemoShell>
@@ -95,7 +85,7 @@ export default function BrandAssets() {
           <a href="#minimum-pack" className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1.5 font-semibold hover:text-[var(--ppn-brand)]">Minimum asset pack</a>
           <a href="#asset-slots" className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1.5 font-semibold hover:text-[var(--ppn-brand)]">Asset slots</a>
           <a href="#where-assets-appear" className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1.5 font-semibold hover:text-[var(--ppn-brand)]">Where assets appear</a>
-          <a href="#advanced-reference" className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1.5 font-semibold hover:text-[var(--ppn-brand)]">Advanced reference</a>
+          <a href="#advanced-reference" className="rounded-full border border-[var(--ppn-border)] bg-[var(--ppn-surface)] px-3 py-1.5 font-semibold hover:text-[var(--ppn-brand)]">Technical appendix</a>
         </nav>
 
         {/* ── #minimum-pack ── */}
@@ -139,6 +129,7 @@ export default function BrandAssets() {
                     <div><span className="text-[var(--ppn-text)]">Size:</span> {s.recommended}</div>
                     <div><span className="text-[var(--ppn-text)]">Aspect:</span> {s.aspect}</div>
                     <div><span className="text-[var(--ppn-text)]">Type:</span> {fileType(s.key)}</div>
+                    <div><span className="text-[var(--ppn-text)]">Media:</span> {s.key === "questionMedia" ? "image or short video (not wired yet)" : "image / GIF (no video on this slot)"}</div>
                     <div><span className="text-[var(--ppn-text)]">Appears:</span> {s.appearsOn.join(" · ")}</div>
                   </dl>
                   {s.notes && <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">{s.notes}</p>}
@@ -148,14 +139,21 @@ export default function BrandAssets() {
             })}
           </div>
           <div className="mt-3 rounded-xl border border-dashed border-[var(--ppn-border)] bg-[var(--ppn-surface)] p-3">
-            <p className="text-xs font-semibold text-[var(--ppn-muted)]">Video slots (optional)</p>
-            <ul className="mt-1.5 flex flex-wrap gap-2">
-              {VIDEO_SLOTS.map((v) => (
-                <li key={v.key} className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-3 py-1.5 text-[11px] text-[var(--ppn-muted)]">
-                  <span className="font-semibold text-[var(--ppn-text)]">{v.label}</span> · 16:9 MP4 URL / embed · optional · {v.notes}
+            <p className="text-xs font-semibold text-[var(--ppn-muted)]">Video slots — live on TV</p>
+            <ul className="mt-1.5 space-y-1.5">
+              {[
+                { label: "TV intro video", live: true, where: "TV welcome / intro" },
+                { label: "Sponsor bumper video", live: true, where: "TV sponsor slideshow" },
+                { label: "Closing video", live: true, where: "TV closing" },
+                { label: "Picture / video question media", live: false, where: "question example only" },
+              ].map((v) => (
+                <li key={v.label} className="flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-3 py-1.5 text-[11px] text-[var(--ppn-muted)]">
+                  <span className="font-semibold text-[var(--ppn-text)]">{v.label}</span> · 16:9 · MP4 / WebM · cover · host presses play (no autoplay) · appears: {v.where}
+                  <span className="rounded-full px-1.5 py-0.5 text-[8px] font-semibold uppercase" style={statusTone(v.live ? "live in demo" : "not built yet")}>{v.live ? "live (TV)" : "not built"}</span>
                 </li>
               ))}
             </ul>
+            <p className="mt-1.5 text-[10px] text-[var(--ppn-muted)]">Upload video in <a href={CONFIG_HREF} className="text-[var(--ppn-brand)]">brand &amp; media setup</a>. MP3/audio is separate (file-based playback, not wired through the asset manager).</p>
           </div>
         </section>
 
@@ -177,57 +175,10 @@ export default function BrandAssets() {
 
         {/* ── #advanced-reference — deep technical maps, collapsed by default (secondary) ── */}
         <section id="advanced-reference" className="scroll-mt-4">
-          <h2 className="mt-10 border-t border-[var(--ppn-border)] pt-6 text-sm font-semibold uppercase tracking-wider text-[var(--ppn-muted)]">Advanced reference</h2>
-          <p className="mt-1 text-xs text-[var(--ppn-muted)]">Deep slot/zone maps, copy slots, host-script reference text and per-slot video detail. Expand only if you need it — not required for a basic demo.</p>
+          <h2 className="mt-10 border-t border-[var(--ppn-border)] pt-6 text-sm font-semibold uppercase tracking-wider text-[var(--ppn-muted)]">Technical appendix</h2>
+          <p className="mt-1 text-xs text-[var(--ppn-muted)]">Operator-useful detail only — which field controls each on-screen zone, and the host-script copy. Everything is uploaded/configured in <a href={CONFIG_HREF} className="text-[var(--ppn-brand)]">brand &amp; media setup</a>.</p>
 
-          <Details title="How assets get into the demo (manual paths / storage-backed)">
-            <p className="text-xs text-[var(--ppn-muted)]">Place files under <span className="font-mono">public/demo/assets/&lt;preset&gt;/</span> and paste the paths in <a href={CONFIG_HREF} className="text-[var(--ppn-brand)]">detailed config → Quick manual paths</a> (no upload needed), or upload client files in <span className="font-mono">detailed config → Upload asset pack</span> (PPN storage + registry; needs the local PPN database). Uploads happen in detailed config, not here. Blank fields keep the preset default.</p>
-            <p className="mt-2 text-[11px] text-[var(--ppn-muted)]">Not built yet: approvals, image editing/cropping, brewery self-service, CDN, customer portal.</p>
-          </Details>
-
-          <Details title="Demo asset readiness">
-            <ul className="space-y-1 text-xs text-[var(--ppn-muted)]">
-              <li><span style={{ color: suppliedCount >= 1 ? "var(--ppn-success)" : "var(--ppn-warning)" }}>●</span> Visual asset pack: <span className="text-[var(--ppn-text)]">{suppliedCount} supplied</span> — no bundled pictures; add the client's logo/hero/etc. in detailed config (until then, surfaces use brand initials + a neutral panel).</li>
-              <li><span style={{ color: "var(--ppn-warning)" }}>●</span> Audio: <span className="text-[var(--ppn-text)]">file-based playback</span> — MP3s expected under <span className="font-mono">public/demo/audio/{DEMO_BRAND.audio.audioBaseDir?.split("/").pop()}/</span>; missing files fall back to <span className="text-[var(--ppn-text)]">script-only</span> (honest).</li>
-              <li>Expected MP3s: <span className="font-mono text-[10px]">{AUDIO_FILES.join(" · ")}</span></li>
-              <li className="text-[var(--ppn-muted)]">File-based playback only — <span className="text-[var(--ppn-text)]">no audio or generated asset is created here</span>. Fictional demo brewery.</li>
-            </ul>
-          </Details>
-
-          <Details title="Dynamic text & copy slots">
-            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {[...TEXT_SLOTS, ...COPY_SLOTS].map((t) => (
-                <li key={t} className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-3 py-2 text-xs text-[var(--ppn-text)]">{t}</li>
-              ))}
-            </ul>
-          </Details>
-
-          <Details title="Host script reference (text only)">
-            <p className="text-xs text-[var(--ppn-muted)]">Pre-written host-narration text from the active preset, shown so you can review the spoken copy. Reference text only; no audio or generated asset is created here.</p>
-            <div className="mt-2 space-y-2">
-              {AI_SLOTS.map((a) => (
-                <div key={a.key} className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-3">
-                  <p className="text-sm font-medium text-[var(--ppn-text)]">{a.label}</p>
-                  <p className="mt-1 text-sm text-[var(--ppn-muted)]">“{DEMO_BRAND.ai[a.key as keyof typeof DEMO_BRAND.ai]}”</p>
-                </div>
-              ))}
-              <p className="text-xs text-[var(--ppn-muted)]">{DEMO_BRAND.responsibleNote}</p>
-            </div>
-          </Details>
-
-          <Details title="Brand colour tokens (active preset)">
-            <div className="flex flex-wrap gap-3">
-              {Object.entries(DEMO_BRAND.colours).map(([k, v]) => (
-                <div key={k} className="flex items-center gap-2 rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-2 py-1.5">
-                  <span className="h-6 w-6 rounded border border-[var(--ppn-border)]" style={{ background: v }} />
-                  <span className="text-xs"><span className="text-[var(--ppn-text)]">{k}</span> <span className="text-[var(--ppn-muted)]">{v}</span></span>
-                </div>
-              ))}
-            </div>
-            <p className="mt-2 text-xs text-[var(--ppn-muted)]">Switch preset / colours in <a href={CONFIG_HREF} className="text-[var(--ppn-brand)]">detailed config</a> — theme applies across player / host / TV / presenter with readability guardrails.</p>
-          </Details>
-
-          <Details title="Branding zone map (what appears where + which field controls it)">
+          <Details title="Branding zone map (which field controls each on-screen zone)">
             <div className="grid gap-3 lg:grid-cols-2">
               {ZONE_MAP.map((s) => (
                 <div key={s.surface} className="rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-3">
@@ -246,82 +197,19 @@ export default function BrandAssets() {
             </div>
           </Details>
 
-          <Details title="Asset usage map">
-            <ul className="grid gap-2 sm:grid-cols-2">
-              {ASSET_USAGE.map((a) => (
-                <li key={a.asset} className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] px-3 py-2 text-sm">
-                  <span className="font-medium text-[var(--ppn-text)]">{a.asset}</span>
-                  <span className="text-[var(--ppn-muted)]"> → {a.appears}</span>
-                </li>
+          <Details title="Host script reference (text only)">
+            <p className="text-xs text-[var(--ppn-muted)]">Pre-written host-narration text from the active preset, shown so you can review the spoken copy. Reference text only; no audio or generated asset is created here.</p>
+            <div className="mt-2 space-y-2">
+              {AI_SLOTS.map((a) => (
+                <div key={a.key} className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-3">
+                  <p className="text-sm font-medium text-[var(--ppn-text)]">{a.label}</p>
+                  <p className="mt-1 text-sm text-[var(--ppn-muted)]">“{DEMO_BRAND.ai[a.key as keyof typeof DEMO_BRAND.ai]}”</p>
+                </div>
               ))}
-            </ul>
-          </Details>
-
-          <Details title="Transparency & overlay rules">
-            <div className="space-y-2 text-sm">
-              <p><span className="font-medium text-[var(--ppn-text)]">Transparent preferred:</span> <span className="text-[var(--ppn-muted)]">{TRANSPARENCY.transparentPreferred.join(" · ")}</span></p>
-              <p><span className="font-medium text-[var(--ppn-text)]">Non-transparent (photos/backgrounds):</span> <span className="text-[var(--ppn-muted)]">{TRANSPARENCY.nonTransparent.join(" · ")}</span></p>
-              <p className="text-[var(--ppn-muted)]">{TRANSPARENCY.overlaySafe}</p>
+              <p className="text-xs text-[var(--ppn-muted)]">{DEMO_BRAND.responsibleNote}</p>
             </div>
           </Details>
 
-          <Details title="Media zones table">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="text-[var(--ppn-muted)]">
-                  <tr>{["zone id", "surface", "state", "allowed", "aspect", "sponsor", "+action"].map((h) => <th key={h} className="py-1 pr-3 font-medium">{h}</th>)}</tr>
-                </thead>
-                <tbody>
-                  {MEDIA_ZONES.map((z) => (
-                    <tr key={z.id} className="border-t border-[var(--ppn-border)]">
-                      <td className="py-1.5 pr-3 font-mono" style={{ color: DEMO_BRAND.primary }}>{z.id}</td>
-                      <td className="py-1.5 pr-3">{z.surface}</td>
-                      <td className="py-1.5 pr-3">{z.screenState}</td>
-                      <td className="py-1.5 pr-3 text-[var(--ppn-muted)]">{z.allowed.join(", ")}</td>
-                      <td className="py-1.5 pr-3">{z.aspect}</td>
-                      <td className="py-1.5 pr-3">{z.sponsorAllowed ? "✓" : "—"}</td>
-                      <td className="py-1.5 pr-3">{z.playerActionVisible ? "✓" : "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Details>
-
-          <Details title="Carousels / slideshows (live example + guidance)">
-            <div className="max-w-xl"><Carousel slides={preEventSlides(DEMO_BRAND)} size="presenter" aspect="16/9" /></div>
-            <ul className="mt-3 grid gap-1 text-xs text-[var(--ppn-muted)] sm:grid-cols-2">
-              {CAROUSEL_GUIDANCE.map((g) => <li key={g}>· {g}</li>)}
-            </ul>
-          </Details>
-
-          <Details title="Video assets & guidance (real URL or local MP4 — slot/player/fallback)">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-3">
-                <VideoSlot url={DEMO_BRAND.video.videoQuestionUrl} sourceType={DEMO_BRAND.video.videoQuestionSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="external MP4 (plays)" />
-                <VideoSlot url={DEMO_BRAND.video.sponsorBumperVideoUrl} sourceType={DEMO_BRAND.video.sponsorBumperVideoSourceType} fallbackImage={DEMO_BRAND.video.fallbackImage} sourceNote={DEMO_BRAND.video.sourceNote} aspect="16/9" label="local (missing → fallback)" />
-              </div>
-              <div className="text-sm">
-                <p className="font-medium text-[var(--ppn-text)]">Per-slot source type</p>
-                <ul className="mt-1 space-y-0.5 text-xs text-[var(--ppn-muted)]">
-                  {([
-                    ["TV intro", DEMO_BRAND.video.tvIntroVideoSourceType, DEMO_BRAND.video.tvIntroVideoUrl],
-                    ["Sponsor bumper", DEMO_BRAND.video.sponsorBumperVideoSourceType, DEMO_BRAND.video.sponsorBumperVideoUrl],
-                    ["Video question", DEMO_BRAND.video.videoQuestionSourceType, DEMO_BRAND.video.videoQuestionUrl],
-                    ["Closing", DEMO_BRAND.video.closingVideoSourceType, DEMO_BRAND.video.closingVideoUrl],
-                  ] as [string, string | undefined, string | undefined][]).map(([name, st, url]) => (
-                    <li key={name}>
-                      <span className="text-[var(--ppn-text)]">{name}</span> · <span className="font-mono" style={{ color: DEMO_BRAND.primary }}>{st ?? "—"}</span> · {url ? "set" : "empty → fallback"}
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-3 font-medium text-[var(--ppn-text)]">Guidance</p>
-                <ul className="mt-1 space-y-0.5 text-xs text-[var(--ppn-muted)]">{VIDEO_GUIDANCE.map((g) => <li key={g}>· {g}</li>)}</ul>
-                <p className="mt-3 font-medium text-[var(--ppn-text)]">Playback rules</p>
-                <ul className="mt-1 space-y-0.5 text-xs text-[var(--ppn-muted)]">{VIDEO_RULES.map((r) => <li key={r}>· {r}</li>)}</ul>
-              </div>
-            </div>
-          </Details>
         </section>
       </div>
     </DemoShell>
