@@ -33,6 +33,16 @@
 | Germany | reference/future | O'Learys | Krombacher | Krombacher Pils | de-DE | German |
 | Sweden | reference/future | O'Learys | Spendrups | Norrlands Guld | sv-SE | Swedish |
 
+## How-to-play variants by setup mode
+
+One how-to-play script per product setup mode (`src/demo/setup.ts`). The QR is shown where the setup supports it; no-TV modes use a host-read join code.
+
+| Setup mode | Variant file | QR / join |
+| --- | --- | --- |
+| TV + audio | how-to-play.mp3 | QR on TV / main screen / table |
+| Audio-only | how-to-play-audio.mp3 | No screen — host reads the join code |
+| Local host · mic/speaker · phones-only | how-to-play-local.mp3 | QR on table card, or host-read join code |
+
 ## Sponsor & product wording rules
 
 - Use the sponsor/product naturally — don't sound like an advert every time.
@@ -54,8 +64,9 @@ Safe example wordings (no factual claims):
 | cueId | filename | family | phase | priority | scope | status | playback | scriptText |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | intro-welcome | intro-welcome.mp3 | global | intro | P1 core demo | market-specific | ready-to-record | standalone | Good evening and welcome to O'Learys for tonight's quiz, brought to you by Fuller's. Scan the QR code on your table, give your team a name, and answer on your phone — one shared answer per team. Please drink responsibly. Phones ready — let's play! |
-| how-to-play | how-to-play.mp3 | global | how-to-play | P1 core demo | reusable | ready-to-record | standalone | Scan the QR code on your table — or from a nearby table, the main screen, or any TV showing the quiz join code. One person from each team joins on their phone, enters your team name, and submits the team's answers. I'll take you through all the questions first — we'll review the answers later — and then announce the winner by team number. No shouting out! |
-| how-to-play-2 | how-to-play-2.mp3 | global | how-to-play | P2 useful variant | reusable | ready-to-record | standalone | Scan the QR code on your table — or from a nearby table, the main screen, or any TV showing the quiz join code. One person from each team joins on their phone and enters your team name. Some questions are multiple choice; others ask you to type an answer where enabled — just follow the prompts on your phone. I'll control the pace, we ask all the questions first and review the answers later, and the winner is announced by team number. |
+| how-to-play | how-to-play.mp3 | global | how-to-play | P1 core demo | reusable | ready-to-record | standalone | Scan the QR code on the main screen, any TV showing the quiz join code, or the QR on your table — or a nearby table. One person from each team joins on their phone, enters your team name, and submits the team's answers. Just follow the prompts on your phone — some questions are multiple choice, others ask for a typed answer where enabled. I'll take you through all the questions first, we'll review the answers later, and announce the winner by team number. No shouting out! |
+| how-to-play-audio | how-to-play-audio.mp3 | global | how-to-play | P2 useful variant | reusable | ready-to-record | standalone | We're playing without a screen tonight, so listen up. On your phone, head to the join page, and I'll read out tonight's join code — it's one, one, five, six, seven, eight. One person from each team enters the code, picks your team name, and answers on the phone. I'll read every question aloud first, we'll go through the answers later, and the winner's announced by team number. |
+| how-to-play-local | how-to-play-local.mp3 | global | how-to-play | P2 useful variant | reusable | ready-to-record | standalone | Nice and simple tonight — phones only. Scan the QR code on your table card, or I'll read out a join code for you to type in. One person from each team joins, enters your team name, and answers on the phone. I'll read the questions over the mic, we'll review the answers afterwards, and announce the winner by team number. |
 | sponsor-message | sponsor-message.mp3 | global | how-to-play | P1 core demo | market-specific | ready-to-record | standalone | A quick word from tonight's featured sponsor, Fuller's — enjoy a London Pride responsibly. Right, back to the quiz. |
 | pause-handin | pause-handin.mp3 | global | answer-review-phase | P2 useful variant | reusable | ready-to-record | standalone | Pens down for a moment — pass your answers in, grab a drink, and we'll go through the answers shortly. |
 | answer-review-intro | answer-review-intro.mp3 | global | answer-review-phase | P1 core demo | reusable | ready-to-record | standalone | Right, pens down everyone — let's go through tonight's answers in order. |
@@ -160,4 +171,4 @@ Two-part assembly (never split smaller than this):
 9. Keep one voice + settings across the whole first pack.
 10. Upload into PPN and smoke after recording.
 
-**Totals:** 54 rows · 48 recordable MP3s · **21 P1 files to record first.**
+**Totals:** 55 rows · 49 recordable MP3s · **21 P1 files to record first.**

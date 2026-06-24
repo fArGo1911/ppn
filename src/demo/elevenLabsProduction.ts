@@ -46,6 +46,8 @@ export interface ProductionRow {
   playbackType: PlaybackType;
   /** Reusable across markets, or specific to the active market (mentions sponsor/product/venue). */
   scope: "reusable" | "market-specific";
+  /** For how-to-play variants: which product setup mode this script represents. */
+  setupMode?: "tv_audio" | "audio_only" | "local_host";
   notes: string;
 }
 
@@ -120,12 +122,16 @@ export function buildProductionPack(): ProductionRow[] {
   add({ cueId: "intro-welcome", filename: "intro-welcome.mp3", family: "global", phase: "intro", playbackType: "standalone", priority: "P1 core demo", recordingStatus: "ready-to-record", usedBy: "playlist step · host cue",
     scriptText: fillContext("Good evening and welcome to O'Learys for tonight's quiz, brought to you by Fuller's. Scan the QR code on your table, give your team a name, and answer on your phone — one shared answer per team. Please drink responsibly. Phones ready — let's play!"),
     notes: "Build energy to 'let's play!'. Keeps the responsible-sponsor line. No factual product claims." });
-  add({ cueId: "how-to-play", filename: "how-to-play.mp3", family: "global", phase: "how-to-play", playbackType: "standalone", priority: "P1 core demo", recordingStatus: "ready-to-record", usedBy: "playlist step",
-    scriptText: "Scan the QR code on your table — or from a nearby table, the main screen, or any TV showing the quiz join code. One person from each team joins on their phone, enters your team name, and submits the team's answers. I'll take you through all the questions first — we'll review the answers later — and then announce the winner by team number. No shouting out!",
-    notes: "Variant 1 — classic hosted pub quiz. One device per team. QR is scannable from the table, a nearby table, the main screen or any TV showing the join code." });
-  add({ cueId: "how-to-play-2", filename: "how-to-play-2.mp3", family: "global", phase: "how-to-play", playbackType: "standalone", priority: "P2 useful variant", recordingStatus: "ready-to-record", usedBy: "playlist step",
-    scriptText: "Scan the QR code on your table — or from a nearby table, the main screen, or any TV showing the quiz join code. One person from each team joins on their phone and enters your team name. Some questions are multiple choice; others ask you to type an answer where enabled — just follow the prompts on your phone. I'll control the pace, we ask all the questions first and review the answers later, and the winner is announced by team number.",
-    notes: "Variant 2 — flexible phone/multiple-choice/typed. One device per team. QR scannable from the table, a nearby table, the main screen or any TV. 'Typed answer' is product direction (phrase as 'where enabled'); multiple choice is the live format." });
+  // Three how-to-play variants — one per product setup mode (src/demo/setup.ts: tv_audio / audio_only / local_host).
+  add({ cueId: "how-to-play", filename: "how-to-play.mp3", family: "global", phase: "how-to-play", playbackType: "standalone", priority: "P1 core demo", recordingStatus: "ready-to-record", usedBy: "playlist step", setupMode: "tv_audio",
+    scriptText: "Scan the QR code on the main screen, any TV showing the quiz join code, or the QR on your table — or a nearby table. One person from each team joins on their phone, enters your team name, and submits the team's answers. Just follow the prompts on your phone — some questions are multiple choice, others ask for a typed answer where enabled. I'll take you through all the questions first, we'll review the answers later, and announce the winner by team number. No shouting out!",
+    notes: "Setup mode: TV + audio — QR shown on the TV / main screen (and table). One device per team. Multiple choice is the live format; typed answer is product direction ('where enabled')." });
+  add({ cueId: "how-to-play-audio", filename: "how-to-play-audio.mp3", family: "global", phase: "how-to-play", playbackType: "standalone", priority: "P2 useful variant", recordingStatus: "ready-to-record", usedBy: "playlist step", setupMode: "audio_only",
+    scriptText: "We're playing without a screen tonight, so listen up. On your phone, head to the join page, and I'll read out tonight's join code — it's one, one, five, six, seven, eight. One person from each team enters the code, picks your team name, and answers on the phone. I'll read every question aloud first, we'll go through the answers later, and the winner's announced by team number.",
+    notes: "Setup mode: Audio-only — no TV; host reads the questions aloud and gives the join code verbally (digits). One device per team." });
+  add({ cueId: "how-to-play-local", filename: "how-to-play-local.mp3", family: "global", phase: "how-to-play", playbackType: "standalone", priority: "P2 useful variant", recordingStatus: "ready-to-record", usedBy: "playlist step", setupMode: "local_host",
+    scriptText: "Nice and simple tonight — phones only. Scan the QR code on your table card, or I'll read out a join code for you to type in. One person from each team joins, enters your team name, and answers on the phone. I'll read the questions over the mic, we'll review the answers afterwards, and announce the winner by team number.",
+    notes: "Setup mode: Local host · mic/speaker · phones-only — lowest-friction; QR on a table card or a host-read join code. One device per team." });
   add({ cueId: "sponsor-message", filename: "sponsor-message.mp3", family: "global", phase: "how-to-play", playbackType: "standalone", priority: "P1 core demo", recordingStatus: "ready-to-record", usedBy: "playlist step · host cue",
     scriptText: fillContext("A quick word from tonight's featured sponsor, Fuller's — enjoy a London Pride responsibly. Right, back to the quiz."),
     notes: "Natural sponsor mention, not an advert. Responsible wording. No factual product claims." });

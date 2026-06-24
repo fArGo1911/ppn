@@ -116,25 +116,33 @@ test("no misspelled venue/sponsor/product names anywhere in the pack", () => {
   expect(blob).toContain("London Pride");
 });
 
-test("two how-to-play / rules variants exist and explain the table-QR, one-per-team, team-number flow", () => {
+test("three how-to-play variants exist, one per product setup mode, with the shared team flow", () => {
   const rows = buildProductionPack();
-  const v1 = rows.find((r) => r.cueId === "how-to-play");
-  const v2 = rows.find((r) => r.cueId === "how-to-play-2");
-  expect(v1?.scriptText).toBeTruthy();
-  expect(v2?.scriptText).toBeTruthy();
-  for (const v of [v1!, v2!]) {
+  const howto = rows.filter((r) => r.phase === "how-to-play" && r.family === "global" && r.setupMode);
+  // One variant per product setup mode (tv_audio / audio_only / local_host).
+  const modes = howto.map((r) => r.setupMode).sort();
+  expect(modes).toEqual(["audio_only", "local_host", "tv_audio"]);
+  // Shared flow in every variant: one device per team, team name, questions-first, winner by number.
+  for (const v of howto) {
     const s = v.scriptText.toLowerCase();
-    expect(s, `${v.cueId} mentions the table QR code`).toContain("qr code on your table");
-    // QR is scannable from several places: nearby table, main screen, TV / join code.
-    expect(s, `${v.cueId} mentions a nearby table`).toContain("nearby table");
-    expect(s, `${v.cueId} mentions the main screen`).toContain("main screen");
-    expect(s, `${v.cueId} mentions a TV / join code`).toMatch(/tv showing the quiz join code|join code/);
-    expect(s, `${v.cueId} uses the one-device-per-team model`).toMatch(/one person (from each|per) team/);
-    expect(s, `${v.cueId} enters the team name`).toContain("team name");
-    expect(s, `${v.cueId} announces winner by team number`).toContain("team number");
+    expect(s, `${v.cueId} one-device-per-team`).toMatch(/one person from each team/);
+    expect(s, `${v.cueId} team name`).toContain("team name");
+    expect(s, `${v.cueId} winner by team number`).toContain("team number");
   }
-  // Variant 2 references the flexible phone/MC/typed flow with honest "where enabled" phrasing.
-  expect(v2?.scriptText.toLowerCase()).toContain("where enabled");
+  // TV mode shows the QR on screen/TV; no-TV modes use a host-given join code.
+  const tv = howto.find((r) => r.setupMode === "tv_audio")!.scriptText.toLowerCase();
+  expect(tv).toContain("main screen");
+  expect(tv).toMatch(/tv showing the quiz join code/);
+  expect(tv).toContain("where enabled"); // honest MC/typed phrasing
+
+  const audio = howto.find((r) => r.setupMode === "audio_only")!.scriptText.toLowerCase();
+  expect(audio).toContain("without a screen");
+  expect(audio).toContain("join code");
+  expect(audio).toContain("one, one, five, six, seven, eight"); // host reads a code
+
+  const local = howto.find((r) => r.setupMode === "local_host")!.scriptText.toLowerCase();
+  expect(local).toContain("phones only");
+  expect(local).toMatch(/table card|join code/);
 });
 
 test("intro and outro mention the active venue + sponsor; outro keeps responsible tone", () => {

@@ -61,8 +61,8 @@
     "Enjoy responsibly, and keep your answers sharper than your arguments."
   ],
   "howToRulesNote": "Multiple-choice is the live question format (seeded questions carry options). Typed-answer is product direction — phrase it as 'where enabled'. Don't overpromise features not built.",
-  "totalRows": 54,
-  "recordableFiles": 48,
+  "totalRows": 55,
+  "recordableFiles": 49,
   "rows": [
     {
       "voiceStyle": "British pub host — warm, confident, playful, never shouty",
@@ -98,7 +98,7 @@
       "language": "en-GB",
       "accent": "British (England)",
       "scope": "reusable",
-      "notes": "Variant 1 — classic hosted pub quiz. One device per team. QR is scannable from the table, a nearby table, the main screen or any TV showing the join code.",
+      "notes": "Setup mode: TV + audio — QR shown on the TV / main screen (and table). One device per team. Multiple choice is the live format; typed answer is product direction ('where enabled').",
       "filename": "how-to-play.mp3",
       "noFile": false,
       "cueId": "how-to-play",
@@ -108,7 +108,8 @@
       "priority": "P1 core demo",
       "recordingStatus": "ready-to-record",
       "usedBy": "playlist step",
-      "scriptText": "Scan the QR code on your table — or from a nearby table, the main screen, or any TV showing the quiz join code. One person from each team joins on their phone, enters your team name, and submits the team's answers. I'll take you through all the questions first — we'll review the answers later — and then announce the winner by team number. No shouting out!"
+      "setupMode": "tv_audio",
+      "scriptText": "Scan the QR code on the main screen, any TV showing the quiz join code, or the QR on your table — or a nearby table. One person from each team joins on their phone, enters your team name, and submits the team's answers. Just follow the prompts on your phone — some questions are multiple choice, others ask for a typed answer where enabled. I'll take you through all the questions first, we'll review the answers later, and announce the winner by team number. No shouting out!"
     },
     {
       "voiceStyle": "British pub host — warm, confident, playful, never shouty",
@@ -121,17 +122,42 @@
       "language": "en-GB",
       "accent": "British (England)",
       "scope": "reusable",
-      "notes": "Variant 2 — flexible phone/multiple-choice/typed. One device per team. QR scannable from the table, a nearby table, the main screen or any TV. 'Typed answer' is product direction (phrase as 'where enabled'); multiple choice is the live format.",
-      "filename": "how-to-play-2.mp3",
+      "notes": "Setup mode: Audio-only — no TV; host reads the questions aloud and gives the join code verbally (digits). One device per team.",
+      "filename": "how-to-play-audio.mp3",
       "noFile": false,
-      "cueId": "how-to-play-2",
+      "cueId": "how-to-play-audio",
       "family": "global",
       "phase": "how-to-play",
       "playbackType": "standalone",
       "priority": "P2 useful variant",
       "recordingStatus": "ready-to-record",
       "usedBy": "playlist step",
-      "scriptText": "Scan the QR code on your table — or from a nearby table, the main screen, or any TV showing the quiz join code. One person from each team joins on their phone and enters your team name. Some questions are multiple choice; others ask you to type an answer where enabled — just follow the prompts on your phone. I'll control the pace, we ask all the questions first and review the answers later, and the winner is announced by team number."
+      "setupMode": "audio_only",
+      "scriptText": "We're playing without a screen tonight, so listen up. On your phone, head to the join page, and I'll read out tonight's join code — it's one, one, five, six, seven, eight. One person from each team enters the code, picks your team name, and answers on the phone. I'll read every question aloud first, we'll go through the answers later, and the winner's announced by team number."
+    },
+    {
+      "voiceStyle": "British pub host — warm, confident, playful, never shouty",
+      "toneNotes": "Premium-but-approachable; smiling; not a game-show announcer.",
+      "deliveryNotes": "Unhurried, clear; leave a breath before answers; consistent loudness for a noisy room.",
+      "market": "UK",
+      "venue": "O'Learys",
+      "sponsor": "Fuller's",
+      "product": "London Pride",
+      "language": "en-GB",
+      "accent": "British (England)",
+      "scope": "reusable",
+      "notes": "Setup mode: Local host · mic/speaker · phones-only — lowest-friction; QR on a table card or a host-read join code. One device per team.",
+      "filename": "how-to-play-local.mp3",
+      "noFile": false,
+      "cueId": "how-to-play-local",
+      "family": "global",
+      "phase": "how-to-play",
+      "playbackType": "standalone",
+      "priority": "P2 useful variant",
+      "recordingStatus": "ready-to-record",
+      "usedBy": "playlist step",
+      "setupMode": "local_host",
+      "scriptText": "Nice and simple tonight — phones only. Scan the QR code on your table card, or I'll read out a join code for you to type in. One person from each team joins, enters your team name, and answers on the phone. I'll read the questions over the mic, we'll review the answers afterwards, and announce the winner by team number."
     },
     {
       "voiceStyle": "British pub host — warm, confident, playful, never shouty",
