@@ -98,7 +98,7 @@
       "language": "en-GB",
       "accent": "British (England)",
       "scope": "reusable",
-      "notes": "Variant 1 — classic hosted pub quiz. One device per team (scan the table QR, one player joins for the team).",
+      "notes": "Variant 1 — classic hosted pub quiz. One device per team. QR is scannable from the table, a nearby table, the main screen or any TV showing the join code.",
       "filename": "how-to-play.mp3",
       "noFile": false,
       "cueId": "how-to-play",
@@ -108,7 +108,7 @@
       "priority": "P1 core demo",
       "recordingStatus": "ready-to-record",
       "usedBy": "playlist step",
-      "scriptText": "Scan the QR code on your table. One person from each team joins on their phone, enters your team name, and submits the team's answers. I'll take you through all the questions first — we'll review the answers later — and then announce the winner by team number. No shouting out!"
+      "scriptText": "Scan the QR code on your table — or from a nearby table, the main screen, or any TV showing the quiz join code. One person from each team joins on their phone, enters your team name, and submits the team's answers. I'll take you through all the questions first — we'll review the answers later — and then announce the winner by team number. No shouting out!"
     },
     {
       "voiceStyle": "British pub host — warm, confident, playful, never shouty",
@@ -121,7 +121,7 @@
       "language": "en-GB",
       "accent": "British (England)",
       "scope": "reusable",
-      "notes": "Variant 2 — flexible phone/multiple-choice/typed. One device per team (table QR). 'Typed answer' is product direction (phrase as 'where enabled'); multiple choice is the live format.",
+      "notes": "Variant 2 — flexible phone/multiple-choice/typed. One device per team. QR scannable from the table, a nearby table, the main screen or any TV. 'Typed answer' is product direction (phrase as 'where enabled'); multiple choice is the live format.",
       "filename": "how-to-play-2.mp3",
       "noFile": false,
       "cueId": "how-to-play-2",
@@ -131,7 +131,7 @@
       "priority": "P2 useful variant",
       "recordingStatus": "ready-to-record",
       "usedBy": "playlist step",
-      "scriptText": "Scan the QR code on your table — one person per team joins on their phone and enters your team name. Some questions are multiple choice; others ask you to type an answer where enabled — just follow the prompts on your phone. I'll control the pace, we ask all the questions first and review the answers later, and the winner is announced by team number."
+      "scriptText": "Scan the QR code on your table — or from a nearby table, the main screen, or any TV showing the quiz join code. One person from each team joins on their phone and enters your team name. Some questions are multiple choice; others ask you to type an answer where enabled — just follow the prompts on your phone. I'll control the pace, we ask all the questions first and review the answers later, and the winner is announced by team number."
     },
     {
       "voiceStyle": "British pub host — warm, confident, playful, never shouty",

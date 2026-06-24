@@ -125,6 +125,10 @@ test("two how-to-play / rules variants exist and explain the table-QR, one-per-t
   for (const v of [v1!, v2!]) {
     const s = v.scriptText.toLowerCase();
     expect(s, `${v.cueId} mentions the table QR code`).toContain("qr code on your table");
+    // QR is scannable from several places: nearby table, main screen, TV / join code.
+    expect(s, `${v.cueId} mentions a nearby table`).toContain("nearby table");
+    expect(s, `${v.cueId} mentions the main screen`).toContain("main screen");
+    expect(s, `${v.cueId} mentions a TV / join code`).toMatch(/tv showing the quiz join code|join code/);
     expect(s, `${v.cueId} uses the one-device-per-team model`).toMatch(/one person (from each|per) team/);
     expect(s, `${v.cueId} enters the team name`).toContain("team name");
     expect(s, `${v.cueId} announces winner by team number`).toContain("team number");
