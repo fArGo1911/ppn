@@ -48,8 +48,13 @@ export interface ProductionRow {
   scope: "reusable" | "market-specific";
   /** For how-to-play variants: which product setup mode this script represents. */
   setupMode?: "tv_audio" | "audio_only" | "local_host";
+  /** P0 smoke: the tiny "record these first" set (a subset of P1) to test voice/naming/upload/playback. */
+  smoke: boolean;
   notes: string;
 }
+
+/** The four-file P0 smoke pack — record these first; if they sound right, record the rest of P1. */
+export const SMOKE_CUE_IDS = ["intro-welcome", "q01-readout", "a-leadin-01", "a01-answer"];
 
 // ── Production / recording context (Part G). UK is active; DE/SE are reference/future. ──
 export interface MarketContext { market: string; active: boolean; venue: string; sponsor: string; product: string; language: string; accent: string }
@@ -108,7 +113,7 @@ const fillContext = (text: string): string =>
 const base = (): Omit<ProductionRow, "cueId" | "filename" | "noFile" | "family" | "phase" | "scriptText" | "priority" | "recordingStatus" | "usedBy" | "playbackType"> => ({
   voiceStyle: VOICE, toneNotes: TONE, deliveryNotes: DELIVERY,
   market: ACTIVE.market, venue: ACTIVE.venue, sponsor: ACTIVE.sponsor, product: ACTIVE.product,
-  language: ACTIVE.language, accent: ACTIVE.accent, scope: "reusable", notes: "",
+  language: ACTIVE.language, accent: ACTIVE.accent, scope: "reusable", smoke: false, notes: "",
 });
 
 /** Build the full production pack (deterministic; derived from the playlist + script source so it can't drift). */
@@ -214,7 +219,17 @@ export function buildProductionPack(): ProductionRow[] {
   const marketTerms = [ACTIVE.sponsor, ACTIVE.product, ACTIVE.venue];
   for (const r of rows) r.scope = marketTerms.some((t) => r.scriptText.includes(t)) ? "market-specific" : "reusable";
 
+  // Tag the tiny P0 smoke pack (a subset of P1 — P1 is left intact).
+  const smoke = new Set(SMOKE_CUE_IDS);
+  for (const r of rows) r.smoke = smoke.has(r.cueId);
+
   return rows;
+}
+
+/** The P0 smoke rows in record order (intro → q01 readout → answer lead-in → a01 answer). */
+export function smokeRows(rows: ProductionRow[] = buildProductionPack()): ProductionRow[] {
+  const order = new Map(SMOKE_CUE_IDS.map((id, i) => [id, i]));
+  return rows.filter((r) => r.smoke).sort((a, b) => (order.get(a.cueId)! - order.get(b.cueId)!));
 }
 
 /** Recordable filenames (excludes metadata-only rows). */

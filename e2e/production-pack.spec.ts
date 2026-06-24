@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
-import { buildProductionPack, productionFilenames, PRODUCTION_CONTEXT, MARKET_CONTEXTS } from "../src/demo/elevenLabsProduction";
+import { buildProductionPack, productionFilenames, smokeRows, SMOKE_CUE_IDS, PRODUCTION_CONTEXT, MARKET_CONTEXTS } from "../src/demo/elevenLabsProduction";
 import { DEMO_PLAYLIST } from "../src/demo/quizPlaylist";
 
 /**
@@ -83,6 +83,53 @@ test("question readouts and question lead-ins are separate; readouts carry the p
 test("winner cue uses Team {number}, not a team name", () => {
   const winner = buildProductionPack().find((r) => r.cueId === "winner-team-number");
   expect(winner?.scriptText).toContain("Team {number}");
+});
+
+// ── 3G-H: tiny P0 smoke pack (record these four first) ──
+test("P0 smoke pack is exactly the four expected cues, in record order; P1 still exists", () => {
+  const rows = buildProductionPack();
+  const smoke = smokeRows(rows);
+  expect(smoke.map((r) => r.cueId)).toEqual(["intro-welcome", "q01-readout", "a-leadin-01", "a01-answer"]);
+  expect(SMOKE_CUE_IDS).toEqual(["intro-welcome", "q01-readout", "a-leadin-01", "a01-answer"]);
+  // Exact filenames (one per smoke purpose: intro / question / answer lead-in / answer).
+  expect(smoke.map((r) => r.filename)).toEqual([
+    "intro-welcome.mp3", "playlist-demo-q01-readout.mp3", "a-leadin-01.mp3", "playlist-demo-a01-answer.mp3",
+  ]);
+  // Every smoke row is tagged and only those four are.
+  expect(rows.filter((r) => r.smoke)).toHaveLength(4);
+  // P1 is NOT removed — the smoke set is a subset of P1 (still priority P1).
+  expect(smoke.every((r) => r.priority === "P1 core demo")).toBe(true);
+  expect(rows.filter((r) => r.priority === "P1 core demo").length).toBeGreaterThan(4);
+});
+
+test("smoke files are unique, non-colliding, and carry full per-row metadata", () => {
+  const smoke = smokeRows();
+  const files = smoke.map((r) => r.filename as string);
+  expect(new Set(files).size).toBe(files.length);
+  for (const f of files) expect(f).not.toMatch(/^question-\d+\.mp3$|^reveal-\d+\.mp3$/);
+  for (const r of smoke) {
+    expect(r.scriptText).toBeTruthy();
+    expect(r.phase).toBeTruthy();
+    expect(r.family).toBeTruthy();
+    expect(r.venue).toBe("O'Learys");
+    expect(r.market).toBe("UK");
+    expect(r.sponsor).toBe("Fuller's");
+    expect(r.product).toBe("London Pride");
+    expect(r.toneNotes).toBeTruthy();
+    expect(r.deliveryNotes).toBeTruthy();
+  }
+});
+
+test("smoke pack + 'P0 smoke' appear in the Markdown and JSON exports", () => {
+  const md = readFileSync(MD, "utf8");
+  expect(md).toMatch(/Record this first — tiny smoke pack/i);
+  expect(md).toContain("P0 smoke");
+  for (const f of ["intro-welcome.mp3", "playlist-demo-q01-readout.mp3", "a-leadin-01.mp3", "playlist-demo-a01-answer.mp3"]) {
+    expect(md).toContain(f);
+  }
+  const json = JSON.parse(readFileSync(JSON_PACK, "utf8"));
+  expect(json.smokePack.cueIds).toEqual(["intro-welcome", "q01-readout", "a-leadin-01", "a01-answer"]);
+  expect(json.rows.filter((r: { smoke: boolean }) => r.smoke)).toHaveLength(4);
 });
 
 // ── 3G-G: context alignment ──
