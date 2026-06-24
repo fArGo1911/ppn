@@ -145,20 +145,31 @@ export const DEMO_PLAYLIST: BankQuestion[] = compilePlaylist(DEMO_COMPILE_OPTION
 export interface AnswerReviewLine { order: number; categoryLabel: string; prompt: string; answer: string; line: string }
 export interface AnswerReviewScript { file: string; intro: string; lines: AnswerReviewLine[]; script: string }
 
-/** Light, varied lead-ins so the combined reveal doesn't sound robotic (direction only — NOT generated audio). */
-const REVIEW_LEADINS = [
-  "For question one, the answer was",
-  "Question two — the answer is",
-  "Onto question three, that was",
-  "Question four — the answer we wanted was",
-  "And finally, question five — the answer is",
+/**
+ * Varied answer-review lead-ins, templated with {n} (question number) + {answer}. The combined reveal rotates
+ * through these so no two answers are announced the same way — and it scales to any playlist length without
+ * sounding robotic. Direction/script only — NOT generated audio.
+ */
+export const ANSWER_REVIEW_LEADINS = [
+  "For question {n}, the answer was {answer}.",
+  "Question {n} — the answer is {answer}.",
+  "Number {n}, that one was {answer}.",
+  "Onto {n}: the answer we wanted was {answer}.",
+  "Question {n} caught a few out — it was {answer}.",
+  "For number {n}, you needed {answer}.",
+  "Question {n} — the answer there was {answer}.",
+  "And {n} — that's {answer}.",
+  "Number {n}: it was {answer}, if you had it.",
+  "Question {n} — {answer} was the one we were after.",
 ];
+const fillLeadin = (tpl: string, n: number, answer: string) => tpl.replace("{n}", String(n)).replace("{answer}", answer);
 
 export function buildAnswerReviewScript(playlist: BankQuestion[] = DEMO_PLAYLIST, demoId = DEMO_ID): AnswerReviewScript {
   const intro = "Right, pens down everyone — let's go through tonight's answers in order.";
+  // Rotate through the lead-in bank (i % len) → varied phrasing, never the same two in a row, scales to any length.
   const lines: AnswerReviewLine[] = playlist.map((q, i) => ({
     order: q.order, categoryLabel: q.categoryLabel, prompt: q.prompt, answer: q.answer,
-    line: `${REVIEW_LEADINS[i] ?? `Question ${q.order} — the answer is`} ${q.answer}.`,
+    line: fillLeadin(ANSWER_REVIEW_LEADINS[i % ANSWER_REVIEW_LEADINS.length], q.order, q.answer),
   }));
   const script = [intro, ...lines.map((l) => l.line), "Tot up your scores — and let's find tonight's winners."].join(" ");
   return { file: answerReviewKey(demoId), intro, lines, script };

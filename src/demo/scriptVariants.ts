@@ -10,9 +10,11 @@
  * (`question-NN.mp3`) cues.
  */
 import { SCRIPT_STYLES } from "./quizPlaylist";
+import { ANSWER_REVIEW_LEADINS } from "./questionBank";
 
 export type VariantColour = "generic" | "venue" | "sport" | "music" | "picture";
-export interface ScriptVariant { file: string; text: string; colour: VariantColour }
+/** `file` present → record as its own MP3. Absent → a phrasing woven INTO another file (e.g. the combined review). */
+export interface ScriptVariant { file?: string; text: string; colour: VariantColour }
 export interface VariantBank { id: string; label: string; blurb: string; variants: ScriptVariant[] }
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -43,17 +45,8 @@ const REPEAT_LINES: { text: string; colour: VariantColour }[] = [
 ];
 const REPEAT_VARIANTS: ScriptVariant[] = REPEAT_LINES.map((l, i) => ({ file: `generic-repeat-${pad(i + 1)}.mp3`, text: l.text, colour: l.colour }));
 
-// ── Answer-review lead-ins (7) — varied "the answer was…" so the combined review doesn't drone ──
-const REVEAL_LEADIN_LINES = [
-  "The answer we were looking for was…",
-  "If you wrote this one down, give yourselves a point…",
-  "Drumroll… the answer is…",
-  "This one caught a few of you out — the answer was…",
-  "Pens down — the correct answer is…",
-  "And the answer that bagged you the points…",
-  "Straightforward enough — the answer was…",
-];
-const REVEAL_LEADINS: ScriptVariant[] = REVEAL_LEADIN_LINES.map((t, i) => ({ file: `generic-reveal-leadin-${pad(i + 1)}.mp3`, text: t, colour: "generic" }));
+// ── Answer-review lead-ins — the phrasings the ONE combined answer-review file rotates through (not separate MP3s) ──
+const REVEAL_LEADINS: ScriptVariant[] = ANSWER_REVIEW_LEADINS.map((t) => ({ text: t, colour: "generic" }));
 
 // ── Transitions / banter (6) — between-question filler so the night breathes ──
 const TRANSITION_LINES = [
@@ -69,7 +62,7 @@ const TRANSITIONS: ScriptVariant[] = TRANSITION_LINES.map((t, i) => ({ file: `ge
 export const VARIANT_BANKS: VariantBank[] = [
   { id: "intro", label: "Intro openers", blurb: "One opener per host style — vary the welcome so it's never the same line.", variants: INTRO_OPENERS },
   { id: "repeat", label: "Repeat / read-again", blurb: "Vary how you repeat a question — generic, venue colour and category colour. Record all of these.", variants: REPEAT_VARIANTS },
-  { id: "reveal", label: "Answer-review lead-ins", blurb: "Varied lead-ins for the combined answer-review so it doesn't drone.", variants: REVEAL_LEADINS },
+  { id: "reveal", label: "Answer-review lead-ins", blurb: "Phrasings the single combined answer-review file rotates through ({n}=question number, {answer}=answer) — woven into playlist-demo-answer-review.mp3, not separate MP3s.", variants: REVEAL_LEADINS },
   { id: "transition", label: "Transitions / banter", blurb: "Short between-question fillers so the night breathes.", variants: TRANSITIONS },
 ];
 

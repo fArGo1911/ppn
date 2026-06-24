@@ -70,6 +70,9 @@ test("/config#brand-media has a combined answer-review model in playlist order",
   await expect(reviewBlock).toContainText("Seven");
   await expect(reviewBlock).toContainText("Eleven");
   await expect(reviewBlock).toContainText("Queen");
+  // Lead-ins are VARIED (not the same phrasing each time) so the single combined file doesn't sound robotic.
+  await expect(reviewBlock).toContainText("For question 1, the answer was Seven.");
+  await expect(reviewBlock).toContainText("Number 3, that one was Queen.");
 });
 
 // ── Part F: ElevenLabs production list for the 5-question demo ──

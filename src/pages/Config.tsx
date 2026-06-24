@@ -34,7 +34,7 @@ import {
 } from "../demo/quizPlaylist";
 import {
   bankCategoryCounts, QUESTION_BANK, MIX_PROFILES, DEMO_COMPILE_OPTIONS, buildAnswerReviewScript,
-  buildProductionList, ANSWER_REVIEW_TONE, ANSWER_REVIEW_EXAMPLES, type ProductionStatus,
+  buildProductionList, ANSWER_REVIEW_TONE, ANSWER_REVIEW_EXAMPLES, ANSWER_REVIEW_LEADINS, type ProductionStatus,
 } from "../demo/questionBank";
 import { VARIANT_BANKS, VARIETY_RECORDING_TIPS, type VariantColour } from "../demo/scriptVariants";
 
@@ -608,6 +608,7 @@ export default function Config() {
           {/* Answer-review model — ONE combined reveal (Option 1, preferred POC) in playlist order */}
           <Card title="Answer-review model">
             <p className="text-xs text-[var(--ppn-muted)]">Answers are revealed <span className="font-semibold text-[var(--ppn-text)]">together, in playlist order</span>, in a single combined answer-review — <span className="font-semibold text-[var(--ppn-text)]">not after each question</span>. One natural-sounding MP3 (<span className="font-mono">{reviewScript.file}</span>) is easier to record and sounds less robotic; per-question reveal keys stay available for later.</p>
+            <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">Each answer uses a <span className="font-semibold text-[var(--ppn-text)]">different lead-in</span>, rotated through {ANSWER_REVIEW_LEADINS.length} phrasings so no two reveals sound alike — and it scales to any number of questions (see the Answer-review lead-ins bank below).</p>
             <div className="mt-2 rounded-xl border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-3">
               <p className="text-[11px] font-semibold text-[var(--ppn-text)]">Combined answer-review script (generated from the playlist — text only, no audio)</p>
               <p className="mt-1 text-[11px] text-[var(--ppn-muted)]">{reviewScript.intro}</p>
@@ -837,8 +838,8 @@ export default function Config() {
                   <p className="text-[10px] text-[var(--ppn-muted)]">{bank.blurb}</p>
                   <ul className="mt-1.5 space-y-1">
                     {bank.variants.map((v) => (
-                      <li key={v.file} className="flex flex-wrap items-baseline gap-2 text-[11px]">
-                        <span className="font-mono text-[9px] text-[var(--ppn-muted)]">{v.file}</span>
+                      <li key={v.file ?? v.text} className="flex flex-wrap items-baseline gap-2 text-[11px]">
+                        {v.file && <span className="font-mono text-[9px] text-[var(--ppn-muted)]">{v.file}</span>}
                         {v.colour !== "generic" && <span className="rounded-full px-1.5 py-0.5 text-[8px] font-semibold uppercase" style={colourTone(v.colour)}>{v.colour}</span>}
                         <span className="text-[var(--ppn-text)]">“{v.text}”</span>
                       </li>
