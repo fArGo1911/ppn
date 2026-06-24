@@ -98,7 +98,7 @@
       "language": "en-GB",
       "accent": "British (England)",
       "scope": "reusable",
-      "notes": "Variant 1 — classic hosted pub quiz.",
+      "notes": "Variant 1 — classic hosted pub quiz. One device per team (scan the table QR, one player joins for the team).",
       "filename": "how-to-play.mp3",
       "noFile": false,
       "cueId": "how-to-play",
@@ -108,7 +108,7 @@
       "priority": "P1 core demo",
       "recordingStatus": "ready-to-record",
       "usedBy": "playlist step",
-      "scriptText": "Here's how it works: join on your phone and play as a team — one shared answer per team. I'll read all the questions in the round first, you lock in your answers as we go, and then we'll go back through the answers together. The winning team is announced by its team number. No shouting out!"
+      "scriptText": "Scan the QR code on your table. One person from each team joins on their phone, enters your team name, and submits the team's answers. I'll take you through all the questions first — we'll review the answers later — and then announce the winner by team number. No shouting out!"
     },
     {
       "voiceStyle": "British pub host — warm, confident, playful, never shouty",
@@ -121,7 +121,7 @@
       "language": "en-GB",
       "accent": "British (England)",
       "scope": "reusable",
-      "notes": "Variant 2 — flexible phone/multiple-choice/typed. 'Typed answer' is product direction (phrase as 'where enabled'); multiple choice is the live format.",
+      "notes": "Variant 2 — flexible phone/multiple-choice/typed. One device per team (table QR). 'Typed answer' is product direction (phrase as 'where enabled'); multiple choice is the live format.",
       "filename": "how-to-play-2.mp3",
       "noFile": false,
       "cueId": "how-to-play-2",
@@ -131,7 +131,7 @@
       "priority": "P2 useful variant",
       "recordingStatus": "ready-to-record",
       "usedBy": "playlist step",
-      "scriptText": "Here's how to play: join on your phone and answer as a team. Some questions are multiple choice; others ask you to type an answer where enabled — just follow the prompts on your phone. I'll set the pace, answers are reviewed together at the end, and the winning team is announced by its team number."
+      "scriptText": "Scan the QR code on your table — one person per team joins on their phone and enters your team name. Some questions are multiple choice; others ask you to type an answer where enabled — just follow the prompts on your phone. I'll control the pace, we ask all the questions first and review the answers later, and the winner is announced by team number."
     },
     {
       "voiceStyle": "British pub host — warm, confident, playful, never shouty",

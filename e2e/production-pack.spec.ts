@@ -116,12 +116,19 @@ test("no misspelled venue/sponsor/product names anywhere in the pack", () => {
   expect(blob).toContain("London Pride");
 });
 
-test("two how-to-play / rules variants exist", () => {
+test("two how-to-play / rules variants exist and explain the table-QR, one-per-team, team-number flow", () => {
   const rows = buildProductionPack();
   const v1 = rows.find((r) => r.cueId === "how-to-play");
   const v2 = rows.find((r) => r.cueId === "how-to-play-2");
   expect(v1?.scriptText).toBeTruthy();
   expect(v2?.scriptText).toBeTruthy();
+  for (const v of [v1!, v2!]) {
+    const s = v.scriptText.toLowerCase();
+    expect(s, `${v.cueId} mentions the table QR code`).toContain("qr code on your table");
+    expect(s, `${v.cueId} uses the one-device-per-team model`).toMatch(/one person (from each|per) team/);
+    expect(s, `${v.cueId} enters the team name`).toContain("team name");
+    expect(s, `${v.cueId} announces winner by team number`).toContain("team number");
+  }
   // Variant 2 references the flexible phone/MC/typed flow with honest "where enabled" phrasing.
   expect(v2?.scriptText.toLowerCase()).toContain("where enabled");
 });
