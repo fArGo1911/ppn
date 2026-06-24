@@ -661,6 +661,7 @@ export default function Config() {
               </table>
             </div>
             <p className="mt-2 text-[10px] text-[var(--ppn-muted)]">Winner uses <span className="font-semibold text-[var(--ppn-text)]">Team {"{number}"}</span> (not a team name). Cues marked <span className="font-semibold text-[var(--ppn-text)]">needs copy</span> / <span className="font-semibold text-[var(--ppn-text)]">placeholder</span> need script text written before recording.</p>
+            <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">Full recording pack (filenames, scripts, voice/tone, P1 list, two-part assembly + ElevenLabs usage notes): <span className="font-mono">docs/demo-assets/ELEVENLABS_PRODUCTION_TABLE.md</span> · machine-readable <span className="font-mono">elevenlabs-production-pack.json</span>.</p>
           </Card>
 
           {/* Host run mode — manual / semi-automatic / automatic (concept + honest live status) */}
