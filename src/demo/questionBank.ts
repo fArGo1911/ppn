@@ -22,6 +22,37 @@ export function bankCategoryCounts(): BankCategoryCount[] {
   return CONTENT_CATEGORIES.map((c) => ({ id: c.id, label: c.label, count: QUESTION_BANK.filter((q) => q.category === c.id).length }));
 }
 
+// ── Full-bank SCRIPT MATRIX — a recordable readout + answer line for EVERY seeded question (not just the demo 5),
+// so a compiled playlist of any mix has scripts ready. Order-agnostic (the running "Question N" number + the
+// rotated answer-review lead-in are applied at compile time). Source of truth for the inventory/matrix export. ──
+export interface BankScriptRow {
+  id: string;
+  category: string;
+  categoryLabel: string;
+  prompt: string;
+  answer: string;
+  difficulty?: "easy" | "medium" | "hard";
+  sponsor: boolean;
+  readoutScript: string;
+  answerScript: string;
+  mediaSlot?: string;
+}
+const labelFor = (category: string): string =>
+  category === "tiebreak" ? "Tie-breaker" : categoryLabel(category as ContentCategoryId);
+
+export function buildBankScriptMatrix(): BankScriptRow[] {
+  return QUESTION_POOL.map((q) => {
+    const label = labelFor(q.category);
+    return {
+      id: q.id, category: q.category, categoryLabel: label, prompt: q.prompt, answer: q.answer,
+      difficulty: q.difficulty, sponsor: q.category === "sponsor",
+      readoutScript: `${label}: ${q.prompt}`,
+      answerScript: `The answer is ${q.answer}.`,
+      mediaSlot: q.category === "picture" ? "question image" : q.category === "video" ? "question clip" : undefined,
+    };
+  });
+}
+
 // ── Audio-key convention (playlist-namespaced; cannot collide with live-game question-NN.mp3) ──
 const pad = (n: number) => String(n).padStart(2, "0");
 export const readoutKey = (demoId: string, order: number) => `playlist-${demoId}-q${pad(order)}-readout.mp3`;

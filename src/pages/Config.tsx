@@ -34,7 +34,7 @@ import {
 } from "../demo/quizPlaylist";
 import {
   bankCategoryCounts, QUESTION_BANK, MIX_PROFILES, DEMO_COMPILE_OPTIONS, buildAnswerReviewScript,
-  buildProductionList, ANSWER_REVIEW_TONE, ANSWER_REVIEW_EXAMPLES, ANSWER_REVIEW_LEADINS, type ProductionStatus,
+  buildProductionList, buildBankScriptMatrix, ANSWER_REVIEW_TONE, ANSWER_REVIEW_EXAMPLES, ANSWER_REVIEW_LEADINS, type ProductionStatus,
 } from "../demo/questionBank";
 import { VARIANT_BANKS, VARIETY_RECORDING_TIPS, type VariantColour } from "../demo/scriptVariants";
 
@@ -263,6 +263,7 @@ export default function Config() {
   const reviewScript = buildAnswerReviewScript();
   const productionCues = buildProductionList();
   const demoMixLabel = MIX_PROFILES.find((p) => p.id === DEMO_COMPILE_OPTIONS.mix)?.label ?? "Mixed";
+  const scriptMatrix = buildBankScriptMatrix();
   const [bankBrowseCat, setBankBrowseCat] = useState<ContentCategoryId>("general");
   const prodTone = (s: ProductionStatus): React.CSSProperties => slotTone(s === "ready to record" ? "uploaded" : s === "placeholder" ? "missing" : "preview");
 
@@ -591,15 +592,20 @@ export default function Config() {
             </div>
             <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">Answers are revealed together in the combined answer-review (<span className="font-mono">{reviewScript.file}</span>), not per question — see the answer-review model below.</p>
             <details className="mt-3">
-              <summary className="cursor-pointer text-[11px] text-[var(--ppn-muted)]">Browse the question bank ({QUESTION_BANK.length} questions · {catCounts.length} categories) — selection source</summary>
+              <summary className="cursor-pointer text-[11px] text-[var(--ppn-muted)]">Browse the question bank ({QUESTION_BANK.length} questions · {catCounts.length} categories) — every question has a readout + answer script</summary>
+              <p className="mt-1 text-[10px] text-[var(--ppn-muted)]">The prototype isn't limited to tonight's 5 — <span className="font-semibold text-[var(--ppn-text)]">every</span> bank question carries a recordable readout + answer script, so any compiled mix (more sport, more geography…) is production-ready. Full export: <span className="font-mono">docs/demo-assets/QUESTION_BANK_SCRIPT_MATRIX.md</span>.</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {catCounts.map((c) => (
                   <button key={c.id} onClick={() => setBankBrowseCat(c.id)} className="rounded-full border px-2.5 py-1 text-[10px] font-semibold" style={{ borderColor: bankBrowseCat === c.id ? "var(--ppn-brand)" : "var(--ppn-border)", color: bankBrowseCat === c.id ? "var(--ppn-brand)" : "var(--ppn-muted)" }}>{c.label} · {c.count}</button>
                 ))}
               </div>
-              <ul className="mt-2 max-h-40 space-y-0.5 overflow-y-auto text-[10px] text-[var(--ppn-muted)]">
-                {QUESTION_BANK.filter((q) => q.category === bankBrowseCat).map((q) => (
-                  <li key={q.id} className="flex gap-2"><span className="font-mono">{q.id}</span><span className="truncate text-[var(--ppn-text)]">{q.prompt}</span></li>
+              <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto text-[10px] text-[var(--ppn-muted)]">
+                {scriptMatrix.filter((q) => q.category === bankBrowseCat).map((q) => (
+                  <li key={q.id} className="rounded-lg border border-[var(--ppn-border)] bg-[var(--ppn-bg)] p-2">
+                    <div className="flex items-baseline gap-2"><span className="font-mono text-[9px]">{q.id}</span><span className="text-[var(--ppn-text)]">{q.prompt}</span></div>
+                    <p className="mt-0.5">Readout: <span className="text-[var(--ppn-text)]">“{q.readoutScript}”</span></p>
+                    <p>Answer: <span className="text-[var(--ppn-text)]">“{q.answerScript}”</span></p>
+                  </li>
                 ))}
               </ul>
             </details>

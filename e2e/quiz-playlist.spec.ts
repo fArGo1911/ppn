@@ -59,6 +59,20 @@ test("/config#brand-media exposes the authoritative bank, compiler summary and c
   await expect(page.getByText(/Browse the question bank \(\d+ questions · \d+ categories\)/i)).toBeVisible();
 });
 
+// ── Whole-bank scripts: every question (not just the demo 5) has a recordable readout + answer script ──
+test("/config#brand-media bank browser exposes a readout + answer script for every question", async ({ page }) => {
+  await unlockOperator(page);
+  await page.goto("/config#brand-media");
+  const browser = page.locator("details").filter({ hasText: "Browse the question bank" });
+  await browser.locator("summary").click(); // expand the <details>
+  await expect(browser).toContainText("every bank question carries a recordable readout + answer script");
+  await expect(browser).toContainText("QUESTION_BANK_SCRIPT_MATRIX.md");
+  // A non-demo question (e.g. geography) shows both a readout and an answer script.
+  await browser.getByRole("button", { name: /Geography \/ culture · \d+/i }).click();
+  await expect(browser).toContainText("Readout: “Geography / culture:");
+  await expect(browser).toContainText("Answer: “The answer is");
+});
+
 // ── Part E: combined answer-review model — answers in Q1–Q5 order, one combined script/file ──
 test("/config#brand-media has a combined answer-review model in playlist order", async ({ page }) => {
   await unlockOperator(page);
