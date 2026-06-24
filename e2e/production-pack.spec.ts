@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
-import { buildProductionPack, productionFilenames } from "../src/demo/elevenLabsProduction";
+import { buildProductionPack, productionFilenames, PRODUCTION_CONTEXT, MARKET_CONTEXTS } from "../src/demo/elevenLabsProduction";
 import { DEMO_PLAYLIST } from "../src/demo/quizPlaylist";
 
 /**
@@ -83,4 +83,73 @@ test("question readouts and question lead-ins are separate; readouts carry the p
 test("winner cue uses Team {number}, not a team name", () => {
   const winner = buildProductionPack().find((r) => r.cueId === "winner-team-number");
   expect(winner?.scriptText).toContain("Team {number}");
+});
+
+// ── 3G-G: context alignment ──
+test("active context is O'Learys / UK / Fuller's / London Pride; other markets are reference/future", () => {
+  expect(PRODUCTION_CONTEXT.venue).toBe("O'Learys");
+  expect(PRODUCTION_CONTEXT.market).toBe("UK");
+  expect(PRODUCTION_CONTEXT.sponsor).toBe("Fuller's");
+  expect(PRODUCTION_CONTEXT.product).toBe("London Pride");
+  const active = MARKET_CONTEXTS.filter((m) => m.active);
+  expect(active).toHaveLength(1);
+  expect(active[0].market).toBe("UK");
+  // Sweden + Germany exist but only as reference/future.
+  const se = MARKET_CONTEXTS.find((m) => m.market === "Sweden");
+  const de = MARKET_CONTEXTS.find((m) => m.market === "Germany");
+  expect(se?.active).toBe(false);
+  expect(se?.sponsor).toBe("Spendrups");
+  expect(se?.product).toBe("Norrlands Guld");
+  expect(de?.active).toBe(false);
+  expect(de?.sponsor).toBe("Krombacher");
+  expect(de?.product).toBe("Krombacher Pils");
+});
+
+test("no misspelled venue/sponsor/product names anywhere in the pack", () => {
+  const blob = JSON.stringify({ PRODUCTION_CONTEXT, MARKET_CONTEXTS, rows: buildProductionPack() });
+  for (const bad of [/Spandrips/i, /Chromebasher/i, /Krombasher/i, /Solaris/i, /Spendrups Pils/i, /O'?Learys Guld/i]) {
+    expect(blob).not.toMatch(bad);
+  }
+  // Correct names are present.
+  expect(blob).toContain("O'Learys");
+  expect(blob).toContain("Fuller's");
+  expect(blob).toContain("London Pride");
+});
+
+test("two how-to-play / rules variants exist", () => {
+  const rows = buildProductionPack();
+  const v1 = rows.find((r) => r.cueId === "how-to-play");
+  const v2 = rows.find((r) => r.cueId === "how-to-play-2");
+  expect(v1?.scriptText).toBeTruthy();
+  expect(v2?.scriptText).toBeTruthy();
+  // Variant 2 references the flexible phone/MC/typed flow with honest "where enabled" phrasing.
+  expect(v2?.scriptText.toLowerCase()).toContain("where enabled");
+});
+
+test("intro and outro mention the active venue + sponsor; outro keeps responsible tone", () => {
+  const rows = buildProductionPack();
+  const intro = rows.find((r) => r.cueId === "intro-welcome")!;
+  const outro = rows.find((r) => r.cueId === "outro-closing")!;
+  for (const t of [intro.scriptText, outro.scriptText]) {
+    expect(t).toContain("O'Learys");
+    expect(t).toContain("Fuller's");
+  }
+  expect(intro.scriptText.toLowerCase()).toContain("responsibl");
+  expect(outro.scriptText.toLowerCase()).toContain("responsibl");
+  // Intro/sponsor/winner/outro/q05 are market-specific; generic lead-ins/answers are reusable.
+  const mkt = new Set(rows.filter((r) => r.scope === "market-specific").map((r) => r.cueId));
+  for (const id of ["intro-welcome", "sponsor-message", "winner-team-number", "outro-closing", "q05-readout"]) expect(mkt.has(id)).toBe(true);
+  expect(rows.find((r) => r.cueId === "a01-answer")?.scope).toBe("reusable");
+});
+
+test("sponsor message + pause/hand-in cues exist; no unverified factual product claims", () => {
+  const rows = buildProductionPack();
+  expect(rows.some((r) => r.cueId === "sponsor-message")).toBe(true);
+  expect(rows.some((r) => r.cueId === "pause-handin")).toBe(true);
+  // No invented brewery/product facts (ABV, origin, awards, brewing history).
+  for (const r of rows) {
+    for (const claim of [/\bABV\b/i, /% alcohol/i, /award[- ]winning/i, /founded in/i, /brewed since/i, /established \d{4}/i]) {
+      expect(r.scriptText, `factual claim in ${r.cueId}`).not.toMatch(claim);
+    }
+  }
 });

@@ -44,6 +44,8 @@ export interface ProductionRow {
   recordingStatus: RecordingStatus;
   usedBy: string;
   playbackType: PlaybackType;
+  /** Reusable across markets, or specific to the active market (mentions sponsor/product/venue). */
+  scope: "reusable" | "market-specific";
   notes: string;
 }
 
@@ -62,6 +64,7 @@ export const PRODUCTION_CONTEXT = {
   sponsor: ACTIVE.sponsor,
   product: ACTIVE.product,
   quizSeries: "O'Learys Sunday Quiz League",
+  eventStyle: "Pub quiz night",
   eventDate: "Sunday 18th September",
   eventNumber: "3rd this month",
   tournamentStage: "Qualifier",
@@ -70,7 +73,27 @@ export const PRODUCTION_CONTEXT = {
   language: ACTIVE.language,
   accent: ACTIVE.accent,
   voicePersona: "Warm, confident British pub-quiz host — friendly, a little playful, never shouty.",
+  sponsorTone: "Present but not too salesy.",
+  responsibleWording: "Required for alcohol-sponsor references (e.g. 'please drink responsibly, 18+').",
 };
+
+/** Sponsor/product script rules — keep references natural and responsible; never invent product facts. */
+export const SPONSOR_SCRIPT_RULES = [
+  "Use the sponsor/product naturally — don't sound like an advert every time.",
+  "Always keep responsible wording for alcohol references (drink responsibly, 18+).",
+  "Never invent product facts (ABV, origin, ingredients, awards, brewing history).",
+  "Sponsor-question scripts may say 'tonight's featured sponsor/product' generically.",
+  "Market-specific sponsor terms must match the active context (UK → Fuller's / London Pride).",
+];
+/** Safe example sponsor wordings (no factual claims). */
+export const SPONSOR_SAFE_EXAMPLES = [
+  "Tonight's quiz is brought to you with Fuller's and London Pride.",
+  "A quick nod to tonight's featured pour before we continue.",
+  "Enjoy responsibly, and keep your answers sharper than your arguments.",
+];
+/** How-to-play / rules note — what's actually built vs product direction. */
+export const HOWTO_RULES_NOTE =
+  "Multiple-choice is the live question format (seeded questions carry options). Typed-answer is product direction — phrase it as 'where enabled'. Don't overpromise features not built.";
 
 const VOICE = "British pub host — warm, confident, playful, never shouty";
 const TONE = "Premium-but-approachable; smiling; not a game-show announcer.";
@@ -83,7 +106,7 @@ const fillContext = (text: string): string =>
 const base = (): Omit<ProductionRow, "cueId" | "filename" | "noFile" | "family" | "phase" | "scriptText" | "priority" | "recordingStatus" | "usedBy" | "playbackType"> => ({
   voiceStyle: VOICE, toneNotes: TONE, deliveryNotes: DELIVERY,
   market: ACTIVE.market, venue: ACTIVE.venue, sponsor: ACTIVE.sponsor, product: ACTIVE.product,
-  language: ACTIVE.language, accent: ACTIVE.accent, notes: "",
+  language: ACTIVE.language, accent: ACTIVE.accent, scope: "reusable", notes: "",
 });
 
 /** Build the full production pack (deterministic; derived from the playlist + script source so it can't drift). */
@@ -98,13 +121,24 @@ export function buildProductionPack(): ProductionRow[] {
     scriptText: fillContext("Good evening and welcome to O'Learys for tonight's quiz, brought to you by Fuller's. Scan the QR code on your table, give your team a name, and answer on your phone — one shared answer per team. Please drink responsibly. Phones ready — let's play!"),
     notes: "Build energy to 'let's play!'. Keeps the responsible-sponsor line. No factual product claims." });
   add({ cueId: "how-to-play", filename: "how-to-play.mp3", family: "global", phase: "how-to-play", playbackType: "standalone", priority: "P1 core demo", recordingStatus: "ready-to-record", usedBy: "playlist step",
-    scriptText: "Here's how it works: one shared answer per team. I'll read all the questions in the round first — lock in your answers as we go — and then we'll go back through the answers together. No shouting out!" });
+    scriptText: "Here's how it works: join on your phone and play as a team — one shared answer per team. I'll read all the questions in the round first, you lock in your answers as we go, and then we'll go back through the answers together. The winning team is announced by its team number. No shouting out!",
+    notes: "Variant 1 — classic hosted pub quiz." });
+  add({ cueId: "how-to-play-2", filename: "how-to-play-2.mp3", family: "global", phase: "how-to-play", playbackType: "standalone", priority: "P2 useful variant", recordingStatus: "ready-to-record", usedBy: "playlist step",
+    scriptText: "Here's how to play: join on your phone and answer as a team. Some questions are multiple choice; others ask you to type an answer where enabled — just follow the prompts on your phone. I'll set the pace, answers are reviewed together at the end, and the winning team is announced by its team number.",
+    notes: "Variant 2 — flexible phone/multiple-choice/typed. 'Typed answer' is product direction (phrase as 'where enabled'); multiple choice is the live format." });
+  add({ cueId: "sponsor-message", filename: "sponsor-message.mp3", family: "global", phase: "how-to-play", playbackType: "standalone", priority: "P1 core demo", recordingStatus: "ready-to-record", usedBy: "playlist step · host cue",
+    scriptText: fillContext("A quick word from tonight's featured sponsor, Fuller's — enjoy a London Pride responsibly. Right, back to the quiz."),
+    notes: "Natural sponsor mention, not an advert. Responsible wording. No factual product claims." });
+  add({ cueId: "pause-handin", filename: "pause-handin.mp3", family: "global", phase: "answer-review-phase", playbackType: "standalone", priority: "P2 useful variant", recordingStatus: "ready-to-record", usedBy: "playlist step",
+    scriptText: "Pens down for a moment — pass your answers in, grab a drink, and we'll go through the answers shortly.",
+    notes: "Pause / answer hand-in — bridges the question phase and the answer-review phase." });
   add({ cueId: "answer-review-intro", filename: "answer-review-intro.mp3", family: "global", phase: "answer-review-phase", playbackType: "standalone", priority: "P1 core demo", recordingStatus: "ready-to-record", usedBy: "answer review assembly",
     scriptText: review.intro, notes: "Opens the answer-review phase (after all questions are read)." });
   add({ cueId: "winner-team-number", filename: "winner-team-number.mp3", family: "winner", phase: "winner", playbackType: "standalone", priority: "P1 core demo", recordingStatus: "ready-to-record", usedBy: "playlist step · host cue",
     scriptText: fillContext(WINNER_TEMPLATE), notes: "Use 'Team {number}', NOT a team name. Record the demo take with a chosen number (e.g. 'Team seven')." });
   add({ cueId: "outro-closing", filename: "outro-closing.mp3", family: "outro", phase: "outro", playbackType: "standalone", priority: "P1 core demo", recordingStatus: "ready-to-record", usedBy: "playlist step",
-    scriptText: fillContext("Thanks for playing, everyone — get home safe, and we'll see you next time at O'Learys.") });
+    scriptText: fillContext("Thanks for playing, everyone — and thanks to tonight's sponsor, Fuller's. Drink responsibly, get home safe, and we'll see you next time at O'Learys for the O'Learys Sunday Quiz League."),
+    notes: "Thanks + sponsor nod + responsible tone + next-series wording. No unverified claims." });
 
   // ── Selected 5-question readouts (question text only — NO answer) ──
   for (const q of DEMO_PLAYLIST) {
@@ -129,6 +163,7 @@ export function buildProductionPack(): ProductionRow[] {
     { id: "a-leadin-02", text: "For question two.", p: "P1 core demo" },
     { id: "a-leadin-03", text: "This one caught a few people out.", p: "P1 core demo" },
     { id: "a-leadin-sport", text: "For the football question.", p: "P2 useful variant" },
+    { id: "a-leadin-sponsor", text: "And for tonight's sponsor question.", p: "P2 useful variant" },
     { id: "a-leadin-05", text: "And here comes number five.", p: "P2 useful variant" },
   ];
   for (const l of aLeadins) add({ cueId: l.id, filename: `${l.id}.mp3`, family: "answer-leadin", phase: "answer-review-phase",
@@ -148,7 +183,7 @@ export function buildProductionPack(): ProductionRow[] {
   // ── Answer-review assembly (metadata only — how each answer is built from lead-in + answer content) ──
   for (const q of DEMO_PLAYLIST) {
     const n = String(q.order).padStart(2, "0");
-    const leadin = q.sponsor ? "a-leadin-sport.mp3" : `a-leadin-0${Math.min(q.order, 5)}.mp3`;
+    const leadin = q.sponsor ? "a-leadin-sponsor.mp3" : `a-leadin-0${Math.min(q.order, 5)}.mp3`;
     add({ cueId: `a${n}-assembly`, filename: null, noFile: true, family: "answer-review-assembly", phase: "answer-review-phase",
       playbackType: "assembly-only", priority: "P1 core demo", recordingStatus: "placeholder", usedBy: "answer review assembly",
       scriptText: `[${leadin}] then [playlist-demo-a${n}-answer.mp3]  →  "${q.answer}."`,
@@ -168,6 +203,10 @@ export function buildProductionPack(): ProductionRow[] {
         usedBy: "reusable variant · config preview", scriptText: fillContext(v.text), notes: `Variant take (${bank.label}${v.colour !== "generic" ? ` · ${v.colour} colour` : ""}).` });
     }
   }
+
+  // Derive scope: a row is market-specific if it names the active sponsor/product/venue; otherwise reusable.
+  const marketTerms = [ACTIVE.sponsor, ACTIVE.product, ACTIVE.venue];
+  for (const r of rows) r.scope = marketTerms.some((t) => r.scriptText.includes(t)) ? "market-specific" : "reusable";
 
   return rows;
 }
